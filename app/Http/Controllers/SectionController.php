@@ -1,0 +1,58 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\SectionLog;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
+class SectionController extends Controller
+{
+    /** Admin view */
+    public function index()
+    {
+        $admin    = Auth::guard('admin')->user();
+        $logs     = $this->latestSections();
+        $settings = \App\Models\SystemSetting::allSettings();
+        return view('admin.sections.index', compact('admin', 'logs', 'settings'));
+    }
+
+    /** GET /admin/sections/latest — JSON for Alpine.js */
+    public function latest(): JsonResponse
+    {
+        return response()->json($this->latestSections());
+    }
+
+    /** POST /admin/sections/upsert */
+    public function upsert(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'id'       => ['required', 'string'],
+            'name'     => ['required', 'string'],
+            'occupied' => ['required', 'integer', 'min:0'],
+            'reserved' => ['required', 'integer', 'min:0'],
+            'total'    => ['required', 'integer', 'min:1'],
+        ]);
+
+        SectionLog::upsertSnapshot($data);
+        return response()->json(['success' => true]);
+    }
+
+    private function latestSections(): array
+    {
+        $rows = SectionLog::select('section_code','section_name','total_capacity','occupied','reserved','updated_at')
+            ->orderBy('section_code')
+            ->orderByDesc('updated_at')
+            ->get()
+            ->unique('section_code');
+
+        return $rows->map(fn($r) => [
+            'id'       => $r->section_code,
+            'name'     => $r->section_name,
+            'total'    => $r->total_capacity,
+            'occupied' => $r->occupied,
+            'reserved' => $r->reserved,
+        ])->values()->toArray();
+    }
+}

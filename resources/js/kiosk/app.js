@@ -1,0 +1,223 @@
+import { BrowserMultiFormatReader } from '@zxing/browser';
+import { QueueManager } from './offline-queue';
+
+const registerApp = () => {
+    window.Alpine.data('kioskApp', () => ({
+        state: 'idle', // 'idle' | 'active'
+        tab: 'scan',
+        manualId: '',
+        isProcessing: false,
+        result: null,
+        resetTimeout: null,
+        inactivityTimeout: null,
+        occupancy: { inside: 0, max: 200 },
+        
+        // Clock
+        clockHm: '',
+        clockSec: '',
+        clockDate: '',
+        clockInterval: null,
+
+        // Scanner
+        codeReader: null,
+        cameras: [],
+        selectedCamera: '',
+        isCameraActive: false,
+
+        init() {
+            this.codeReader = new BrowserMultiFormatReader();
+            this.startClock();
+            this.fetchOccupancy();
+            setInterval(() => this.fetchOccupancy(), 30000);
+            QueueManager.startSyncTimer();
+
+            // Listen for keydown globally to wake up from idle
+            window.addEventListener('keydown', (e) => {
+                if (this.state === 'idle' && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                    this.manualId = e.key;
+                    this.activate();
+                }
+            });
+        },
+
+        startClock() {
+            const tick = () => {
+                const now = new Date();
+                this.clockHm = now.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: false });
+                this.clockSec = now.toLocaleTimeString('en-PH', { second: '2-digit' }).padStart(2, '0');
+                this.clockDate = now.toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            };
+            tick();
+            this.clockInterval = setInterval(tick, 1000);
+        },
+
+        activate() {
+            if (this.state === 'active') return;
+            this.state = 'active';
+            this.tab = 'scan';
+            this.result = null;
+            this.handleActivity();
+            
+            // Focus barcode input after DOM updates
+            this.$nextTick(() => {
+                this.$refs.barcodeInput?.focus();
+            });
+        },
+
+        deactivate() {
+            this.state = 'idle';
+            this.stopScanning();
+            clearTimeout(this.inactivityTimeout);
+        },
+
+        handleActivity() {
+            if (this.state === 'idle') return;
+            clearTimeout(this.inactivityTimeout);
+            this.inactivityTimeout = setTimeout(() => {
+                this.deactivate();
+            }, 60000); // 60s timeout
+            
+            // Manage camera state based on tab
+            if (this.tab === 'webcam') {
+                if (!this.isCameraActive) this.initScanner();
+            } else {
+                this.stopScanning();
+            }
+
+            // Focus appropriate input
+            this.$nextTick(() => {
+                if (this.tab === 'scan') this.$refs.barcodeInput?.focus();
+                if (this.tab === 'manual') this.$refs.manualInput?.focus();
+            });
+        },
+
+        handleKey(e) {
+            this.handleActivity();
+        },
+
+        // --- Camera Logic ---
+        async initScanner() {
+            try {
+                const videoInputDevices = await BrowserMultiFormatReader.listVideoInputDevices();
+                this.cameras = videoInputDevices;
+                
+                if (this.cameras.length > 0) {
+                    this.selectedCamera = this.cameras[0].deviceId;
+                    this.startScanning();
+                }
+            } catch (err) {
+                console.error("Camera init error:", err);
+            }
+        },
+
+        async startScanning() {
+            const videoEl = document.getElementById('kiosk-video');
+            try {
+                await this.codeReader.decodeFromVideoDevice(this.selectedCamera, videoEl, (result, err) => {
+                    if (result && !this.isProcessing) {
+                        this.manualId = result.text;
+                        this.submitManual();
+                    }
+                });
+                this.isCameraActive = true;
+            } catch (err) {
+                console.error("Scanner start error:", err);
+            }
+        },
+
+        stopScanning() {
+            if (this.codeReader) {
+                this.codeReader.reset();
+            }
+            this.isCameraActive = false;
+        },
+
+        // --- Processing Logic ---
+        submitManual() {
+            if (!this.manualId) return;
+            this.processId(this.manualId);
+        },
+
+        async processId(id) {
+            this.isProcessing = true;
+            this.result = null;
+            clearTimeout(this.resetTimeout);
+            
+            const audio = new Audio('/beep.mp3');
+            audio.play().catch(e => {});
+
+            try {
+                if (!navigator.onLine) {
+                    await QueueManager.enqueue(id);
+                    this.result = { status: 'offline', message: 'Saved offline.', student_id: id };
+                } else {
+                    const res = await this.performOnlineCheckin(id);
+                    this.result = res;
+                    if(res.status === 'success') this.fetchOccupancy();
+                }
+            } catch (err) {
+                this.result = { status: 'error', message: 'A system error occurred. Please try again.' };
+            } finally {
+                this.isProcessing = false;
+                this.manualId = '';
+                
+                if (this.result?.status === 'success' || this.result?.status === 'offline') {
+                    this.resetTimeout = setTimeout(() => {
+                        this.result = null;
+                        this.handleActivity();
+                    }, 4000);
+                }
+            }
+        },
+        
+        async performOnlineCheckin(id) {
+            const lookupRes = await fetch('/kiosk/lookup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+                body: JSON.stringify({ student_id: id })
+            });
+            const lookupData = await lookupRes.json();
+            
+            if (!lookupData.found) return { status: 'error', message: 'Student ID not found in the system.' };
+            if (lookupData.denied) return { status: 'error', message: lookupData.reason, student: lookupData.student };
+            
+            const lastActionRes = await fetch('/kiosk/last', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+                body: JSON.stringify({ student_id: id })
+            });
+            const lastActionData = await lastActionRes.json();
+            const nextAction = lastActionData.action === 'check_in' ? 'check_out' : 'check_in';
+            
+            const logRes = await fetch('/kiosk/log', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+                body: JSON.stringify({ student_id: id, action: nextAction })
+            });
+            
+            if (logRes.ok) {
+                return {
+                    status: 'success',
+                    action: nextAction,
+                    message: nextAction === 'check_in' ? 'Successfully checked in.' : 'Successfully checked out.',
+                    student: lookupData.student
+                };
+            }
+            throw new Error("Failed to log");
+        },
+        
+        async fetchOccupancy() {
+            if(!navigator.onLine) return;
+            try {
+                const res = await fetch('/kiosk/occupancy');
+                if (res.ok) this.occupancy = await res.json();
+            } catch (e) {}
+        }
+    }));
+};
+
+if (window.Alpine) {
+    registerApp();
+} else {
+    document.addEventListener('alpine:init', registerApp);
+}
