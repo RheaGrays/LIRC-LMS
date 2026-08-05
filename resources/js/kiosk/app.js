@@ -181,13 +181,7 @@ const registerApp = () => {
             if (!lookupData.found) return { status: 'error', message: 'Student ID not found in the system.' };
             if (lookupData.denied) return { status: 'error', message: lookupData.reason, student: lookupData.student };
             
-            const lastActionRes = await fetch('/kiosk/last', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
-                body: JSON.stringify({ student_id: id })
-            });
-            const lastActionData = await lastActionRes.json();
-            const nextAction = lastActionData.action === 'check_in' ? 'check_out' : 'check_in';
+            const nextAction = 'check_in';
             
             const logRes = await fetch('/kiosk/log', {
                 method: 'POST',
@@ -199,7 +193,7 @@ const registerApp = () => {
                 return {
                     status: 'success',
                     action: nextAction,
-                    message: nextAction === 'check_in' ? 'Successfully checked in.' : 'Successfully checked out.',
+                    message: 'Successfully checked in.',
                     student: lookupData.student
                 };
             }

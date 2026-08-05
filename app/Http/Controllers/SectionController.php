@@ -41,11 +41,14 @@ class SectionController extends Controller
 
     private function latestSections(): array
     {
-        $rows = SectionLog::select('section_code','section_name','total_capacity','occupied','reserved','updated_at')
+        // Get only the latest row per section_code using a subquery
+        $latestIds = SectionLog::selectRaw('MAX(id) as id')
+            ->groupBy('section_code')
+            ->pluck('id');
+
+        $rows = SectionLog::whereIn('id', $latestIds)
             ->orderBy('section_code')
-            ->orderByDesc('updated_at')
-            ->get()
-            ->unique('section_code');
+            ->get();
 
         return $rows->map(fn($r) => [
             'id'       => $r->section_code,

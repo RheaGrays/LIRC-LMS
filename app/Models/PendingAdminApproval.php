@@ -14,4 +14,8 @@ class PendingAdminApproval extends Model
     ];
 
     protected $hidden = ['password_hash'];
+    public function scopePending($query)
+    {
+        return $query->where('status', 'pending');
+    }
 }

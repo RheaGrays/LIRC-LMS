@@ -6,6 +6,7 @@ use App\Models\Violation;
 use App\Models\Student;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Auth;
 
 class ViolationController extends Controller
 {
@@ -31,5 +32,27 @@ class ViolationController extends Controller
     {
         Violation::findOrFail($vid)->delete();
         return back()->with('success', 'Violation removed successfully.');
+    }
+
+    public function index($studentId)
+    {
+        $student = Student::with('violations')->findOrFail($studentId);
+        $admin = Auth::guard('admin')->user();
+        return view('admin.violations.index', compact('student', 'admin'));
+    }
+
+    public function update(Request $request, $vid)
+    {
+        $violation = Violation::findOrFail($vid);
+        $validated = $request->validate([
+            'type' => 'required|string',
+            'notes' => 'nullable|string',
+            'severity' => 'required|in:minor,moderate,severe',
+            'date' => 'required|date',
+        ]);
+
+        $violation->update($validated);
+
+        return back()->with('success', 'Violation updated successfully.');
     }
 }

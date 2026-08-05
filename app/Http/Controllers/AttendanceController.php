@@ -15,12 +15,12 @@ class AttendanceController extends Controller
      */
     public function lookup(Request $request): JsonResponse
     {
-        $id = trim($request->input('student_id', ''));
-        if (!$id) {
-            return response()->json(['error' => 'No student ID provided.'], 422);
+        $term = trim($request->input('student_id', ''));
+        if (!$term) {
+            return response()->json(['error' => 'No student ID or name provided.'], 422);
         }
 
-        $student = Student::find($id);
+        $student = $this->resolveStudent($term);
         if (!$student) {
             return response()->json(['found' => false, 'reason' => 'Student not found.']);
         }
@@ -47,12 +47,32 @@ class AttendanceController extends Controller
     public function log(Request $request): JsonResponse
     {
         $request->validate([
-            'student_id' => ['required', 'string', 'exists:students,id'],
+            'student_id' => ['required', 'string'],
             'action'     => ['required', 'in:check_in,check_out'],
         ]);
 
+        $student = $this->resolveStudent($request->student_id);
+        if (!$student) {
+            return response()->json(['error' => 'Student not found.'], 404);
+        }
+
+        // ── Cooldown Buffer (Prevents duplicate scans within 5 minutes) ──
+        $cooldownMinutes = (int) \App\Models\SystemSetting::get('checkin_cooldown_minutes', 5);
+        $recentLog = AttendanceLog::where('student_id', $student->id)
+            ->where('logged_at', '>=', now()->subMinutes($cooldownMinutes))
+            ->first();
+
+        if ($recentLog) {
+            // Return success so Kiosk still greets the student, but DO NOT save duplicate to DB
+            return response()->json([
+                'success'   => true,
+                'duplicate' => true,
+                'message'   => 'Duplicate scan ignored (within 5-minute cooldown).'
+            ]);
+        }
+
         AttendanceLog::create([
-            'student_id' => $request->student_id,
+            'student_id' => $student->id,
             'action'     => $request->action,
             'logged_at'  => now(),
         ]);
@@ -65,13 +85,19 @@ class AttendanceController extends Controller
      */
     public function lastAction(Request $request): JsonResponse
     {
-        $studentId = trim($request->input('student_id', ''));
-        $today     = now()->startOfDay();
+        $term = trim($request->input('student_id', ''));
+        $student = $this->resolveStudent($term);
+        $studentId = $student ? $student->id : null;
 
-        $log = AttendanceLog::where('student_id', $studentId)
-            ->where('logged_at', '>=', $today)
-            ->orderByDesc('logged_at')
-            ->first();
+        $today = now()->startOfDay();
+
+        $log = null;
+        if ($studentId) {
+            $log = AttendanceLog::where('student_id', $studentId)
+                ->where('logged_at', '>=', $today)
+                ->orderByDesc('logged_at')
+                ->first();
+        }
 
         return response()->json(['action' => $log?->action]);
     }
@@ -81,24 +107,24 @@ class AttendanceController extends Controller
      */
     public function occupancy(): JsonResponse
     {
-        $maxCapacity = (int) \App\Models\SystemSetting::get('max_occupancy', 200);
-        $today       = now()->startOfDay();
+        return response()->json(\App\Services\OccupancyService::today());
+    }
 
-        $logs = AttendanceLog::select('student_id', 'action')
-            ->where('logged_at', '>=', $today)
-            ->orderByDesc('logged_at')
-            ->get();
+    private function resolveStudent($term)
+    {
+        if (!$term) return null;
 
-        $seen   = [];
-        $inside = 0;
-        foreach ($logs as $log) {
-            if (!isset($seen[$log->student_id])) {
-                $seen[$log->student_id] = true;
-                if ($log->action === 'check_in') $inside++;
-            }
-        }
+        // Try exact ID match first
+        $student = Student::find($term);
+        if ($student) return $student;
 
-        return response()->json(['inside' => $inside, 'max' => $maxCapacity]);
+        // Try name search with proper parameter binding
+        $searchTerm = '%' . trim($term) . '%';
+        return Student::whereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", [$searchTerm])
+            ->orWhereRaw("CONCAT(last_name, ' ', first_name) LIKE ?", [$searchTerm])
+            ->orWhere('first_name', 'LIKE', $searchTerm)
+            ->orWhere('last_name', 'LIKE', $searchTerm)
+            ->first();
     }
 
     private function formatStudent(Student $s): array

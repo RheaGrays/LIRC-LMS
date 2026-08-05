@@ -22,26 +22,19 @@ class DashboardController extends Controller
         // Total active students
         $totalStudents = Student::where('status', 'active')->count();
 
-        // Current occupancy
-        $logs = AttendanceLog::select('student_id', 'action')
+        // Occupancy (unique visitors today)
+        $occupancy = \App\Services\OccupancyService::today();
+        $inside = $occupancy['inside'];
+        $maxOccupancy = $occupancy['max'];
+
+        // Recent activity feed (latest activity per student today)
+        $latestLogIds = AttendanceLog::selectRaw('MAX(id) as id')
             ->where('logged_at', '>=', $today)
-            ->orderByDesc('logged_at')
-            ->get();
+            ->groupBy('student_id')
+            ->pluck('id');
 
-        $seen   = [];
-        $inside = 0;
-        foreach ($logs as $log) {
-            if (!isset($seen[$log->student_id])) {
-                $seen[$log->student_id] = true;
-                if ($log->action === 'check_in') $inside++;
-            }
-        }
-
-        $maxOccupancy = (int) \App\Models\SystemSetting::get('max_occupancy', 200);
-
-        // Recent activity feed (last 50)
         $recentLogs = AttendanceLog::with('student')
-            ->where('logged_at', '>=', $today)
+            ->whereIn('id', $latestLogIds)
             ->orderByDesc('logged_at')
             ->limit(50)
             ->get()

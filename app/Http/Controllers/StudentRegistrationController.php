@@ -37,7 +37,17 @@ class StudentRegistrationController extends Controller
             if (count($imageParts) == 2) {
                 $imageTypeAux = explode('image/', $imageParts[0]);
                 $imageType = $imageTypeAux[1] ?? 'jpeg';
+                
+                if (!in_array(strtolower($imageType), ['jpeg', 'jpg', 'png', 'webp'])) {
+                    return response()->json(['message' => 'Invalid image format. Allowed formats: jpeg, jpg, png, webp'], 422);
+                }
+
                 $imageBase64 = base64_decode($imageParts[1]);
+
+                if (strlen($imageBase64) > 5 * 1024 * 1024) {
+                    return response()->json(['message' => 'Image size must not exceed 5MB'], 422);
+                }
+
                 $safeId = Str::slug($validated['studentId'], '_');
                 $fileName = "student-photos/{$safeId}_" . time() . ".{$imageType}";
                 

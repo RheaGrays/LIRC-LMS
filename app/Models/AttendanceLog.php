@@ -19,4 +19,23 @@ class AttendanceLog extends Model
     {
         return $this->belongsTo(Student::class, 'student_id', 'id');
     }
+    public function scopeToday($query)
+    {
+        return $query->where('logged_at', '>=', now()->startOfDay());
+    }
+
+    public function scopeCheckIns($query)
+    {
+        return $query->where('action', 'check_in');
+    }
+
+    public function scopeCheckOuts($query)
+    {
+        return $query->where('action', 'check_out');
+    }
+
+    public function scopeBetweenDates($query, $from, $to)
+    {
+        return $query->whereBetween('logged_at', [$from, $to]);
+    }
 }

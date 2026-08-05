@@ -1,0 +1,18 @@
+{
+  "name": "LEMS - Cor Jesu College Library",
+  "short_name": "LEMS Kiosk",
+  "description": "Library Entrance Monitoring System",
+  "start_url": "/kiosk",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#0f2744",
+  "icons": [
+    {
+      "src": "/cjc-logo.jpeg",
+      "sizes": "192x192 512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}

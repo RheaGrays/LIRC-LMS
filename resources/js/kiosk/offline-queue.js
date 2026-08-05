@@ -50,17 +50,7 @@ export const QueueManager = {
         // Process sequentially to maintain order and logic (checkin vs checkout)
         for (const item of queue) {
             try {
-                // 1. Determine action based on current DB state
-                const lastRes = await fetch('/kiosk/last', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
-                    body: JSON.stringify({ student_id: item.student_id })
-                });
-                
-                if (!lastRes.ok) continue; // Skip on error, keep in queue
-                
-                const lastData = await lastRes.json();
-                const nextAction = lastData.action === 'check_in' ? 'check_out' : 'check_in';
+                const nextAction = 'check_in';
                 
                 // 2. Log it
                 const logRes = await fetch('/kiosk/log', {

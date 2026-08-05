@@ -20,4 +20,13 @@ class Violation extends Model
     {
         return $this->belongsTo(Student::class, 'student_id', 'id');
     }
+    public function scopeSeverity($query, $severity)
+    {
+        return $query->where('severity', $severity);
+    }
+
+    public function scopeRecent($query, $days = 30)
+    {
+        return $query->where('date', '>=', now()->subDays($days));
+    }
 }

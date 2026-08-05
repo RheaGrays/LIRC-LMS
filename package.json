@@ -1,9 +1,12 @@
 {
     "private": true,
     "type": "module",
+    "main": "electron/main.js",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "electron": "electron .",
+        "electron:admin": "electron . --admin"
     },
     "devDependencies": {
         "@tailwindcss/forms": "^0.5.2",
@@ -12,6 +15,7 @@
         "autoprefixer": "^10.4.2",
         "axios": "^1.7.4",
         "concurrently": "^9.0.1",
+        "electron": "^43.2.0",
         "laravel-vite-plugin": "^1.2.0",
         "postcss": "^8.4.31",
         "tailwindcss": "^3.1.0",

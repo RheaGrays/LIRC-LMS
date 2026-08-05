@@ -46,4 +46,28 @@ class Student extends Model
         if (str_starts_with($this->photo_path, 'http')) return $this->photo_path;
         return asset('storage/' . $this->photo_path);
     }
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'active');
+    }
+
+    public function scopeInactive($query)
+    {
+        return $query->where('status', 'inactive');
+    }
+
+    public function scopeDepartment($query, $dept)
+    {
+        return $query->where('department', $dept);
+    }
+
+    public function scopeSearch($query, $term)
+    {
+        return $query->where(function ($q) use ($term) {
+            $q->where('id', 'LIKE', "%{$term}%")
+              ->orWhere('last_name', 'LIKE', "%{$term}%")
+              ->orWhere('first_name', 'LIKE', "%{$term}%")
+              ->orWhere('department', 'LIKE', "%{$term}%");
+        });
+    }
 }

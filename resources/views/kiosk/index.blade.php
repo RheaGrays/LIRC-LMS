@@ -204,13 +204,13 @@
                             <!-- Tab: Manual -->
                             <div x-show="tab === 'manual'" class="flex flex-col gap-3.5 animate-slide-in">
                                 <label class="flex flex-col gap-1.5">
-                                    <span class="text-[11px] font-semibold tracking-[0.07em] uppercase text-[var(--text-muted)] font-['Inter']">Student ID Number</span>
+                                    <span class="text-[11px] font-semibold tracking-[0.07em] uppercase text-[var(--text-muted)] font-['Inter']">Student ID or Name</span>
                                     <input type="text" x-model="manualId" x-ref="manualInput" 
                                         @keydown.enter.prevent="if(manualId.trim()) submitManual()"
                                         @input="handleActivity()"
-                                        placeholder="Enter Student ID" 
+                                        placeholder="Enter Student ID or Name" 
                                         class="w-full p-3 font-['JetBrains_Mono'] text-[16px] font-medium tracking-[0.05em] bg-white border border-[var(--border-light)] rounded-[var(--radius-md)] text-[var(--cjc-navy)] outline-none focus:border-[var(--cjc-navy)] focus:shadow-[0_0_0_3px_rgba(15,39,68,0.08)] transition-all">
-                                    <span class="text-[11px] text-[var(--text-subtle)] font-['Inter']">Enter exactly as printed on your ID card</span>
+                                    <span class="text-[11px] text-[var(--text-subtle)] font-['Inter']">Enter your Student ID or full name</span>
                                 </label>
                                 <button @click="submitManual()" :disabled="!manualId.trim() || isProcessing"
                                     class="w-full p-3 bg-[var(--cjc-red)] text-white border-none rounded-[var(--radius-md)] text-[14px] font-semibold font-['Inter'] cursor-pointer transition-opacity disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90">

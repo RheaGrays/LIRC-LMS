@@ -1,12 +1,8 @@
 const CACHE_NAME = 'lems-kiosk-v1';
 const ASSETS_TO_CACHE = [
     '/kiosk',
-    '/logo.png',
-    '/bg.jpg', // Assuming we have this
-    '/beep.mp3' // Assuming we have this
-    // We should also cache JS and CSS, but Vite generates hashed filenames. 
-    // In a real PWA we'd use workbox or Vite PWA plugin. For this basic offline 
-    // fallback, we will cache the main offline page and assets we request.
+    '/cjc-logo.jpeg',
+    '/bg.jpg'
 ];
 
 self.addEventListener('install', (event) => {

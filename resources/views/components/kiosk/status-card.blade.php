@@ -1,19 +1,8 @@
-<div class="card bg-white border-2 overflow-hidden relative" 
+<div class="card bg-white border-2 border-gray-100 overflow-hidden relative" 
      :class="{
-         'border-green-500': result?.status === 'success' && result?.action === 'check_in',
-         'border-gray-400': result?.status === 'success' && result?.action === 'check_out',
          'border-red-500': result?.status === 'error',
          'border-orange-500': result?.status === 'offline'
      }">
-    
-    <!-- Top colored bar based on status -->
-    <div class="absolute top-0 left-0 right-0 h-2"
-         :class="{
-             'bg-green-500': result?.status === 'success' && result?.action === 'check_in',
-             'bg-gray-500': result?.status === 'success' && result?.action === 'check_out',
-             'bg-red-500': result?.status === 'error',
-             'bg-orange-500': result?.status === 'offline'
-         }"></div>
 
     <div class="p-6 pt-8">
         <!-- Error State -->
@@ -78,20 +67,18 @@
                     </div>
                     
                     <!-- Details -->
-                    <div class="flex-1 text-center sm:text-left space-y-2">
+                    <div class="flex-1 text-center sm:text-left space-y-3 min-w-0">
                         <div>
-                            <div class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Student Name</div>
-                            <div class="text-xl font-bold text-gray-900 leading-tight" x-text="result?.student?.name"></div>
+                            <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Student Name</div>
+                            <div class="text-lg sm:text-xl font-bold text-gray-900 leading-tight" x-text="result?.student?.name"></div>
                         </div>
-                        <div class="grid grid-cols-2 gap-4 pt-2">
-                            <div>
-                                <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">ID Number</div>
-                                <div class="font-semibold text-gray-700" x-text="result?.student?.id"></div>
-                            </div>
-                            <div>
-                                <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Department</div>
-                                <div class="font-semibold text-gray-700 truncate" :title="result?.student?.dept" x-text="result?.student?.dept"></div>
-                            </div>
+                        <div>
+                            <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">ID Number</div>
+                            <div class="text-[15px] font-semibold text-gray-700" x-text="result?.student?.id"></div>
+                        </div>
+                        <div>
+                            <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Department / Course</div>
+                            <div class="text-[13px] font-semibold text-gray-700 leading-snug" x-text="result?.student?.dept"></div>
                         </div>
                     </div>
                 </div>

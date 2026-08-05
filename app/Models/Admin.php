@@ -19,10 +19,20 @@ class Admin extends Authenticatable
 
     protected $casts = [
         'is_active' => 'boolean',
+        'password' => 'hashed',
     ];
 
     public function isSuperAdmin(): bool
     {
         return $this->role === 'Super Admin';
+    }
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    public function scopeRole($query, $role)
+    {
+        return $query->where('role', $role);
     }
 }
