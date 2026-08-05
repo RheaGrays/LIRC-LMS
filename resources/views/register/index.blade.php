@@ -607,21 +607,7 @@
 
 @push('scripts')
 <script>
-    // Define the departments structure directly in JS
-    const DEPARTMENTS = [
-        { name: "Bachelor of Science in Accountancy", college: "College of Business and Accountancy", level: "college" },
-        { name: "Bachelor of Science in Business Administration", college: "College of Business and Accountancy", level: "college" },
-        { name: "Bachelor of Science in Information Technology", college: "College of Computer Studies", level: "college" },
-        { name: "Bachelor of Science in Computer Science", college: "College of Computer Studies", level: "college" },
-        { name: "Bachelor of Elementary Education", college: "College of Education", level: "college" },
-        { name: "Bachelor of Secondary Education", college: "College of Education", level: "college" },
-        { name: "Bachelor of Science in Civil Engineering", college: "College of Engineering", level: "college" },
-        { name: "Bachelor of Science in Computer Engineering", college: "College of Engineering", level: "college" },
-        { name: "Bachelor of Science in Nursing", college: "College of Health Sciences", level: "college" },
-        { name: "Bachelor of Arts in Psychology", college: "College of Arts and Sciences", level: "college" },
-        { name: "Junior High School", college: "Junior High School", level: "basic_ed" },
-        { name: "Senior High School", college: "Senior High School", level: "basic_ed" },
-    ];
+    // Departments are now fetched dynamically from the API
 
     const COLLEGE_YEAR_LEVELS = ["1st Year", "2nd Year", "3rd Year", "4th Year", "5th Year"];
     const JHS_YEAR_LEVELS = ["Grade 7", "Grade 8", "Grade 9", "Grade 10"];
@@ -629,6 +615,7 @@
 
     function registrationApp() {
         return {
+            departmentsData: [],
             step: 'info',
             currentTime: '',
             submitting: false,
@@ -665,13 +652,14 @@
 
             get collegeOptions() {
                 if (!this.form.level) return [];
-                const options = new Set(DEPARTMENTS.filter(d => d.level === this.form.level).map(d => d.college));
-                return Array.from(options).sort();
+                return this.departmentsData.filter(d => d.level === this.form.level).map(d => d.name).sort();
             },
 
             get programOptions() {
                 if (!this.form.college) return [];
-                return DEPARTMENTS.filter(d => d.level === this.form.level && d.college === this.form.college).map(d => d.name).sort();
+                const dept = this.departmentsData.find(d => d.level === this.form.level && d.name === this.form.college);
+                if (!dept || !dept.programs) return [];
+                return dept.programs.map(p => p.name).sort();
             },
 
             get yearOptions() {
@@ -679,14 +667,34 @@
                 if (this.form.level === 'basic_ed') {
                     if (/junior/i.test(this.form.college)) return JHS_YEAR_LEVELS;
                     if (/senior/i.test(this.form.college)) return SHS_YEAR_LEVELS;
-                    return [];
+                    return ["Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12"];
+                }
+                if (this.form.department) {
+                    const dept = this.departmentsData.find(d => d.level === this.form.level && d.name === this.form.college);
+                    if (dept) {
+                        const prog = dept.programs.find(p => p.name === this.form.department);
+                        if (prog && prog.years) {
+                            return Array.from({length: prog.years}, (_, i) => {
+                                const num = i + 1;
+                                const suffix = ["st","nd","rd"][num-1] || "th";
+                                return `${num}${suffix} Year`;
+                            });
+                        }
+                    }
                 }
                 return COLLEGE_YEAR_LEVELS;
             },
 
-            init() {
+            async init() {
                 this.updateTime();
                 setInterval(() => this.updateTime(), 30000);
+                
+                try {
+                    const res = await fetch('/api/academics');
+                    this.departmentsData = await res.json();
+                } catch (e) {
+                    console.error("Failed to fetch academics", e);
+                }
             },
 
             updateTime() {

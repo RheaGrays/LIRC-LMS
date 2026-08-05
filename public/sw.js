@@ -1,11 +1,14 @@
-const CACHE_NAME = 'lems-kiosk-v2';
+const CACHE_NAME = 'lems-kiosk-v10';
 const ASSETS_TO_CACHE = [
     '/kiosk',
     '/cjc-logo.jpeg',
-    '/bg.jpg'
+    '/bg.jpg',
+    '/discussion_room.jpg',
+    '/quiet_zone.jpg'
 ];
 
 self.addEventListener('install', (event) => {
+    self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
             return cache.addAll(ASSETS_TO_CACHE);
@@ -24,28 +27,25 @@ self.addEventListener('fetch', (event) => {
         event.request.url.includes('/kiosk/last') || 
         event.request.url.includes('/kiosk/occupancy')) return;
 
+    // BYPASS CACHE FOR DEVELOPMENT: Always fetch from network first.
     event.respondWith(
-        caches.match(event.request).then((cachedResponse) => {
-            if (cachedResponse) {
-                return cachedResponse;
-            }
-            return fetch(event.request).then((response) => {
-                // Optionally cache new successful requests dynamically
-                if (!response || response.status !== 200 || response.type !== 'basic') {
-                    return response;
-                }
-                
-                // Don't cache dynamic data dynamically if we want fresh
-                if(event.request.url.includes('.js') || event.request.url.includes('.css')) {
-                    const responseToCache = response.clone();
-                    caches.open(CACHE_NAME).then((cache) => {
-                        cache.put(event.request, responseToCache);
-                    });
-                }
-                
+        fetch(event.request).then((response) => {
+            if (!response || response.status !== 200 || response.type !== 'basic') {
                 return response;
-            }).catch(() => {
-                // If offline and not in cache, fallback to kiosk root if it's a navigation
+            }
+            
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+                cache.put(event.request, responseToCache);
+            });
+            
+            return response;
+        }).catch(() => {
+            // If offline, fallback to cache
+            return caches.match(event.request).then((cachedResponse) => {
+                if (cachedResponse) {
+                    return cachedResponse;
+                }
                 if (event.request.mode === 'navigate') {
                     return caches.match('/kiosk');
                 }
@@ -65,6 +65,6 @@ self.addEventListener('activate', (event) => {
                     }
                 })
             );
-        })
+        }).then(() => self.clients.claim())
     );
 });

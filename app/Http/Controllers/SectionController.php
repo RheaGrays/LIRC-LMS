@@ -39,6 +39,31 @@ class SectionController extends Controller
         return response()->json(['success' => true]);
     }
 
+    /** POST /admin/sections/upload-image */
+    public function uploadImage(Request $request): JsonResponse
+    {
+        $request->validate([
+            'section_id' => ['required', 'string'],
+            'image'      => ['required', 'image', 'max:5120'], // 5MB max
+        ]);
+
+        $sectionId = $request->section_id;
+        $file = $request->file('image');
+        
+        $filename = "{$sectionId}.{$file->extension()}";
+        $path = $file->storeAs('sections', $filename, 'public');
+
+        // Update the SystemSetting
+        $images = \App\Models\SystemSetting::get('section_images', []);
+        $images[$sectionId] = "/storage/{$path}";
+        \App\Models\SystemSetting::set('section_images', $images);
+
+        return response()->json([
+            'success' => true,
+            'url'     => "/storage/{$path}"
+        ]);
+    }
+
     private function latestSections(): array
     {
         // Get only the latest row per section_code using a subquery

@@ -27,8 +27,9 @@ class SettingsController extends Controller
         ];
 
         $settings = array_merge($defaults, $settings);
+        $terms = \App\Models\AcademicTerm::orderBy('start_date', 'desc')->get();
 
-        return view('admin.settings.index', compact('admin', 'settings'));
+        return view('admin.settings.index', compact('admin', 'settings', 'terms'));
     }
 
     public function update(Request $request)
@@ -55,5 +56,39 @@ class SettingsController extends Controller
         }
 
         return back()->with('success', 'Settings saved successfully.');
+    }
+
+    public function storeTerm(Request $request)
+    {
+        $request->validate([
+            'academic_year' => 'required|string|max:50',
+            'semester' => 'required|string|max:50',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+            'holidays' => 'nullable|integer|min:0',
+            'status' => 'required|in:Active,Archived',
+        ]);
+        \App\Models\AcademicTerm::create($request->only('academic_year', 'semester', 'start_date', 'end_date', 'holidays', 'status'));
+        return redirect()->back()->with('success', 'Academic Term created successfully.');
+    }
+
+    public function updateTerm(Request $request, $id)
+    {
+        $request->validate([
+            'academic_year' => 'required|string|max:50',
+            'semester' => 'required|string|max:50',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+            'holidays' => 'nullable|integer|min:0',
+            'status' => 'required|in:Active,Archived',
+        ]);
+        \App\Models\AcademicTerm::findOrFail($id)->update($request->only('academic_year', 'semester', 'start_date', 'end_date', 'holidays', 'status'));
+        return redirect()->back()->with('success', 'Academic Term updated successfully.');
+    }
+
+    public function destroyTerm($id)
+    {
+        \App\Models\AcademicTerm::findOrFail($id)->delete();
+        return redirect()->back()->with('success', 'Academic Term deleted successfully.');
     }
 }

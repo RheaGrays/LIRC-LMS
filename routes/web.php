@@ -12,6 +12,7 @@ use App\Http\Controllers\SectionController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\AdminSignupController;
+use App\Http\Controllers\AcademicController;
 use Illuminate\Support\Facades\Route;
 
 // ── Root ─────────────────────────────────────────────────────
@@ -31,6 +32,7 @@ Route::prefix('kiosk')->name('kiosk.')->middleware('throttle:30,1')->group(funct
 // ── Student Registration (public) ─────────────────────────────
 Route::get('/register', [App\Http\Controllers\StudentRegistrationController::class, 'index'])->name('register.index');
 Route::post('/register', [App\Http\Controllers\StudentRegistrationController::class, 'store'])->name('register.store');
+Route::get('/api/academics', [App\Http\Controllers\AcademicController::class, 'apiData'])->name('api.academics');
 
 // ── Admin Auth ────────────────────────────────────────────────
 Route::prefix('admin')->name('admin.')->group(function () {
@@ -78,12 +80,29 @@ Route::prefix('admin')->name('admin.')->middleware('auth.admin')->group(function
     Route::get('/sections',        [SectionController::class, 'index'])->name('sections.index');
     Route::get('/sections/latest', [SectionController::class, 'latest'])->name('sections.latest');
     Route::post('/sections/upsert',[SectionController::class, 'upsert'])->name('sections.upsert');
+    Route::post('/sections/upload-image', [SectionController::class, 'uploadImage'])->name('sections.upload-image');
 
     // Settings (Super Admin only)
     Route::middleware('admin.role:Super Admin')->group(function () {
         Route::get('/settings',  [SettingsController::class, 'index'])->name('settings.index');
         Route::post('/settings', [SettingsController::class, 'update'])->name('settings.update');
+        
+        // Academic Terms (managed in Settings)
+        Route::post('/settings/terms', [SettingsController::class, 'storeTerm'])->name('settings.terms.store');
+        Route::put('/settings/terms/{id}', [SettingsController::class, 'updateTerm'])->name('settings.terms.update');
+        Route::delete('/settings/terms/{id}', [SettingsController::class, 'destroyTerm'])->name('settings.terms.destroy');
     });
+
+    // Academic Setup (all roles)
+    Route::get('/academics', [AcademicController::class, 'index'])->name('academics.index');
+    Route::post('/academics/departments', [AcademicController::class, 'storeDepartment'])->name('academics.departments.store');
+    Route::put('/academics/departments/{id}', [AcademicController::class, 'updateDepartment'])->name('academics.departments.update');
+    Route::delete('/academics/departments/{id}', [AcademicController::class, 'destroyDepartment'])->name('academics.departments.destroy');
+    
+    Route::post('/academics/programs', [AcademicController::class, 'storeProgram'])->name('academics.programs.store');
+    Route::put('/academics/programs/{id}', [AcademicController::class, 'updateProgram'])->name('academics.programs.update');
+    Route::delete('/academics/programs/{id}', [AcademicController::class, 'destroyProgram'])->name('academics.programs.destroy');
+
 
     // Approvals (Super Admin only)
     Route::middleware('admin.role:Super Admin')->group(function () {

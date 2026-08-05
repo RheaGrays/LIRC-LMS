@@ -4,7 +4,68 @@
 @section('header_title', 'System Settings')
 
 @section('admin_content')
-<div class="max-w-4xl space-y-6">
+<div class="max-w-7xl mx-auto space-y-6">
+
+    <div class="card mb-6 p-0 overflow-hidden fade-in-up">
+        <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white">
+            <div>
+                <h3 class="text-lg font-bold text-[var(--cjc-navy)]">Academic Term Management</h3>
+            </div>
+            <button type="button" onclick="document.getElementById('add-term-modal').classList.remove('hidden')" class="btn-primary text-sm px-4 py-2 flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                Add Term
+            </button>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left">
+                <thead class="text-xs text-gray-500 uppercase bg-gray-50/50 font-bold tracking-wider">
+                    <tr>
+                        <th class="px-6 py-4">Academic Year</th>
+                        <th class="px-6 py-4">Semester</th>
+                        <th class="px-6 py-4">Start Date</th>
+                        <th class="px-6 py-4">End Date</th>
+                        <th class="px-6 py-4">Holidays</th>
+                        <th class="px-6 py-4">Status</th>
+                        <th class="px-6 py-4 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    @forelse($terms as $term)
+                    <tr class="hover:bg-gray-50/50 transition-colors">
+                        <td class="px-6 py-4 font-bold text-[var(--cjc-navy)]">{{ $term->academic_year }}</td>
+                        <td class="px-6 py-4 text-gray-600">{{ $term->semester }}</td>
+                        <td class="px-6 py-4 text-gray-500">{{ $term->start_date->format('M d, Y') }}</td>
+                        <td class="px-6 py-4 text-gray-500">{{ $term->end_date->format('M d, Y') }}</td>
+                        <td class="px-6 py-4">
+                            <span class="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium border border-gray-200">{{ $term->holidays }} holidays</span>
+                        </td>
+                        <td class="px-6 py-4">
+                            @if($term->status === 'Active')
+                                <span class="px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium border border-green-200">Active</span>
+                            @else
+                                <span class="px-3 py-1 bg-gray-50 text-gray-600 rounded-full text-xs font-medium border border-gray-200">Archived</span>
+                            @endif
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <button type="button" onclick="editTerm({{ $term->id }}, '{{ addslashes($term->academic_year) }}', '{{ addslashes($term->semester) }}', '{{ $term->start_date->format('Y-m-d') }}', '{{ $term->end_date->format('Y-m-d') }}', {{ $term->holidays }}, '{{ $term->status }}')" class="text-blue-500 hover:text-blue-700 font-medium text-xs mr-3">Edit</button>
+                            <form action="{{ route('admin.settings.terms.destroy', $term->id) }}" method="POST" class="inline-block" onsubmit="return confirm('Are you sure you want to delete this term?');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="text-red-500 hover:text-red-700 font-medium text-xs">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="7" class="px-6 py-8 text-center text-gray-500 bg-gray-50/30">
+                            No academic terms found.
+                        </td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
 
     <div class="card p-0 overflow-hidden fade-in-up">
         <form action="{{ route('admin.settings.update') }}" method="POST">
@@ -74,4 +135,134 @@
         </form>
     </div>
 </div>
+
+<!-- Add Term Modal -->
+<div id="add-term-modal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="this.parentElement.classList.add('hidden')"></div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-xl shadow-2xl p-6">
+        <div class="flex justify-between items-center mb-5">
+            <h3 class="text-xl font-bold text-[var(--cjc-navy)]">Add Academic Term</h3>
+            <button type="button" onclick="this.closest('#add-term-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+        </div>
+        
+        <form action="{{ route('admin.settings.terms.store') }}" method="POST" class="space-y-4">
+            @csrf
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Academic Year</label>
+                    <input type="text" name="academic_year" class="input" placeholder="e.g. 2025-2026" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Semester</label>
+                    <select name="semester" class="input" required>
+                        <option value="1st Semester">1st Semester</option>
+                        <option value="2nd Semester">2nd Semester</option>
+                        <option value="Summer">Summer</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Start Date</label>
+                    <input type="date" name="start_date" class="input" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">End Date</label>
+                    <input type="date" name="end_date" class="input" required>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Holidays</label>
+                    <input type="number" name="holidays" class="input" value="0" min="0" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Status</label>
+                    <select name="status" class="input" required>
+                        <option value="Active">Active</option>
+                        <option value="Archived">Archived</option>
+                    </select>
+                </div>
+            </div>
+            <div class="pt-2 flex justify-end gap-3">
+                <button type="button" onclick="this.closest('#add-term-modal').classList.add('hidden')" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-md">Cancel</button>
+                <button type="submit" class="btn-primary">Save Term</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Term Modal -->
+<div id="edit-term-modal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="this.parentElement.classList.add('hidden')"></div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-xl shadow-2xl p-6">
+        <div class="flex justify-between items-center mb-5">
+            <h3 class="text-xl font-bold text-[var(--cjc-navy)]">Edit Academic Term</h3>
+            <button type="button" onclick="this.closest('#edit-term-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+        </div>
+        
+        <form id="edit-term-form" method="POST" class="space-y-4">
+            @csrf
+            @method('PUT')
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Academic Year</label>
+                    <input type="text" name="academic_year" id="edit-term-ay" class="input" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Semester</label>
+                    <select name="semester" id="edit-term-sem" class="input" required>
+                        <option value="1st Semester">1st Semester</option>
+                        <option value="2nd Semester">2nd Semester</option>
+                        <option value="Summer">Summer</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Start Date</label>
+                    <input type="date" name="start_date" id="edit-term-start" class="input" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">End Date</label>
+                    <input type="date" name="end_date" id="edit-term-end" class="input" required>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Holidays</label>
+                    <input type="number" name="holidays" id="edit-term-holidays" class="input" min="0" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Status</label>
+                    <select name="status" id="edit-term-status" class="input" required>
+                        <option value="Active">Active</option>
+                        <option value="Archived">Archived</option>
+                    </select>
+                </div>
+            </div>
+            <div class="pt-2 flex justify-end gap-3">
+                <button type="button" onclick="document.getElementById('edit-term-modal').classList.add('hidden')" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-md">Cancel</button>
+                <button type="submit" class="btn-primary">Update Term</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function editTerm(id, ay, sem, start, end, holidays, status) {
+        document.getElementById('edit-term-form').action = `/admin/settings/terms/${id}`;
+        document.getElementById('edit-term-ay').value = ay;
+        document.getElementById('edit-term-sem').value = sem;
+        document.getElementById('edit-term-start').value = start;
+        document.getElementById('edit-term-end').value = end;
+        document.getElementById('edit-term-holidays').value = holidays;
+        document.getElementById('edit-term-status').value = status;
+        document.getElementById('edit-term-modal').classList.remove('hidden');
+    }
+</script>
 @endsection

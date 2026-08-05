@@ -13,7 +13,13 @@
             <p class="text-sm text-gray-500">Visualize library foot traffic and trends</p>
         </div>
         <div class="flex items-center gap-3 w-full md:w-auto">
-            <select x-model="period" @change="fetchData()" class="input bg-white font-medium text-sm w-full md:w-48">
+            <select x-model="term_id" @change="fetchData()" class="input bg-white font-medium text-sm w-full md:w-48">
+                <option value="">By Term (All Time)</option>
+                @foreach($terms as $term)
+                    <option value="{{ $term->id }}">{{ $term->name }}</option>
+                @endforeach
+            </select>
+            <select x-model="period" @change="fetchData()" :disabled="term_id !== ''" class="input bg-white font-medium text-sm w-full md:w-48" :class="{'opacity-50': term_id !== ''}">
                 <option value="today">Today (Hourly)</option>
                 <option value="week">This Week (Daily)</option>
                 <option value="month">This Month (Daily)</option>
@@ -61,6 +67,7 @@
 document.addEventListener('alpine:init', () => {
     Alpine.data('analyticsApp', () => ({
         period: 'today',
+        term_id: '',
         loading: true,
         trafficChartInstance: null,
         deptChartInstance: null,
@@ -115,7 +122,11 @@ document.addEventListener('alpine:init', () => {
         async fetchData() {
             this.loading = true;
             try {
-                const response = await fetch(`/admin/analytics/data?period=${this.period}`);
+                let url = `/admin/analytics/data?period=${this.period}`;
+                if (this.term_id) {
+                    url += `&term_id=${this.term_id}`;
+                }
+                const response = await fetch(url);
                 const data = await response.json();
                 
                 // Update Traffic Chart
