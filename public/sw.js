@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lems-kiosk-v1';
+const CACHE_NAME = 'lems-kiosk-v2';
 const ASSETS_TO_CACHE = [
     '/kiosk',
     '/cjc-logo.jpeg',

@@ -187,17 +187,24 @@
                                 <label class="block text-[10px] font-bold tracking-[0.08em] uppercase text-[var(--text-muted)] font-['Inter'] mb-1.5">
                                     Level <span class="text-[var(--cjc-red)]">*</span>
                                 </label>
-                                <select
-                                    x-model="form.level"
-                                    @change="onLevelChange()"
-                                    class="w-full px-[13px] py-[10px] font-['JetBrains_Mono'] text-sm font-medium bg-white border rounded-[var(--radius-md)] text-[var(--cjc-navy)] outline-none transition-all duration-150 box-border focus:border-[var(--cjc-navy)] focus:shadow-[0_0_0_3px_rgba(15,39,68,0.08)] appearance-none bg-no-repeat bg-[right_12px_center] pr-9 cursor-pointer"
-                                    :class="{'border-[#dc2626]': errors.level, 'border-[var(--border-light)]': !errors.level}"
-                                    style="background-image: url('data:image/svg+xml,%3Csvg width=\'12\' height=\'8\' viewBox=\'0 0 12 8\' fill=\'none\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M1 1l5 5 5-5\' stroke=\'%236b7280\' stroke-width=\'1.5\' stroke-linecap=\'round\'/%3E%3C/svg%3E');"
-                                >
-                                    <option value="">— Select Level —</option>
-                                    <option value="college">College</option>
-                                    <option value="basic_ed">Basic Education</option>
-                                </select>
+                                <div class="relative" x-data="{ open: false }">
+                                    <button type="button" @click="open = !open" 
+                                        class="w-full px-[13px] py-[10px] text-left font-['JetBrains_Mono'] text-sm font-medium bg-white border rounded-[var(--radius-md)] text-[var(--cjc-navy)] outline-none transition-all duration-150 flex justify-between items-center focus:border-[var(--cjc-navy)] focus:shadow-[0_0_0_3px_rgba(15,39,68,0.08)]"
+                                        :class="{'border-[#dc2626]': errors.level, 'border-[var(--border-light)]': !errors.level}">
+                                        <span x-text="form.level === 'college' ? 'College' : (form.level === 'basic_ed' ? 'Basic Education' : '— Select Level —')"></span>
+                                        <svg class="w-4 h-4 text-gray-500 transition-transform duration-200" :class="{'rotate-180': open}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                                    </button>
+                                    <div x-show="open" @click.away="open = false" x-transition.opacity.duration.200ms class="absolute z-50 w-full mt-1 bg-white border border-[var(--border-light)] rounded-[var(--radius-md)] shadow-lg overflow-hidden" style="display: none;">
+                                        <template x-for="opt in [{value: 'college', label: 'College'}, {value: 'basic_ed', label: 'Basic Education'}]">
+                                            <div @click="form.level = opt.value; onLevelChange(); open = false" 
+                                                 class="px-[13px] py-2.5 text-sm font-['JetBrains_Mono'] cursor-pointer transition-colors hover:bg-gray-50 flex items-center justify-between" 
+                                                 :class="form.level === opt.value ? 'text-[var(--cjc-red)] bg-red-50/50' : 'text-[var(--cjc-navy)]'">
+                                                <span x-text="opt.label"></span>
+                                                <svg x-show="form.level === opt.value" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
                                 <template x-if="errors.level">
                                     <p class="text-[11px] text-[#dc2626] font-['Inter'] mt-1" x-text="errors.level"></p>
                                 </template>
@@ -215,23 +222,29 @@
                                     <span x-text="form.level === 'basic_ed' ? 'Department' : 'College / School'"></span>
                                     <span :class="form.level ? 'text-[var(--cjc-red)]' : 'text-red-300'">*</span>
                                 </label>
-                                <select
-                                    x-model="form.college"
-                                    @change="onCollegeChange()"
-                                    :disabled="!form.level"
-                                    class="w-full px-[13px] py-[10px] font-['JetBrains_Mono'] text-sm font-medium border rounded-[var(--radius-md)] text-[var(--cjc-navy)] outline-none transition-all duration-150 box-border focus:border-[var(--cjc-navy)] focus:shadow-[0_0_0_3px_rgba(15,39,68,0.08)] appearance-none bg-no-repeat bg-[right_12px_center] pr-9"
-                                    :class="{
-                                        'border-[#dc2626] bg-white cursor-pointer': errors.college && form.level, 
-                                        'border-[var(--border-light)] bg-white cursor-pointer': !errors.college && form.level,
-                                        'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed opacity-50': !form.level
-                                    }"
-                                    :style="!form.level ? 'background-image: url(\'data:image/svg+xml,%3Csvg width=12 height=8 viewBox=0 0 12 8 fill=none xmlns=http://www.w3.org/2000/svg%3E%3Cpath d=M1 1l5 5 5-5 stroke=%23d1d5db stroke-width=1.5 stroke-linecap=round/%3E%3C/svg%3E\');' : 'background-image: url(\'data:image/svg+xml,%3Csvg width=12 height=8 viewBox=0 0 12 8 fill=none xmlns=http://www.w3.org/2000/svg%3E%3Cpath d=M1 1l5 5 5-5 stroke=%236b7280 stroke-width=1.5 stroke-linecap=round/%3E%3C/svg%3E\');'"
-                                >
-                                    <option value="" x-text="!form.level ? 'Select a level first' : (form.level === 'basic_ed' ? '— Select Department —' : '— Select College —')"></option>
-                                    <template x-for="c in collegeOptions" :key="c">
-                                        <option :value="c" x-text="c"></option>
-                                    </template>
-                                </select>
+                                <div class="relative" x-data="{ open: false }">
+                                    <button type="button" @click="if(form.level) open = !open" 
+                                        :disabled="!form.level"
+                                        class="w-full px-[13px] py-[10px] text-left font-['JetBrains_Mono'] text-sm font-medium border rounded-[var(--radius-md)] text-[var(--cjc-navy)] outline-none transition-all duration-150 flex justify-between items-center focus:border-[var(--cjc-navy)] focus:shadow-[0_0_0_3px_rgba(15,39,68,0.08)]"
+                                        :class="{
+                                            'border-[#dc2626] bg-white cursor-pointer': errors.college && form.level, 
+                                            'border-[var(--border-light)] bg-white cursor-pointer': !errors.college && form.level,
+                                            'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed opacity-50': !form.level
+                                        }">
+                                        <span class="truncate pr-4" x-text="form.college ? form.college : (!form.level ? 'Select a level first' : (form.level === 'basic_ed' ? '— Select Department —' : '— Select College —'))"></span>
+                                        <svg class="w-4 h-4 transition-transform duration-200 shrink-0" :class="{'rotate-180': open, 'text-gray-300': !form.level, 'text-gray-500': form.level}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                                    </button>
+                                    <div x-show="open" @click.away="open = false" x-transition.opacity.duration.200ms class="absolute z-50 w-full mt-1 bg-white border border-[var(--border-light)] rounded-[var(--radius-md)] shadow-lg overflow-hidden max-h-60 overflow-y-auto" style="display: none;">
+                                        <template x-for="c in collegeOptions" :key="c">
+                                            <div @click="form.college = c; onCollegeChange(); open = false" 
+                                                 class="px-[13px] py-2.5 text-sm font-['JetBrains_Mono'] cursor-pointer transition-colors hover:bg-gray-50 flex items-center justify-between" 
+                                                 :class="form.college === c ? 'text-[var(--cjc-red)] bg-red-50/50' : 'text-[var(--cjc-navy)]'">
+                                                <span x-text="c"></span>
+                                                <svg x-show="form.college === c" class="w-4 h-4 shrink-0 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
                                 <template x-if="errors.college">
                                     <p class="text-[11px] text-[#dc2626] font-['Inter'] mt-1" x-text="errors.college"></p>
                                 </template>
@@ -249,23 +262,29 @@
                                                :class="form.college ? 'text-[var(--text-muted)]' : 'text-gray-300'">
                                             Program / Course <span :class="form.college ? 'text-[var(--cjc-red)]' : 'text-red-300'">*</span>
                                         </label>
-                                        <select
-                                            x-model="form.department"
-                                            @change="errors.department = ''"
-                                            :disabled="!form.college"
-                                            class="w-full px-[13px] py-[10px] font-['JetBrains_Mono'] text-sm font-medium border rounded-[var(--radius-md)] text-[var(--cjc-navy)] outline-none transition-all duration-150 box-border focus:border-[var(--cjc-navy)] focus:shadow-[0_0_0_3px_rgba(15,39,68,0.08)] appearance-none bg-no-repeat bg-[right_12px_center] pr-9"
-                                            :class="{
-                                                'border-[#dc2626] bg-white cursor-pointer': errors.department && form.college, 
-                                                'border-[var(--border-light)] bg-white cursor-pointer': !errors.department && form.college,
-                                                'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed opacity-50': !form.college
-                                            }"
-                                            :style="!form.college ? 'background-image: url(\'data:image/svg+xml,%3Csvg width=12 height=8 viewBox=0 0 12 8 fill=none xmlns=http://www.w3.org/2000/svg%3E%3Cpath d=M1 1l5 5 5-5 stroke=%23d1d5db stroke-width=1.5 stroke-linecap=round/%3E%3C/svg%3E\');' : 'background-image: url(\'data:image/svg+xml,%3Csvg width=12 height=8 viewBox=0 0 12 8 fill=none xmlns=http://www.w3.org/2000/svg%3E%3Cpath d=M1 1l5 5 5-5 stroke=%236b7280 stroke-width=1.5 stroke-linecap=round/%3E%3C/svg%3E\');'"
-                                        >
-                                            <option value="" x-text="!form.college ? 'Select a college first' : '— Select Program —'"></option>
-                                            <template x-for="p in programOptions" :key="p">
-                                                <option :value="p" x-text="p"></option>
-                                            </template>
-                                        </select>
+                                        <div class="relative" x-data="{ open: false }">
+                                            <button type="button" @click="if(form.college) open = !open" 
+                                                :disabled="!form.college"
+                                                class="w-full px-[13px] py-[10px] text-left font-['JetBrains_Mono'] text-sm font-medium border rounded-[var(--radius-md)] text-[var(--cjc-navy)] outline-none transition-all duration-150 flex justify-between items-center focus:border-[var(--cjc-navy)] focus:shadow-[0_0_0_3px_rgba(15,39,68,0.08)]"
+                                                :class="{
+                                                    'border-[#dc2626] bg-white cursor-pointer': errors.department && form.college, 
+                                                    'border-[var(--border-light)] bg-white cursor-pointer': !errors.department && form.college,
+                                                    'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed opacity-50': !form.college
+                                                }">
+                                                <span class="truncate pr-4" x-text="form.department ? form.department : (!form.college ? 'Select a college first' : '— Select Program —')"></span>
+                                                <svg class="w-4 h-4 transition-transform duration-200 shrink-0" :class="{'rotate-180': open, 'text-gray-300': !form.college, 'text-gray-500': form.college}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                                            </button>
+                                            <div x-show="open" @click.away="open = false" x-transition.opacity.duration.200ms class="absolute z-50 w-full mt-1 bg-white border border-[var(--border-light)] rounded-[var(--radius-md)] shadow-lg max-h-60 overflow-y-auto" style="display: none;">
+                                                <template x-for="p in programOptions" :key="p">
+                                                    <div @click="form.department = p; errors.department = ''; open = false" 
+                                                         class="px-[13px] py-2.5 text-sm font-['JetBrains_Mono'] cursor-pointer transition-colors hover:bg-gray-50 flex items-center justify-between" 
+                                                         :class="form.department === p ? 'text-[var(--cjc-red)] bg-red-50/50' : 'text-[var(--cjc-navy)]'">
+                                                        <span class="truncate" x-text="p"></span>
+                                                        <svg x-show="form.department === p" class="w-4 h-4 shrink-0 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
                                         <template x-if="errors.department">
                                             <p class="text-[11px] text-[#dc2626] font-['Inter'] mt-1" x-text="errors.department"></p>
                                         </template>
@@ -281,23 +300,29 @@
                                 <span x-text="form.level === 'basic_ed' ? 'Grade Level' : 'Year Level'"></span>
                                 <span :class="form.level ? 'text-[var(--cjc-red)]' : 'text-red-300'">*</span>
                             </label>
-                            <select
-                                x-model="form.yearLevel"
-                                @change="errors.yearLevel = ''"
-                                :disabled="!form.level || (form.level === 'basic_ed' && !form.college)"
-                                class="w-full px-[13px] py-[10px] font-['JetBrains_Mono'] text-sm font-medium border rounded-[var(--radius-md)] text-[var(--cjc-navy)] outline-none transition-all duration-150 box-border focus:border-[var(--cjc-navy)] focus:shadow-[0_0_0_3px_rgba(15,39,68,0.08)] appearance-none bg-no-repeat bg-[right_12px_center] pr-9"
-                                :class="{
-                                    'border-[#dc2626] bg-white cursor-pointer': errors.yearLevel && form.level, 
-                                    'border-[var(--border-light)] bg-white cursor-pointer': !errors.yearLevel && form.level && !(form.level === 'basic_ed' && !form.college),
-                                    'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed opacity-50': !form.level || (form.level === 'basic_ed' && !form.college)
-                                }"
-                                :style="(!form.level || (form.level === 'basic_ed' && !form.college)) ? 'background-image: url(\'data:image/svg+xml,%3Csvg width=12 height=8 viewBox=0 0 12 8 fill=none xmlns=http://www.w3.org/2000/svg%3E%3Cpath d=M1 1l5 5 5-5 stroke=%23d1d5db stroke-width=1.5 stroke-linecap=round/%3E%3C/svg%3E\');' : 'background-image: url(\'data:image/svg+xml,%3Csvg width=12 height=8 viewBox=0 0 12 8 fill=none xmlns=http://www.w3.org/2000/svg%3E%3Cpath d=M1 1l5 5 5-5 stroke=%236b7280 stroke-width=1.5 stroke-linecap=round/%3E%3C/svg%3E\');'"
-                            >
-                                <option value="" x-text="!form.level ? 'Select a level first' : (form.level === 'basic_ed' && !form.college ? 'Select a department first' : (form.level === 'basic_ed' ? '— Select Grade —' : '— Select Year —'))"></option>
-                                <template x-for="y in yearOptions" :key="y">
-                                    <option :value="y" x-text="y"></option>
-                                </template>
-                            </select>
+                            <div class="relative" x-data="{ open: false }">
+                                <button type="button" @click="if(form.level && !(form.level === 'basic_ed' && !form.college)) open = !open" 
+                                    :disabled="!form.level || (form.level === 'basic_ed' && !form.college)"
+                                    class="w-full px-[13px] py-[10px] text-left font-['JetBrains_Mono'] text-sm font-medium border rounded-[var(--radius-md)] text-[var(--cjc-navy)] outline-none transition-all duration-150 flex justify-between items-center focus:border-[var(--cjc-navy)] focus:shadow-[0_0_0_3px_rgba(15,39,68,0.08)]"
+                                    :class="{
+                                        'border-[#dc2626] bg-white cursor-pointer': errors.yearLevel && form.level, 
+                                        'border-[var(--border-light)] bg-white cursor-pointer': !errors.yearLevel && form.level && !(form.level === 'basic_ed' && !form.college),
+                                        'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed opacity-50': !form.level || (form.level === 'basic_ed' && !form.college)
+                                    }">
+                                    <span class="truncate pr-4" x-text="form.yearLevel ? form.yearLevel : (!form.level ? 'Select a level first' : (form.level === 'basic_ed' && !form.college ? 'Select a department first' : (form.level === 'basic_ed' ? '— Select Grade —' : '— Select Year —')))"></span>
+                                    <svg class="w-4 h-4 transition-transform duration-200 shrink-0" :class="{'rotate-180': open, 'text-gray-300': !form.level || (form.level === 'basic_ed' && !form.college), 'text-gray-500': form.level && !(form.level === 'basic_ed' && !form.college)}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                                </button>
+                                <div x-show="open" @click.away="open = false" x-transition.opacity.duration.200ms class="absolute z-50 w-full mt-1 bg-white border border-[var(--border-light)] rounded-[var(--radius-md)] shadow-lg max-h-60 overflow-y-auto" style="display: none;">
+                                    <template x-for="y in yearOptions" :key="y">
+                                        <div @click="form.yearLevel = y; errors.yearLevel = ''; open = false" 
+                                             class="px-[13px] py-2.5 text-sm font-['JetBrains_Mono'] cursor-pointer transition-colors hover:bg-gray-50 flex items-center justify-between" 
+                                             :class="form.yearLevel === y ? 'text-[var(--cjc-red)] bg-red-50/50' : 'text-[var(--cjc-navy)]'">
+                                            <span x-text="y"></span>
+                                            <svg x-show="form.yearLevel === y" class="w-4 h-4 shrink-0 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
                             <template x-if="errors.yearLevel">
                                 <p class="text-[11px] text-[#dc2626] font-['Inter'] mt-1" x-text="errors.yearLevel"></p>
                             </template>

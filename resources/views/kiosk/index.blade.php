@@ -75,17 +75,17 @@
                         <span class="opacity-60">LEMS · System v1.0</span>
                     </p>
                     <div class="flex items-center gap-2 mt-2 justify-end">
-                        <a href="{{ route('register.index') }}" @click.stop class="inline-flex items-center gap-1.5 text-[11px] font-medium text-[var(--text-subtle)] font-['Inter'] no-underline px-2.5 py-1 border border-[var(--border-warm)] rounded-[var(--radius-sm)] bg-white/60 hover:text-[var(--cjc-navy)] hover:border-[var(--cjc-navy)] transition-colors">
-                            <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-                                <circle cx="5.5" cy="4" r="2" stroke="currentColor" stroke-width="1.2"/>
-                                <path d="M2.5 9.5a3 3 0 016 0" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                        <a href="{{ route('register.index') }}" @click.stop class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-gray-900 font-['Inter'] no-underline px-3 py-1.5 border border-black shadow-sm rounded-lg bg-white hover:text-white hover:bg-black transition-all" style="border: 1.5px solid black !important; background-color: white !important; color: black !important; opacity: 1 !important; box-shadow: 0 1px 4px rgba(0,0,0,0.3) !important;">
+                            <svg width="12" height="12" viewBox="0 0 11 11" fill="none">
+                                <circle cx="5.5" cy="4" r="2" stroke="currentColor" stroke-width="1.5"/>
+                                <path d="M2.5 9.5a3 3 0 016 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
                             </svg>
                             Register
                         </a>
-                        <a href="{{ route('admin.login') }}" @click.stop class="inline-flex items-center gap-1.5 text-[11px] font-medium text-[var(--text-subtle)] font-['Inter'] no-underline px-2.5 py-1 border border-[var(--border-warm)] rounded-[var(--radius-sm)] bg-white/60 hover:text-[var(--cjc-navy)] hover:border-[var(--cjc-navy)] transition-colors">
-                            <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-                                <rect x="1" y="1" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
-                                <path d="M3.5 5.5h4M5.5 3.5v4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                        <a href="{{ route('admin.login') }}" @click.stop class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-gray-900 font-['Inter'] no-underline px-3 py-1.5 border border-black shadow-sm rounded-lg bg-white hover:text-white hover:bg-black transition-all" style="border: 1.5px solid black !important; background-color: white !important; color: black !important; opacity: 1 !important; box-shadow: 0 1px 4px rgba(0,0,0,0.3) !important;">
+                            <svg width="12" height="12" viewBox="0 0 11 11" fill="none">
+                                <rect x="1" y="1" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+                                <path d="M3.5 5.5h4M5.5 3.5v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
                             </svg>
                             Admin
                         </a>
