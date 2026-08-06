@@ -37,17 +37,12 @@
         <template x-if="result?.status === 'success'">
             <div>
                 <div class="text-center mb-6">
-                    <div class="inline-flex items-center justify-center p-3 rounded-full mb-3 shadow-sm"
-                         :class="result?.action === 'check_in' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'">
-                        <svg x-show="result?.action === 'check_in'" class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div class="inline-flex items-center justify-center p-3 rounded-full mb-3 shadow-sm bg-green-100 text-green-700">
+                        <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
                         </svg>
-                        <svg x-show="result?.action === 'check_out'" class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                        </svg>
                     </div>
-                    <h3 class="text-3xl font-bold tracking-tight text-[var(--cjc-navy)]"
-                        x-text="result?.action === 'check_in' ? 'Welcome!' : 'Time Out!'"></h3>
+                    <h3 class="text-3xl font-bold tracking-tight text-[var(--cjc-navy)]">Welcome!</h3>
                     <p class="text-gray-500 font-medium mt-1" x-text="result?.message"></p>
                 </div>
                 

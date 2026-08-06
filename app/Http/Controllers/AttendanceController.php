@@ -86,14 +86,8 @@ class AttendanceController extends Controller
             ]);
         }
 
-        // Determine next action
-        $today = now()->startOfDay();
-        $lastLog = AttendanceLog::query()->where('student_id', $student->id)
-            ->where('logged_at', '>=', $today)
-            ->orderByDesc('logged_at')
-            ->first();
-            
-        $nextAction = ($lastLog && $lastLog->action === 'check_in') ? 'check_out' : 'check_in';
+        // Always log as check_in (as requested by librarian, no check-out)
+        $nextAction = 'check_in';
 
         // Log action
         AttendanceLog::create([
@@ -105,7 +99,7 @@ class AttendanceController extends Controller
         return response()->json([
             'status'  => 'success',
             'action'  => $nextAction,
-            'message' => $nextAction === 'check_in' ? 'Successfully checked in.' : 'Successfully checked out.',
+            'message' => 'Successfully checked in.',
             'student' => $this->formatStudent($student)
         ]);
     }
