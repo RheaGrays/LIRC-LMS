@@ -244,7 +244,7 @@
 <script>
 function sectionCounter() {
     return {
-        sections: {!! json_encode($logs) !!},
+        sections: @json($logs),
         activeSection: null,
         modalOpen: false,
         
@@ -257,7 +257,7 @@ function sectionCounter() {
 
         initData() {
             if(this.sections.length === 0) {
-                let defaultNames = {!! json_encode($settings['library_sections'] ?? ['General Reading', 'Discussion Room', 'Internet Section', 'Periodicals']) !!};
+                let defaultNames = @json($settings['library_sections'] ?? ['General Reading', 'Discussion Room', 'Internet Section', 'Periodicals']);
                 this.sections = defaultNames.map(name => {
                     return {
                         id: name.substring(0, 3).toUpperCase(),

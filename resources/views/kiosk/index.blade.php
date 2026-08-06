@@ -246,7 +246,7 @@
     <script>
         function kioskSlideshow() {
             return {
-                images: {!! json_encode($slideshowImages) !!},
+                images: @json($slideshowImages),
                 currentIndex: 0,
                 timer: null,
                 init() {
