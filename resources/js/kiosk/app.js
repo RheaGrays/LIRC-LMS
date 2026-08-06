@@ -227,12 +227,12 @@ const registerApp = () => {
                 this.isProcessing = false;
                 this.manualId = '';
                 
-                if (this.result?.status === 'success' || this.result?.status === 'offline') {
-                    this.resetTimeout = setTimeout(() => {
-                        this.result = null;
-                        this.handleActivity();
-                    }, 4000);
-                }
+                const timeoutMs = (this.result?.status === 'success' || this.result?.status === 'offline') ? 8000 : 5000;
+                
+                this.resetTimeout = setTimeout(() => {
+                    this.result = null;
+                    this.handleActivity();
+                }, timeoutMs);
             }
         },
         
