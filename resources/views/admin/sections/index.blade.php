@@ -119,12 +119,16 @@
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 text-right">
-                                    <button @click="openModal(section)" class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-[var(--cjc-navy)] bg-blue-50/50 hover:bg-blue-100 border border-blue-100 rounded-lg transition-colors">
-                                        Log Seats
-                                        <svg class="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                        </svg>
-                                    </button>
+                                    <div class="inline-flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-lg p-1 shadow-sm">
+                                        <button @click="activeSection = section; updateSection(-1)" :disabled="section.occupied <= 0" 
+                                                class="w-8 h-8 rounded-md flex items-center justify-center text-gray-500 hover:bg-red-50 hover:text-red-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M20 12H4"></path></svg>
+                                        </button>
+                                        <button @click="activeSection = section; updateSection(1)" :disabled="section.occupied >= section.total" 
+                                                class="w-8 h-8 rounded-md flex items-center justify-center text-gray-500 hover:bg-green-50 hover:text-green-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         </template>
@@ -172,72 +176,7 @@
 
     </div>
 
-    <!-- Tap Modal (Native LEMS Design) -->
-    <div x-show="modalOpen" x-cloak class="fixed inset-0 z-[100] flex items-center justify-center">
-        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="closeModal()" x-show="modalOpen" x-transition.opacity></div>
-        
-        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 z-10 mx-4" x-show="modalOpen" x-transition.scale.origin.bottom>
-            
-            <!-- Modal Header -->
-            <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
-                <h2 class="font-bold text-[var(--cjc-navy)] uppercase tracking-wider text-sm">Log Seat Activity</h2>
-                <button @click="closeModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-            </div>
-            
-            <!-- Section Info -->
-            <div class="text-center mb-8">
-                <div class="inline-block px-3 py-1 bg-gray-100 text-[var(--text-muted)] font-bold text-xs rounded-md mb-3 tracking-wider">
-                    <span x-text="activeSection?.id"></span>
-                </div>
-                <h3 class="text-3xl font-bold text-[var(--cjc-navy)] leading-tight mb-2" x-text="activeSection?.name"></h3>
-                <p class="text-[var(--text-subtle)] text-sm font-medium">
-                    <span :class="activeSection?.occupied >= activeSection?.total ? 'text-[var(--cjc-red)]' : ''">
-                        <span x-text="activeSection?.occupied"></span> / <span x-text="activeSection?.total"></span> Seats Occupied
-                    </span>
-                </p>
-            </div>
-            
-            <!-- Interactive Counter -->
-            <div class="flex items-center justify-center gap-6 mb-8">
-                <!-- Minus Button -->
-                <button @click="updateSection(-1)" :disabled="activeSection?.occupied <= 0" 
-                        class="w-14 h-14 rounded-full flex items-center justify-center bg-gray-50 border border-gray-200 text-gray-500 hover:bg-red-50 hover:border-red-200 hover:text-red-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M20 12H4"></path></svg>
-                </button>
-                
-                <!-- Center Number -->
-                <div class="w-20 text-center flex-shrink-0">
-                    <span class="text-6xl font-black transition-colors duration-300" 
-                          :class="activeSection?.occupied >= activeSection?.total ? 'text-[var(--cjc-red)]' : 'text-[var(--cjc-navy)]'" 
-                          x-text="activeSection?.occupied"></span>
-                </div>
-                
-                <!-- Plus Button -->
-                <button @click="updateSection(1)" :disabled="activeSection?.occupied >= activeSection?.total" 
-                        class="w-14 h-14 rounded-full flex items-center justify-center bg-gray-50 border border-gray-200 text-gray-500 hover:bg-green-50 hover:border-green-200 hover:text-green-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
-                </button>
-            </div>
-            
-            <!-- Progress Line -->
-            <div class="w-full bg-gray-100 rounded-full h-1.5 mb-4 overflow-hidden">
-                <div class="h-1.5 rounded-full transition-all duration-500 ease-out bg-[var(--cjc-navy)]" 
-                     :class="{'bg-[var(--cjc-red)]': activeSection?.occupied >= activeSection?.total}"
-                     :style="`width: ${(activeSection?.occupied / activeSection?.total) * 100}%`"></div>
-            </div>
-            
-            <!-- Footer text -->
-            <div class="text-center">
-                <p class="text-[11px] text-gray-400 font-bold uppercase tracking-wider flex items-center justify-center gap-1">
-                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                    Changes saved automatically
-                </p>
-            </div>
-            
-        </div>
-    </div>
+    <!-- Modal removed in favor of inline counters -->
 
 </div>
 

@@ -69,10 +69,6 @@
                 <!-- CTA Button (Above container) -->
                 <div class="fade-in-up delay-3 shrink-0">
                     <div class="flex items-center gap-3 bg-white/80 backdrop-blur-md px-7 py-3 rounded-full border border-[var(--border-warm)] shadow-md cursor-pointer hover:bg-white hover:scale-105 transition-all animate-bounce-slow" @click="activate()">
-                        <span class="relative flex h-3 w-3">
-                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--cjc-red)] opacity-75"></span>
-                            <span class="relative inline-flex rounded-full h-3 w-3 bg-[var(--cjc-red)]"></span>
-                        </span>
                         <span class="font-['Inter'] text-[15px] font-bold text-[var(--cjc-navy)] tracking-wide">
                             Present your ID to begin
                         </span>

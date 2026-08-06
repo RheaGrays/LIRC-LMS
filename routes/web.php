@@ -40,6 +40,9 @@ Route::middleware('throttle:5,1')->group(function () {
     Route::post('/register', [App\Http\Controllers\StudentRegistrationController::class, 'store'])->name('register.store');
 });
 
+// Public API for Academic Departments (Needed for Student Registration dropdowns)
+Route::get('/api/academics', [AcademicController::class, 'apiData'])->name('api.academics');
+
 // ── Admin Auth ────────────────────────────────────────────────
 Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/login',  [AdminAuthController::class, 'showLogin'])->name('login');
@@ -108,9 +111,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth.admin')->group(function
     // Academic Setup (all roles)
     Route::get('/academics', [AcademicController::class, 'index'])->name('academics.index');
 
-    // Critical Fix #3: /api/academics moved inside auth.admin middleware group.
-    // Previously public — exposed all department/program data without authentication.
-    Route::get('/api/academics', [AcademicController::class, 'apiData'])->name('api.academics');
+    // Route::get('/api/academics', ...) has been moved to public routes for Registration page
     Route::post('/academics/departments', [AcademicController::class, 'storeDepartment'])->name('academics.departments.store');
     Route::put('/academics/departments/{id}', [AcademicController::class, 'updateDepartment'])->name('academics.departments.update');
     Route::delete('/academics/departments/{id}', [AcademicController::class, 'destroyDepartment'])->name('academics.departments.destroy');

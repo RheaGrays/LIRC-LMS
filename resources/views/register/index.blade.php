@@ -194,10 +194,10 @@
                                         <span x-text="form.level === 'college' ? 'College' : (form.level === 'basic_ed' ? 'Basic Education' : '— Select Level —')"></span>
                                         <svg class="w-4 h-4 text-gray-500 transition-transform duration-200" :class="{'rotate-180': open}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                                     </button>
-                                    <div x-show="open" @click.away="open = false" x-transition.opacity.duration.200ms class="absolute z-50 w-full mt-1 bg-white border border-[var(--border-light)] rounded-[var(--radius-md)] shadow-lg overflow-hidden" style="display: none;">
+                                    <div x-show="open" @click.away="open = false" x-transition.opacity.duration.200ms class="absolute z-50 w-full mt-1 bg-white border border-[var(--border-light)] rounded-[var(--radius-md)] shadow-lg overflow-hidden py-1" style="display: none;">
                                         <template x-for="opt in [{value: 'college', label: 'College'}, {value: 'basic_ed', label: 'Basic Education'}]">
                                             <div @click="form.level = opt.value; onLevelChange(); open = false" 
-                                                 class="px-[13px] py-2.5 text-sm font-['JetBrains_Mono'] cursor-pointer transition-colors hover:bg-gray-50 flex items-center justify-between" 
+                                                 class="px-[13px] py-1.5 text-sm font-['JetBrains_Mono'] cursor-pointer transition-colors hover:bg-gray-50 flex items-center justify-between" 
                                                  :class="form.level === opt.value ? 'text-[var(--cjc-red)] bg-red-50/50' : 'text-[var(--cjc-navy)]'">
                                                 <span x-text="opt.label"></span>
                                                 <svg x-show="form.level === opt.value" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
@@ -234,10 +234,10 @@
                                         <span class="truncate pr-4" x-text="form.college ? form.college : (!form.level ? 'Select a level first' : (form.level === 'basic_ed' ? '— Select Department —' : '— Select College —'))"></span>
                                         <svg class="w-4 h-4 transition-transform duration-200 shrink-0" :class="{'rotate-180': open, 'text-gray-300': !form.level, 'text-gray-500': form.level}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                                     </button>
-                                    <div x-show="open" @click.away="open = false" x-transition.opacity.duration.200ms class="absolute z-50 w-full mt-1 bg-white border border-[var(--border-light)] rounded-[var(--radius-md)] shadow-lg overflow-hidden max-h-60 overflow-y-auto" style="display: none;">
+                                    <div x-show="open" @click.away="open = false" x-transition.opacity.duration.200ms class="absolute z-50 w-full mt-1 bg-white border border-[var(--border-light)] rounded-[var(--radius-md)] shadow-lg overflow-hidden max-h-60 overflow-y-auto py-1" style="display: none;">
                                         <template x-for="c in collegeOptions" :key="c">
                                             <div @click="form.college = c; onCollegeChange(); open = false" 
-                                                 class="px-[13px] py-2.5 text-sm font-['JetBrains_Mono'] cursor-pointer transition-colors hover:bg-gray-50 flex items-center justify-between" 
+                                                 class="px-[13px] py-1.5 text-sm font-['JetBrains_Mono'] cursor-pointer transition-colors hover:bg-gray-50 flex items-center justify-between" 
                                                  :class="form.college === c ? 'text-[var(--cjc-red)] bg-red-50/50' : 'text-[var(--cjc-navy)]'">
                                                 <span x-text="c"></span>
                                                 <svg x-show="form.college === c" class="w-4 h-4 shrink-0 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
@@ -274,10 +274,10 @@
                                                 <span class="truncate pr-4" x-text="form.department ? form.department : (!form.college ? 'Select a college first' : '— Select Program —')"></span>
                                                 <svg class="w-4 h-4 transition-transform duration-200 shrink-0" :class="{'rotate-180': open, 'text-gray-300': !form.college, 'text-gray-500': form.college}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                                             </button>
-                                            <div x-show="open" @click.away="open = false" x-transition.opacity.duration.200ms class="absolute z-50 w-full mt-1 bg-white border border-[var(--border-light)] rounded-[var(--radius-md)] shadow-lg max-h-60 overflow-y-auto" style="display: none;">
+                                            <div x-show="open" @click.away="open = false" x-transition.opacity.duration.200ms class="absolute z-50 w-full mt-1 bg-white border border-[var(--border-light)] rounded-[var(--radius-md)] shadow-lg overflow-hidden max-h-60 overflow-y-auto py-1" style="display: none;">
                                                 <template x-for="p in programOptions" :key="p">
                                                     <div @click="form.department = p; errors.department = ''; open = false" 
-                                                         class="px-[13px] py-2.5 text-sm font-['JetBrains_Mono'] cursor-pointer transition-colors hover:bg-gray-50 flex items-center justify-between" 
+                                                         class="px-[13px] py-1.5 text-sm font-['JetBrains_Mono'] cursor-pointer transition-colors hover:bg-gray-50 flex items-center justify-between" 
                                                          :class="form.department === p ? 'text-[var(--cjc-red)] bg-red-50/50' : 'text-[var(--cjc-navy)]'">
                                                         <span class="truncate" x-text="p"></span>
                                                         <svg x-show="form.department === p" class="w-4 h-4 shrink-0 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
@@ -312,10 +312,10 @@
                                     <span class="truncate pr-4" x-text="form.yearLevel ? form.yearLevel : (!form.level ? 'Select a level first' : (form.level === 'basic_ed' && !form.college ? 'Select a department first' : (form.level === 'basic_ed' ? '— Select Grade —' : '— Select Year —')))"></span>
                                     <svg class="w-4 h-4 transition-transform duration-200 shrink-0" :class="{'rotate-180': open, 'text-gray-300': !form.level || (form.level === 'basic_ed' && !form.college), 'text-gray-500': form.level && !(form.level === 'basic_ed' && !form.college)}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                                 </button>
-                                <div x-show="open" @click.away="open = false" x-transition.opacity.duration.200ms class="absolute z-50 w-full mt-1 bg-white border border-[var(--border-light)] rounded-[var(--radius-md)] shadow-lg max-h-60 overflow-y-auto" style="display: none;">
+                                <div x-show="open" @click.away="open = false" x-transition.opacity.duration.200ms class="absolute z-50 w-full mt-1 bg-white border border-[var(--border-light)] rounded-[var(--radius-md)] shadow-lg overflow-hidden max-h-60 overflow-y-auto py-1" style="display: none;">
                                     <template x-for="y in yearOptions" :key="y">
                                         <div @click="form.yearLevel = y; errors.yearLevel = ''; open = false" 
-                                             class="px-[13px] py-2.5 text-sm font-['JetBrains_Mono'] cursor-pointer transition-colors hover:bg-gray-50 flex items-center justify-between" 
+                                             class="px-[13px] py-1.5 text-sm font-['JetBrains_Mono'] cursor-pointer transition-colors hover:bg-gray-50 flex items-center justify-between" 
                                              :class="form.yearLevel === y ? 'text-[var(--cjc-red)] bg-red-50/50' : 'text-[var(--cjc-navy)]'">
                                             <span x-text="y"></span>
                                             <svg x-show="form.yearLevel === y" class="w-4 h-4 shrink-0 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
