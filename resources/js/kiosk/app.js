@@ -6,6 +6,9 @@ const registerApp = () => {
         state: 'idle', // 'idle' | 'active'
         tab: 'scan',
         manualId: '',
+        suggestions: [],
+        showSuggestions: false,
+        searchDebounce: null,
         isProcessing: false,
         result: null,
         resetTimeout: null,
@@ -120,12 +123,41 @@ const registerApp = () => {
             // Focus appropriate input
             this.$nextTick(() => {
                 if (this.tab === 'scan') this.$refs.barcodeInput?.focus();
-                if (this.tab === 'manual') this.$refs.manualInput?.focus();
+                if (this.tab === 'manual') {
+                    this.$refs.manualInput?.focus();
+                    this.fetchSuggestions();
+                }
             });
         },
 
         handleKey(e) {
             this.handleActivity();
+        },
+
+        async fetchSuggestions() {
+            const query = this.manualId.trim();
+            if (query.length < 2) {
+                this.suggestions = [];
+                this.showSuggestions = false;
+                return;
+            }
+            
+            clearTimeout(this.searchDebounce);
+            this.searchDebounce = setTimeout(async () => {
+                try {
+                    const res = await fetch(`/kiosk/search?q=${encodeURIComponent(query)}`);
+                    if (res.ok) {
+                        this.suggestions = await res.json();
+                        this.showSuggestions = this.suggestions.length > 0;
+                    }
+                } catch (e) {}
+            }, 250);
+        },
+
+        selectSuggestion(id) {
+            this.manualId = id;
+            this.showSuggestions = false;
+            this.submitManual();
         },
 
         // --- Camera Logic ---
@@ -168,6 +200,7 @@ const registerApp = () => {
         // --- Processing Logic ---
         submitManual() {
             if (!this.manualId) return;
+            this.showSuggestions = false;
             this.processId(this.manualId);
         },
 

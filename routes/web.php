@@ -26,6 +26,7 @@ Route::get('/kiosk', [KioskController::class, 'index'])->name('kiosk.index');
 Route::prefix('kiosk')->name('kiosk.')->group(function () {
     Route::post('/lookup',   [AttendanceController::class, 'lookup'])->name('lookup')->middleware('throttle:10,1');
     Route::post('/process',  [AttendanceController::class, 'process'])->name('process')->middleware('throttle:30,1');
+    Route::get('/search',    [AttendanceController::class, 'search'])->name('search')->middleware('throttle:60,1');
     Route::post('/log',      [AttendanceController::class, 'log'])->name('log')->middleware('throttle:30,1');
     Route::post('/last',     [AttendanceController::class, 'lastAction'])->name('last')->middleware('throttle:30,1');
     Route::get('/occupancy', [AttendanceController::class, 'occupancy'])->name('occupancy')->middleware('throttle:30,1');

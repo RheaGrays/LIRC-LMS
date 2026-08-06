@@ -72,7 +72,7 @@ class AttendanceController extends Controller
 
         // ── Cooldown Buffer (Prevents duplicate scans within 5 minutes) ──
         $cooldownMinutes = (int) \App\Models\SystemSetting::get('checkin_cooldown_minutes', 5);
-        $recentLog = AttendanceLog::where('student_id', $student->id)
+        $recentLog = AttendanceLog::query()->where('student_id', $student->id)
             ->where('logged_at', '>=', now()->subMinutes($cooldownMinutes))
             ->orderByDesc('logged_at')
             ->first();
@@ -88,7 +88,7 @@ class AttendanceController extends Controller
 
         // Determine next action
         $today = now()->startOfDay();
-        $lastLog = AttendanceLog::where('student_id', $student->id)
+        $lastLog = AttendanceLog::query()->where('student_id', $student->id)
             ->where('logged_at', '>=', $today)
             ->orderByDesc('logged_at')
             ->first();
@@ -111,6 +111,35 @@ class AttendanceController extends Controller
     }
 
     /**
+     * Search students for Kiosk manual entry autocomplete
+     */
+    public function search(Request $request): JsonResponse
+    {
+        $term = trim($request->input('q', ''));
+        if (strlen($term) < 2) return response()->json([]);
+
+        $searchTerm = '%' . $term . '%';
+        
+        $students = Student::query()->where('status', 'active')
+            ->where(function($query) use ($searchTerm, $term) {
+                $query->where('id', 'LIKE', $searchTerm)
+                      ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", [$searchTerm])
+                      ->orWhereRaw("CONCAT(last_name, ' ', first_name) LIKE ?", [$searchTerm]);
+            })
+            ->limit(5)
+            ->get();
+
+        return response()->json($students->map(function($s) {
+            return [
+                'id' => $s->id,
+                'name' => $s->first_name . ' ' . $s->last_name,
+                'department' => $s->department,
+                'photo' => $s->photo_path ? asset('storage/' . $s->photo_path) : '/default-avatar.png'
+            ];
+        }));
+    }
+
+    /**
      * Log an attendance action (check_in or check_out).
      */
     public function log(Request $request): JsonResponse
@@ -130,7 +159,7 @@ class AttendanceController extends Controller
 
         // ── Cooldown Buffer (Prevents duplicate scans within 5 minutes) ──
         $cooldownMinutes = (int) \App\Models\SystemSetting::get('checkin_cooldown_minutes', 5);
-        $recentLog = AttendanceLog::where('student_id', $student->id)
+        $recentLog = AttendanceLog::query()->where('student_id', $student->id)
             ->where('logged_at', '>=', now()->subMinutes($cooldownMinutes))
             ->first();
 
@@ -168,7 +197,7 @@ class AttendanceController extends Controller
 
         $log = null;
         if ($studentId) {
-            $log = AttendanceLog::where('student_id', $studentId)
+            $log = AttendanceLog::query()->where('student_id', $studentId)
                 ->where('logged_at', '>=', $today)
                 ->orderByDesc('logged_at')
                 ->first();
@@ -185,18 +214,21 @@ class AttendanceController extends Controller
         return response()->json(\App\Services\OccupancyService::today());
     }
 
-    private function resolveStudent($term)
+    private function resolveStudent(string $term): Student|string|null
     {
         if (!$term) return null;
 
         // Try exact ID match first
-        $student = Student::find($term);
+        /** @var Student|null $student */
+        $student = Student::query()->find($term);
         if ($student) return $student;
 
         // Try name search with proper parameter binding
         $searchTerm = '%' . trim($term) . '%';
-        $students = Student::whereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", [$searchTerm])
-            ->orWhereRaw("CONCAT(last_name, ' ', first_name) LIKE ?", [$searchTerm])
+        
+        /** @var \Illuminate\Database\Eloquent\Collection $students */
+        $students = Student::query()->whereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", [$searchTerm], 'and')
+            ->orWhereRaw("CONCAT(last_name, ' ', first_name) LIKE ?", [$searchTerm], 'or')
             ->orWhere('first_name', 'LIKE', $searchTerm)
             ->orWhere('last_name', 'LIKE', $searchTerm)
             ->get();
@@ -209,7 +241,7 @@ class AttendanceController extends Controller
         
         return null;
     }
-
+    
     private function formatStudent(Student $s): array
     {
         return [

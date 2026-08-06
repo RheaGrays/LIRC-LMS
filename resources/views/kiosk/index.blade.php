@@ -149,7 +149,7 @@
                             <p class="text-[14px] text-[var(--text-muted)] font-['Inter'] m-0 mb-7">Present your Student ID to check in or out.</p>
 
                             <!-- Tabs -->
-                            <div class="flex border-b border-[var(--border-light)] gap-6 mb-8">
+                            <div x-show="!result && !isProcessing" class="flex border-b border-[var(--border-light)] gap-6 mb-8">
                                 <button class="pb-3 text-[14px] font-semibold transition-colors"
                                     :class="tab === 'scan' ? 'text-[var(--cjc-navy)] border-b-2 border-[var(--cjc-navy)]' : 'text-gray-400 hover:text-gray-600'"
                                     @click="tab = 'scan'; handleActivity()">Barcode / QR</button>
@@ -164,61 +164,85 @@
 
                         <div class="px-8 pb-8 min-h-[220px]">
                             
-                            <!-- Tab: Scan -->
-                            <div x-show="tab === 'scan'" class="flex flex-col gap-4 animate-slide-in">
-                                <label class="flex flex-col gap-2">
-                                    <span class="text-[12px] font-semibold tracking-[0.08em] uppercase text-[var(--text-muted)] font-['Inter']">Scan or type ID</span>
-                                    <input type="text" x-model="manualId" x-ref="barcodeInput" 
-                                        @keydown.enter.prevent="if(manualId.trim()) submitManual()"
-                                        @input="handleActivity()"
-                                        placeholder="Scan ID here..." 
-                                        class="w-full p-4 font-['JetBrains_Mono'] text-[20px] font-medium tracking-[0.06em] text-center bg-white border border-[var(--border-light)] rounded-[12px] text-[var(--cjc-navy)] outline-none focus:border-[var(--cjc-navy)] focus:shadow-[0_0_0_3px_rgba(15,39,68,0.08)] transition-all">
-                                </label>
-                                <p class="text-[12px] text-[var(--text-subtle)] font-['Inter'] text-center m-0">
-                                    Press <kbd class="bg-[var(--bg-cream-2)] border border-[var(--border-warm)] rounded-[4px] px-[6px] py-[2px] text-[11px] font-['JetBrains_Mono']">Enter</kbd> to submit
-                                </p>
-                            </div>
-
-                            <!-- Tab: Webcam -->
-                            <div x-show="tab === 'webcam'" class="flex flex-col gap-4 items-center animate-slide-in">
-                                <div class="w-full max-w-[340px] aspect-[4/3] bg-[#0a0a0a] rounded-[16px] relative overflow-hidden border border-[var(--border-light)] flex items-center justify-center">
-                                    <video id="kiosk-video" class="w-full h-full object-cover" :class="isCameraActive ? 'block' : 'hidden'"></video>
-                                    
-                                    <!-- Scanline -->
-                                    <template x-if="isCameraActive">
-                                        <div class="absolute left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[var(--cjc-red)] to-transparent z-10 animate-[scanline_2s_linear_infinite]"></div>
-                                    </template>
-
-                                    <!-- Placeholder -->
-                                    <template x-if="!isCameraActive">
-                                        <div class="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/80 p-4">
-                                            <div class="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-[spin_0.8s_linear_infinite] mb-3"></div>
-                                            <span class="text-white/80 text-[13px] font-['Inter'] font-medium">Starting camera...</span>
-                                        </div>
-                                    </template>
+                            <!-- Form Content (Hidden while processing or showing result) -->
+                            <div x-show="!result && !isProcessing">
+                                <!-- Tab: Scan -->
+                                <div x-show="tab === 'scan'" class="flex flex-col gap-4 animate-slide-in">
+                                    <label class="flex flex-col gap-2">
+                                        <span class="text-[12px] font-semibold tracking-[0.08em] uppercase text-[var(--text-muted)] font-['Inter']">Scan or type ID</span>
+                                        <input type="text" x-model="manualId" x-ref="barcodeInput" 
+                                            @keydown.enter.prevent="if(manualId.trim()) submitManual()"
+                                            @input="handleActivity()"
+                                            placeholder="Scan ID here..." 
+                                            class="w-full p-4 font-['JetBrains_Mono'] text-[20px] font-medium tracking-[0.06em] text-center bg-white border border-[var(--border-light)] rounded-[12px] text-[var(--cjc-navy)] outline-none focus:border-[var(--cjc-navy)] focus:shadow-[0_0_0_3px_rgba(15,39,68,0.08)] transition-all">
+                                    </label>
+                                    <p class="text-[12px] text-[var(--text-subtle)] font-['Inter'] text-center m-0">
+                                        Press <kbd class="bg-[var(--bg-cream-2)] border border-[var(--border-warm)] rounded-[4px] px-[6px] py-[2px] text-[11px] font-['JetBrains_Mono']">Enter</kbd> to submit
+                                    </p>
                                 </div>
-                                <p class="text-[13px] text-[var(--text-muted)] font-['Inter'] text-center m-0">Point your camera at the barcode or QR code on your Student ID.</p>
-                            </div>
 
-                            <!-- Tab: Manual -->
-                            <div x-show="tab === 'manual'" class="flex flex-col gap-4 animate-slide-in">
-                                <label class="flex flex-col gap-2">
-                                    <span class="text-[12px] font-semibold tracking-[0.08em] uppercase text-[var(--text-muted)] font-['Inter']">Student ID or Name</span>
-                                    <input type="text" x-model="manualId" x-ref="manualInput" 
-                                        @keydown.enter.prevent="if(manualId.trim()) submitManual()"
-                                        @input="handleActivity()"
-                                        placeholder="Enter Student ID or Name" 
-                                        class="w-full p-4 font-['JetBrains_Mono'] text-[16px] font-medium tracking-[0.05em] bg-white border border-[var(--border-light)] rounded-[12px] text-[var(--cjc-navy)] outline-none focus:border-[var(--cjc-navy)] focus:shadow-[0_0_0_3px_rgba(15,39,68,0.08)] transition-all">
-                                </label>
-                                <button @click="submitManual()" :disabled="!manualId.trim() || isProcessing"
-                                    class="w-full p-4 bg-[var(--cjc-red)] text-white border-none rounded-[12px] text-[15px] font-bold font-['Inter'] cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:bg-red-700 shadow-md">
-                                    <span x-show="!isProcessing">Verify & Enter</span>
-                                    <span x-show="isProcessing">Processing...</span>
-                                </button>
+                                <!-- Tab: Webcam -->
+                                <div x-show="tab === 'webcam'" class="flex flex-col gap-4 items-center animate-slide-in">
+                                    <div class="w-full max-w-[340px] aspect-[4/3] bg-[#0a0a0a] rounded-[16px] relative overflow-hidden border border-[var(--border-light)] flex items-center justify-center">
+                                        <video id="kiosk-video" class="w-full h-full object-cover" :class="isCameraActive ? 'block' : 'hidden'"></video>
+                                        
+                                        <!-- Scanline -->
+                                        <template x-if="isCameraActive">
+                                            <div class="absolute left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[var(--cjc-red)] to-transparent z-10 animate-[scanline_2s_linear_infinite]"></div>
+                                        </template>
+
+                                        <!-- Placeholder -->
+                                        <template x-if="!isCameraActive">
+                                            <div class="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/80 p-4">
+                                                <div class="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-[spin_0.8s_linear_infinite] mb-3"></div>
+                                                <span class="text-white/80 text-[13px] font-['Inter'] font-medium">Starting camera...</span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                    <p class="text-[13px] text-[var(--text-muted)] font-['Inter'] text-center m-0">Point your camera at the barcode or QR code on your Student ID.</p>
+                                </div>
+
+                                <!-- Tab: Manual -->
+                                <div x-show="tab === 'manual'" class="flex flex-col gap-4 animate-slide-in relative">
+                                    <label class="flex flex-col gap-2 relative">
+                                        <span class="text-[12px] font-semibold tracking-[0.08em] uppercase text-[var(--text-muted)] font-['Inter']">Student ID or Name</span>
+                                        <input type="text" x-model="manualId" x-ref="manualInput" 
+                                            @keydown.enter.prevent="if(manualId.trim()) submitManual()"
+                                            @input="handleActivity()"
+                                            placeholder="Enter Student ID or Name" 
+                                            class="w-full p-4 font-['JetBrains_Mono'] text-[16px] font-medium tracking-[0.05em] bg-white border border-[var(--border-light)] rounded-[12px] text-[var(--cjc-navy)] outline-none focus:border-[var(--cjc-navy)] focus:shadow-[0_0_0_3px_rgba(15,39,68,0.08)] transition-all">
+                                    </label>
+                                    
+                                    <!-- Autocomplete Dropdown -->
+                                    <div x-show="showSuggestions" @click.outside="showSuggestions = false" style="display: none;"
+                                         class="absolute top-[82px] left-0 right-0 bg-white border border-[var(--border-light)] rounded-[12px] shadow-[0_10px_40px_rgba(15,39,68,0.1)] z-[100] overflow-hidden animate-slide-in">
+                                        <template x-for="item in suggestions" :key="item.id">
+                                            <div @click="selectSuggestion(item.id)"
+                                                 class="flex items-center gap-3 p-3 hover:bg-[var(--bg-cream-2)] cursor-pointer transition-colors border-b border-gray-100 last:border-0">
+                                                <img :src="item.photo" class="w-10 h-10 rounded-full object-cover bg-gray-100">
+                                                <div class="flex flex-col">
+                                                    <span class="text-[14px] font-bold text-[var(--cjc-navy)] font-['Inter']" x-text="item.name"></span>
+                                                    <span class="text-[11px] font-semibold text-gray-500 font-['JetBrains_Mono']" x-text="item.id"></span>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </div>
+
+                                    <button @click="submitManual()" :disabled="!manualId.trim()"
+                                        class="w-full p-4 bg-[var(--cjc-red)] text-white border-none rounded-[12px] text-[15px] font-bold font-['Inter'] cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:bg-red-700 shadow-md">
+                                        <span>Verify & Enter</span>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Processing State -->
+                            <div x-show="isProcessing" class="flex flex-col items-center justify-center p-12 gap-5 fade-in-up">
+                                <div class="w-12 h-12 border-4 border-[var(--bg-cream-2)] border-t-[var(--cjc-red)] rounded-full animate-spin"></div>
+                                <span class="text-[16px] font-bold tracking-wide text-[var(--cjc-navy)] font-['Inter'] animate-pulse">Processing ID...</span>
                             </div>
 
                             <!-- Result Overlay -->
-                            <div x-show="result && !isProcessing" class="mt-8 border-t border-[var(--border-light)] pt-8 fade-in-up">
+                            <div x-show="result && !isProcessing" class="fade-in-up animate-slide-in pb-4">
                                 <x-kiosk.status-card />
                             </div>
                         </div>
