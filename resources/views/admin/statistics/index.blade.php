@@ -21,7 +21,7 @@
             <div class="flex items-center gap-3">
                 <div class="bg-gray-100 rounded-xl p-1 flex shadow-sm">
                     <button @click="viewMode = 'overview'" :class="viewMode === 'overview' ? 'bg-[var(--cjc-red)] text-white shadow-md' : 'text-gray-500 hover:text-gray-800'" class="px-5 py-2 rounded-lg text-xs font-bold transition-all">Overview</button>
-                    <button @click="viewMode = 'seatmap'; alert('Seat Map visualization is coming soon!')" :class="viewMode === 'seatmap' ? 'bg-[var(--cjc-red)] text-white shadow-md' : 'text-gray-500 hover:text-gray-800'" class="px-5 py-2 rounded-lg text-xs font-bold transition-all">Seat Map</button>
+                    <button @click="viewMode = 'seatmap'" :class="viewMode === 'seatmap' ? 'bg-[var(--cjc-red)] text-white shadow-md' : 'text-gray-500 hover:text-gray-800'" class="px-5 py-2 rounded-lg text-xs font-bold transition-all">Seat Map</button>
                 </div>
                 <button @click="alert('Hourly report generation will be sent to your email.')" class="px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 text-xs font-bold transition-all shadow-sm flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -124,24 +124,25 @@
         </div>
         -->
 
-        <!-- Sections Grid -->
-        <div class="mb-4 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <span class="text-xs font-bold text-[var(--text-subtle)] uppercase tracking-widest">Filter:</span>
-                <div class="flex items-center gap-2">
-                    <button @click="filter = 'all'" :class="filter === 'all' ? 'bg-[var(--cjc-red)] text-white shadow-sm border-transparent' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'" class="text-[11px] font-bold px-4 py-1.5 rounded-full border transition-colors">All Sections</button>
-                    <button @click="filter = 'available'" :class="filter === 'available' ? 'bg-[var(--cjc-red)] text-white shadow-sm border-transparent' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'" class="text-[11px] font-bold px-4 py-1.5 rounded-full border transition-colors">Available</button>
-                    <button @click="filter = 'hightraffic'" :class="filter === 'hightraffic' ? 'bg-[var(--cjc-red)] text-white shadow-sm border-transparent' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'" class="text-[11px] font-bold px-4 py-1.5 rounded-full border transition-colors">High Traffic</button>
-                    <button @click="filter = 'critical'" :class="filter === 'critical' ? 'bg-[var(--cjc-red)] text-white shadow-sm border-transparent' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'" class="text-[11px] font-bold px-4 py-1.5 rounded-full border transition-colors">Critical</button>
+        <!-- Sections Grid Overview -->
+        <div x-show="viewMode === 'overview'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0">
+            <div class="mb-4 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <span class="text-xs font-bold text-[var(--text-subtle)] uppercase tracking-widest">Filter:</span>
+                    <div class="flex items-center gap-2">
+                        <button @click="filter = 'all'" :class="filter === 'all' ? 'bg-[var(--cjc-red)] text-white shadow-sm border-transparent' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'" class="text-[11px] font-bold px-4 py-1.5 rounded-full border transition-colors">All Sections</button>
+                        <button @click="filter = 'available'" :class="filter === 'available' ? 'bg-[var(--cjc-red)] text-white shadow-sm border-transparent' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'" class="text-[11px] font-bold px-4 py-1.5 rounded-full border transition-colors">Available</button>
+                        <button @click="filter = 'hightraffic'" :class="filter === 'hightraffic' ? 'bg-[var(--cjc-red)] text-white shadow-sm border-transparent' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'" class="text-[11px] font-bold px-4 py-1.5 rounded-full border transition-colors">High Traffic</button>
+                        <button @click="filter = 'critical'" :class="filter === 'critical' ? 'bg-[var(--cjc-red)] text-white shadow-sm border-transparent' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'" class="text-[11px] font-bold px-4 py-1.5 rounded-full border transition-colors">Critical</button>
+                    </div>
+                </div>
+                
+                <div class="text-[13px] text-gray-400 font-medium">
+                    <span x-text="filteredSections.length"></span> of <span x-text="sections.length"></span> sections
                 </div>
             </div>
-            
-            <div class="text-[13px] text-gray-400 font-medium">
-                <span x-text="filteredSections.length"></span> of <span x-text="sections.length"></span> sections
-            </div>
-        </div>
 
-        <div class="space-y-5 pb-20">
+            <div class="space-y-5 pb-20">
             <template x-for="section in filteredSections" :key="section.id">
                 <div class="bg-white rounded-[24px] shadow-sm border border-white p-7 relative group hover:shadow-md transition-shadow">
                     
@@ -211,6 +212,88 @@
 
                 </div>
             </template>
+            </div>
+        </div>
+
+        <!-- Seat Map View -->
+        <div x-show="viewMode === 'seatmap'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0" style="display: none;" class="pb-20">
+            <div class="mb-4 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <span class="text-xs font-bold text-[var(--text-subtle)] uppercase tracking-widest">Zone Map</span>
+                </div>
+                <div class="text-[13px] text-gray-400 font-medium">
+                    Visualizing <span x-text="sections.length"></span> sections
+                </div>
+            </div>
+
+            <!-- Floor Plan Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-[250px]">
+                <template x-for="section in sections" :key="section.id">
+                    <div class="rounded-[32px] p-8 flex flex-col justify-between relative overflow-hidden transition-all duration-500 shadow-sm border border-white group"
+                         :class="{
+                             'bg-green-50': section.occupied < section.total * 0.75,
+                             'bg-amber-50': section.occupied >= section.total * 0.75 && section.occupied < section.total,
+                             'bg-red-50': section.occupied >= section.total
+                         }">
+                        
+                        <!-- Map Zone Background Pattern -->
+                        <div class="absolute inset-0 opacity-[0.03] pointer-events-none" style="background-image: radial-gradient(#000 1px, transparent 1px); background-size: 20px 20px;"></div>
+                        
+                        <!-- Top Info -->
+                        <div class="relative z-10 flex justify-between items-start">
+                            <div>
+                                <span class="px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase mb-3 inline-block"
+                                      :class="{
+                                          'bg-green-100 text-green-700': section.occupied < section.total * 0.75,
+                                          'bg-amber-100 text-amber-700': section.occupied >= section.total * 0.75 && section.occupied < section.total,
+                                          'bg-red-100 text-[var(--cjc-red)]': section.occupied >= section.total
+                                      }"
+                                      x-text="section.occupied >= section.total ? 'Critical' : (section.occupied >= section.total * 0.75 ? 'High Traffic' : 'Available')"></span>
+                                <h3 class="text-2xl font-black text-gray-800 leading-none mb-1" x-text="section.name"></h3>
+                                <p class="text-sm font-bold text-gray-400" x-text="`Zone ${section.id}`"></p>
+                            </div>
+
+                            <!-- Circular Progress -->
+                            <div class="relative w-16 h-16 flex items-center justify-center bg-white/50 backdrop-blur rounded-full shadow-sm">
+                                <svg class="w-16 h-16 transform -rotate-90 absolute inset-0">
+                                    <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="6" fill="transparent" class="text-gray-100" />
+                                    <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="6" fill="transparent" 
+                                            :stroke-dasharray="2 * Math.PI * 28"
+                                            :stroke-dashoffset="(2 * Math.PI * 28) - ((section.occupied / section.total) * (2 * Math.PI * 28))"
+                                            class="transition-all duration-1000 ease-out"
+                                            :class="{
+                                                'text-green-500': section.occupied < section.total * 0.75,
+                                                'text-amber-500': section.occupied >= section.total * 0.75 && section.occupied < section.total,
+                                                'text-[var(--cjc-red)]': section.occupied >= section.total
+                                            }" />
+                                </svg>
+                                <span class="text-[13px] font-black text-gray-700 relative z-10" x-text="Math.round((section.occupied / section.total) * 100) + '%'"></span>
+                            </div>
+                        </div>
+
+                        <!-- Bottom Controls -->
+                        <div class="relative z-10 flex items-end justify-between mt-auto">
+                            <div>
+                                <p class="text-[11px] font-extrabold text-gray-400 uppercase tracking-widest mb-1">Occupancy</p>
+                                <p class="text-3xl font-black text-gray-800 leading-none"><span x-text="section.occupied"></span><span class="text-xl text-gray-400/50">/<span x-text="section.total"></span></span></p>
+                            </div>
+                            
+                            <!-- Inline Counters -->
+                            <div class="flex items-center gap-1 bg-white/80 backdrop-blur rounded-2xl p-1.5 shadow-sm border border-white">
+                                <button @click="updateSectionInline(section, -1)" :disabled="section.occupied <= 0" 
+                                        class="w-10 h-10 rounded-xl flex items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-40 transition-colors cursor-pointer">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M20 12H4"></path></svg>
+                                </button>
+                                <button @click="updateSectionInline(section, 1)" :disabled="section.occupied >= section.total" 
+                                        class="w-10 h-10 rounded-xl flex items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-40 transition-colors cursor-pointer">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </template>
+            </div>
             <div x-show="sections.length === 0" class="p-8 text-center text-sm font-bold text-gray-400 bg-white/50 rounded-2xl border border-gray-100">
                 No sections added yet.
             </div>
