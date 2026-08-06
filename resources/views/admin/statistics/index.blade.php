@@ -398,7 +398,7 @@ function sectionCounter() {
 
         initData() {
             if(this.sections.length === 0) {
-                let defaultNames = @json($settings['library_sections'] ?? ['General Reading', 'Discussion Room', 'Internet Section', 'Periodicals']);
+                let defaultNames = {{ Js::from($settings['library_sections'] ?? ['General Reading', 'Discussion Room', 'Internet Section', 'Periodicals']) }};
                 this.sections = defaultNames.map(name => {
                     return {
                         id: name.substring(0, 3).toUpperCase(),
