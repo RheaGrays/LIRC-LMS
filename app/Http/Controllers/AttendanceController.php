@@ -21,6 +21,9 @@ class AttendanceController extends Controller
         }
 
         $student = $this->resolveStudent($term);
+        if ($student === 'AMBIGUOUS') {
+            return response()->json(['found' => false, 'reason' => 'Multiple students match that name. Please use your exact Student ID.']);
+        }
         if (!$student) {
             return response()->json(['found' => false, 'reason' => 'Student not found.']);
         }
@@ -52,6 +55,9 @@ class AttendanceController extends Controller
         ]);
 
         $student = $this->resolveStudent($request->student_id);
+        if ($student === 'AMBIGUOUS') {
+            return response()->json(['error' => 'Multiple students match that name. Please use your exact Student ID.'], 400);
+        }
         if (!$student) {
             return response()->json(['error' => 'Student not found.'], 404);
         }
@@ -87,6 +93,9 @@ class AttendanceController extends Controller
     {
         $term = trim($request->input('student_id', ''));
         $student = $this->resolveStudent($term);
+        if ($student === 'AMBIGUOUS') {
+            return response()->json(['error' => 'Multiple students match that name.'], 400);
+        }
         $studentId = $student ? $student->id : null;
 
         $today = now()->startOfDay();
@@ -120,11 +129,19 @@ class AttendanceController extends Controller
 
         // Try name search with proper parameter binding
         $searchTerm = '%' . trim($term) . '%';
-        return Student::whereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", [$searchTerm])
+        $students = Student::whereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", [$searchTerm])
             ->orWhereRaw("CONCAT(last_name, ' ', first_name) LIKE ?", [$searchTerm])
             ->orWhere('first_name', 'LIKE', $searchTerm)
             ->orWhere('last_name', 'LIKE', $searchTerm)
-            ->first();
+            ->get();
+            
+        if ($students->count() === 1) {
+            return $students->first();
+        } elseif ($students->count() > 1) {
+            return 'AMBIGUOUS';
+        }
+        
+        return null;
     }
 
     private function formatStudent(Student $s): array

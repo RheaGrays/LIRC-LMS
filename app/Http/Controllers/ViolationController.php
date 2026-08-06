@@ -31,6 +31,12 @@ class ViolationController extends Controller
     public function destroy($vid)
     {
         Violation::findOrFail($vid)->delete();
+
+        \Illuminate\Support\Facades\Log::info('Violation Deleted', [
+            'admin_id' => \Illuminate\Support\Facades\Auth::guard('admin')->id(),
+            'violation_id' => $vid,
+        ]);
+
         return back()->with('success', 'Violation removed successfully.');
     }
 

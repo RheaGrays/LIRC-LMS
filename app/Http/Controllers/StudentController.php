@@ -31,14 +31,14 @@ class StudentController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'id' => 'required|string|unique:students,id',
-            'first_name' => 'required|string',
-            'last_name' => 'required|string',
-            'middle_name' => 'nullable|string',
-            'department' => 'required|string',
-            'year_level' => 'required|string',
-            'email' => 'nullable|email',
-            'contact' => 'nullable|string',
+            'id' => 'required|string|max:50|unique:students,id',
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'middle_name' => 'nullable|string|max:255',
+            'department' => 'required|string|max:255',
+            'year_level' => 'required|string|max:50',
+            'email' => 'nullable|email|max:255',
+            'contact' => 'nullable|string|max:50',
         ]);
 
         Student::create($validated);
@@ -49,13 +49,13 @@ class StudentController extends Controller
     {
         $student = Student::findOrFail($id);
         $validated = $request->validate([
-            'first_name' => 'required|string',
-            'last_name' => 'required|string',
-            'middle_name' => 'nullable|string',
-            'department' => 'required|string',
-            'year_level' => 'required|string',
-            'email' => 'nullable|email',
-            'contact' => 'nullable|string',
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'middle_name' => 'nullable|string|max:255',
+            'department' => 'required|string|max:255',
+            'year_level' => 'required|string|max:50',
+            'email' => 'nullable|email|max:255',
+            'contact' => 'nullable|string|max:50',
         ]);
 
         $student->update($validated);
@@ -86,33 +86,34 @@ class StudentController extends Controller
         $rows = $worksheet->toArray();
         
         $count = 0;
-        foreach ($rows as $index => $row) {
-            if ($index === 0) continue; // Skip header
+        
+        // Wrap in transaction and limit to 5000 rows max to prevent partial data and timeouts
+        \Illuminate\Support\Facades\DB::transaction(function () use ($rows, &$count) {
+            foreach (array_slice($rows, 1, 5000) as $row) {
+                $id = $row[0] ?? null;
+                if (!$id) continue;
 
-            $id = $row[0] ?? null;
-            if (!$id) continue;
-
-            Student::updateOrCreate(
-                ['id' => $id],
-                [
-                    'last_name' => $row[1] ?? '',
-                    'first_name' => $row[2] ?? '',
-                    'middle_name' => $row[3] ?? null,
-                    'department' => $row[4] ?? '',
-                    'year_level' => $row[5] ?? '',
-                    'email' => $row[6] ?? null,
-                    'contact' => $row[7] ?? null,
-                ]
-            );
-            $count++;
-        }
+                Student::updateOrCreate(
+                    ['id' => $id],
+                    [
+                        'last_name' => $row[1] ?? '',
+                        'first_name' => $row[2] ?? '',
+                        'middle_name' => $row[3] ?? null,
+                        'department' => $row[4] ?? '',
+                        'year_level' => $row[5] ?? '',
+                        'email' => $row[6] ?? null,
+                        'contact' => $row[7] ?? null,
+                    ]
+                );
+                $count++;
+            }
+        });
 
         return back()->with('success', "Successfully imported {$count} students.");
     }
 
     public function export()
     {
-        $students = Student::all();
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
@@ -120,20 +121,22 @@ class StudentController extends Controller
         $sheet->fromArray($headers, null, 'A1');
 
         $row = 2;
-        foreach ($students as $student) {
-            $sheet->fromArray([
-                $student->id,
-                $student->last_name,
-                $student->first_name,
-                $student->middle_name,
-                $student->department,
-                $student->year_level,
-                $student->email,
-                $student->contact,
-                $student->status,
-            ], null, 'A' . $row);
-            $row++;
-        }
+        Student::chunk(500, function ($students) use ($sheet, &$row) {
+            foreach ($students as $student) {
+                $sheet->fromArray([
+                    $student->id,
+                    $student->last_name,
+                    $student->first_name,
+                    $student->middle_name,
+                    $student->department,
+                    $student->year_level,
+                    $student->email,
+                    $student->contact,
+                    $student->status,
+                ], null, 'A' . $row);
+                $row++;
+            }
+        });
 
         $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
 

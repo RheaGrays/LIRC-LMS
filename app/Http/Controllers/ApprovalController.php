@@ -50,6 +50,11 @@ class ApprovalController extends Controller
 
         $approval->update(['status' => 'approved']);
 
+        \Illuminate\Support\Facades\Log::info('Admin Account Approved', [
+            'admin_id' => Auth::guard('admin')->id(),
+            'approved_email' => $approval->email,
+        ]);
+
         return back()->with('success', "Account approved for {$approval->full_name}.");
     }
 
@@ -64,6 +69,11 @@ class ApprovalController extends Controller
         }
 
         $approval->update(['status' => 'rejected']);
+
+        \Illuminate\Support\Facades\Log::info('Admin Account Rejected', [
+            'admin_id' => Auth::guard('admin')->id(),
+            'rejected_email' => $approval->email,
+        ]);
 
         return back()->with('success', "Request from {$approval->full_name} rejected.");
     }

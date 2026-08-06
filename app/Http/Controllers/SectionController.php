@@ -59,7 +59,7 @@ class SectionController extends Controller
         $sectionId = $request->section_id;
         $file = $request->file('image');
         
-        $filename = "{$sectionId}.{$file->extension()}";
+        $filename = "{$sectionId}_" . time() . ".{$file->extension()}";
         $path = $file->storeAs('sections', $filename, 'public');
 
         // Update the SystemSetting

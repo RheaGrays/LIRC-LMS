@@ -30,7 +30,7 @@ class KioskController extends Controller
         ];
 
         // Facility images for the cinematic full-screen slider
-        $slideshowImages = [
+        $slideshowImages = collect([
             [
                 'src' => '/discussion_room.jpg',
                 'badge' => 'Collaborative Space',
@@ -49,7 +49,21 @@ class KioskController extends Controller
                 'title' => 'Cor Jesu College',
                 'description' => 'Excellence in education, rooted in faith and dedicated to the community.'
             ]
-        ];
+        ])->filter(function ($slide) {
+            return file_exists(public_path($slide['src']));
+        })->values()->toArray();
+
+        // Fallback if no images exist to prevent broken UI
+        if (empty($slideshowImages)) {
+            $slideshowImages = [
+                [
+                    'src' => 'https://ui-avatars.com/api/?name=LIRC&background=0f2744&color=fff&size=1024',
+                    'badge' => 'Welcome',
+                    'title' => 'Welcome to LIRC',
+                    'description' => 'Your gateway to knowledge and innovation.'
+                ]
+            ];
+        }
 
         return view('kiosk.index', compact('settings', 'collections', 'defaultFacilities', 'slideshowImages'));
     }

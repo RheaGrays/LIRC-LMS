@@ -13,9 +13,12 @@ class SettingsController extends Controller
         $admin    = Auth::guard('admin')->user();
         $settings = SystemSetting::allSettings();
 
+        $terms = \App\Models\AcademicTerm::orderBy('start_date', 'desc')->get();
+        $latestTerm = $terms->first();
+
         // Defaults
         $defaults = [
-            'active_term'           => '2025-2026-2',
+            'active_term'           => $latestTerm ? $latestTerm->id : null,
             'idle_timeout'          => 60,
             'max_occupancy'         => 200,
             'show_occupancy'        => true,
@@ -27,7 +30,6 @@ class SettingsController extends Controller
         ];
 
         $settings = array_merge($defaults, $settings);
-        $terms = \App\Models\AcademicTerm::orderBy('start_date', 'desc')->get();
 
         return view('admin.settings.index', compact('admin', 'settings', 'terms'));
     }

@@ -23,17 +23,22 @@ Route::get('/', fn() => redirect()->route('kiosk.index'));
 Route::get('/kiosk', [KioskController::class, 'index'])->name('kiosk.index');
 
 // Kiosk AJAX endpoints (public — kiosk runs without login)
-Route::prefix('kiosk')->name('kiosk.')->middleware('throttle:30,1')->group(function () {
-    Route::post('/lookup',   [AttendanceController::class, 'lookup'])->name('lookup');
-    Route::post('/log',      [AttendanceController::class, 'log'])->name('log');
-    Route::post('/last',     [AttendanceController::class, 'lastAction'])->name('last');
-    Route::get('/occupancy', [AttendanceController::class, 'occupancy'])->name('occupancy');
+Route::prefix('kiosk')->name('kiosk.')->group(function () {
+    Route::post('/lookup',   [AttendanceController::class, 'lookup'])->name('lookup')->middleware('throttle:10,1');
+    Route::post('/log',      [AttendanceController::class, 'log'])->name('log')->middleware('throttle:30,1');
+    Route::post('/last',     [AttendanceController::class, 'lastAction'])->name('last')->middleware('throttle:30,1');
+    Route::get('/occupancy', [AttendanceController::class, 'occupancy'])->name('occupancy')->middleware('throttle:30,1');
 });
 
-// ── Student Registration (public) ─────────────────────────────
-Route::get('/register', [App\Http\Controllers\StudentRegistrationController::class, 'index'])->name('register.index');
-Route::post('/register', [App\Http\Controllers\StudentRegistrationController::class, 'store'])->name('register.store');
-Route::get('/api/academics', [App\Http\Controllers\AcademicController::class, 'apiData'])->name('api.academics');
+// ── Student Registration (public, rate-limited) ──────────────
+// Critical Fix #2: Rate limited to 10 page views/min and 5 submissions/min
+// to prevent DB flooding with fake student records.
+Route::middleware('throttle:10,1')->group(function () {
+    Route::get('/register', [App\Http\Controllers\StudentRegistrationController::class, 'index'])->name('register.index');
+});
+Route::middleware('throttle:5,1')->group(function () {
+    Route::post('/register', [App\Http\Controllers\StudentRegistrationController::class, 'store'])->name('register.store');
+});
 
 // ── Admin Auth ────────────────────────────────────────────────
 Route::prefix('admin')->name('admin.')->group(function () {
@@ -64,11 +69,10 @@ Route::prefix('admin')->name('admin.')->middleware('auth.admin')->group(function
         Route::post('/students/import',   [StudentController::class, 'import'])->name('students.import');
     });
 
-    // Violations (all roles)
+    // Violations (all roles, except destroy)
     Route::get('/students/{id}/violations',        [ViolationController::class, 'index'])->name('violations.index');
     Route::post('/students/{id}/violations',       [ViolationController::class, 'store'])->name('violations.store');
     Route::put('/violations/{vid}',                [ViolationController::class, 'update'])->name('violations.update');
-    Route::delete('/violations/{vid}',             [ViolationController::class, 'destroy'])->name('violations.destroy');
 
     // Analytics (all roles)
     Route::get('/analytics',      [AnalyticsController::class, 'index'])->name('analytics.index');
@@ -103,6 +107,10 @@ Route::prefix('admin')->name('admin.')->middleware('auth.admin')->group(function
 
     // Academic Setup (all roles)
     Route::get('/academics', [AcademicController::class, 'index'])->name('academics.index');
+
+    // Critical Fix #3: /api/academics moved inside auth.admin middleware group.
+    // Previously public — exposed all department/program data without authentication.
+    Route::get('/api/academics', [AcademicController::class, 'apiData'])->name('api.academics');
     Route::post('/academics/departments', [AcademicController::class, 'storeDepartment'])->name('academics.departments.store');
     Route::put('/academics/departments/{id}', [AcademicController::class, 'updateDepartment'])->name('academics.departments.update');
     Route::delete('/academics/departments/{id}', [AcademicController::class, 'destroyDepartment'])->name('academics.departments.destroy');
@@ -112,10 +120,11 @@ Route::prefix('admin')->name('admin.')->middleware('auth.admin')->group(function
     Route::delete('/academics/programs/{id}', [AcademicController::class, 'destroyProgram'])->name('academics.programs.destroy');
 
 
-    // Approvals (Super Admin only)
+    // Approvals & Violations Destruction (Super Admin only)
     Route::middleware('admin.role:Super Admin')->group(function () {
         Route::get('/approvals',                [ApprovalController::class, 'index'])->name('approvals.index');
         Route::post('/approvals/{id}/approve',  [ApprovalController::class, 'approve'])->name('approvals.approve');
         Route::post('/approvals/{id}/reject',   [ApprovalController::class, 'reject'])->name('approvals.reject');
+        Route::delete('/violations/{vid}',      [ViolationController::class, 'destroy'])->name('violations.destroy');
     });
 });

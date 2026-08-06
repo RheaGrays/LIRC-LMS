@@ -21,35 +21,30 @@ class AnalyticsController extends Controller
         
         $query = AttendanceLog::where('action', 'check_in');
 
-        // If an Academic Term is selected, restrict the query to its date range
+        // Apply Date Filters
         if ($termId) {
             $term = \App\Models\AcademicTerm::find($termId);
             if ($term) {
-                // When term is selected, we want to see the traffic across the entire term
-                // Since term can span months, we'll just group by month or week
                 $query->whereBetween('logged_at', [
                     $term->start_date->startOfDay(), 
                     $term->end_date->endOfDay()
                 ]);
             }
-        }
-
-        // We fetch the data from the query and process it
-        $logs = $query->get();
-
-        // If no term is selected, we filter by the selected period
-        if (!$termId) {
+        } else {
             $now = now();
             if ($period === 'today') {
-                $logs = $logs->where('logged_at', '>=', $now->startOfDay());
+                $query->where('logged_at', '>=', $now->startOfDay());
             } elseif ($period === 'week') {
-                $logs = $logs->where('logged_at', '>=', $now->copy()->startOfWeek());
+                $query->where('logged_at', '>=', $now->copy()->startOfWeek());
             } elseif ($period === 'month') {
-                $logs = $logs->where('logged_at', '>=', $now->copy()->startOfMonth());
+                $query->where('logged_at', '>=', $now->copy()->startOfMonth());
             } elseif ($period === 'year') {
-                $logs = $logs->where('logged_at', '>=', $now->copy()->startOfYear());
+                $query->where('logged_at', '>=', $now->copy()->startOfYear());
             }
         }
+
+        // We need to clone the query for department grouping, because traffic grouping alters the select.
+        $deptQuery = clone $query;
 
         // Process Traffic Data (Line chart)
         $trafficLabels = [];
@@ -57,51 +52,61 @@ class AnalyticsController extends Controller
 
         if ($termId || $period === 'year') {
             // Group by Month
-            $grouped = $logs->groupBy(fn($log) => $log->logged_at->format('M Y'));
-            foreach ($grouped as $label => $group) {
-                $trafficLabels[] = $label;
-                $trafficValues[] = $group->count();
-            }
+            $trafficData = $query->selectRaw("DATE_FORMAT(logged_at, '%b %Y') as label, COUNT(*) as aggregate")
+                ->groupBy('label')
+                ->orderByRaw("MIN(logged_at)") // Ensure chronological order
+                ->get();
         } elseif ($period === 'month' || $period === 'week') {
             // Group by Day
-            $grouped = $logs->groupBy(fn($log) => $log->logged_at->format('M d (D)'));
-            foreach ($grouped as $label => $group) {
-                $trafficLabels[] = $label;
-                $trafficValues[] = $group->count();
-            }
+            $trafficData = $query->selectRaw("DATE_FORMAT(logged_at, '%b %d (%a)') as label, COUNT(*) as aggregate")
+                ->groupBy('label')
+                ->orderByRaw("MIN(logged_at)")
+                ->get();
         } else {
             // Group by Hour (Today)
+            // SQL HOUR() returns 0-23
+            $trafficData = $query->selectRaw("HOUR(logged_at) as hour, COUNT(*) as aggregate")
+                ->groupBy('hour')
+                ->get()->keyBy('hour');
+            
             for ($h = 6; $h <= 22; $h++) {
                 $label = $h < 12 ? "{$h}AM" : ($h === 12 ? "12PM" : ($h - 12) . "PM");
                 $trafficLabels[] = $label;
-                $trafficValues[] = $logs->filter(fn($l) => $l->logged_at->hour === $h)->count();
+                $trafficValues[] = isset($trafficData[$h]) ? $trafficData[$h]->aggregate : 0;
+            }
+            $trafficData = null; // skip the foreach below
+        }
+
+        if (isset($trafficData)) {
+            foreach ($trafficData as $row) {
+                $trafficLabels[] = $row->label;
+                $trafficValues[] = $row->aggregate;
             }
         }
 
         // Process Department Data (Doughnut chart)
-        // Ensure student relation is loaded
-        $logs->load('student');
-        
-        $deptCounts = [];
-        foreach ($logs as $log) {
-            $dept = $log->student?->department ?? 'Unknown';
-            if (!isset($deptCounts[$dept])) {
-                $deptCounts[$dept] = 0;
-            }
-            $deptCounts[$dept]++;
+        // Join students to group by department without loading all models
+        $deptData = $deptQuery->join('students', 'attendance_logs.student_id', '=', 'students.id')
+            ->selectRaw("COALESCE(students.department, 'Unknown') as department, COUNT(*) as aggregate")
+            ->groupBy('department')
+            ->orderByDesc('aggregate')
+            ->get();
+
+        $deptLabels = [];
+        $deptValues = [];
+        foreach ($deptData as $row) {
+            $deptLabels[] = $row->department;
+            $deptValues[] = $row->aggregate;
         }
-        
-        // Sort descending
-        arsort($deptCounts);
-        
+
         return response()->json([
             'traffic' => [
                 'labels' => $trafficLabels,
                 'values' => $trafficValues
             ],
             'departments' => [
-                'labels' => array_keys($deptCounts),
-                'values' => array_values($deptCounts)
+                'labels' => $deptLabels,
+                'values' => $deptValues
             ]
         ]);
     }

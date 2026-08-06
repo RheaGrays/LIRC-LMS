@@ -23,7 +23,7 @@ class StudentRegistrationController extends Controller
             'middleName' => 'nullable|string|max:255',
             'level' => 'required|in:college,basic_ed',
             'college' => 'required|string|max:255',
-            'department' => 'nullable|string|max:255', // used for program in college
+            'department' => 'required_if:level,college|nullable|string|max:255', // used for program in college
             'yearLevel' => 'required|string|max:50',
             'email' => 'required|email|max:255',
             'contactNumber' => 'nullable|string|max:50',
@@ -42,11 +42,12 @@ class StudentRegistrationController extends Controller
                     return response()->json(['message' => 'Invalid image format. Allowed formats: jpeg, jpg, png, webp'], 422);
                 }
 
-                $imageBase64 = base64_decode($imageParts[1]);
-
-                if (strlen($imageBase64) > 5 * 1024 * 1024) {
+                // Check base64 string length BEFORE decoding (~7MB base64 = ~5MB decoded)
+                if (strlen($imageParts[1]) > 7 * 1024 * 1024) {
                     return response()->json(['message' => 'Image size must not exceed 5MB'], 422);
                 }
+
+                $imageBase64 = base64_decode($imageParts[1]);
 
                 $safeId = Str::slug($validated['studentId'], '_');
                 $fileName = "student-photos/{$safeId}_" . time() . ".{$imageType}";
