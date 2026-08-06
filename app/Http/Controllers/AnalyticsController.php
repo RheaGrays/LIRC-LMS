@@ -10,88 +10,99 @@ class AnalyticsController extends Controller
 {
     public function index()
     {
-        return view('admin.analytics.index');
+        $terms = \App\Models\AcademicTerm::orderBy('start_date', 'desc')->get();
+        return view('admin.analytics.index', compact('terms'));
     }
 
-    /** GET /admin/analytics/data?type=hourly&date=YYYY-MM-DD */
     public function data(Request $request): JsonResponse
     {
-        $type = $request->input('type', 'daily');
+        $period = $request->input('period', 'today');
+        $termId = $request->input('term_id');
+        
+        $query = AttendanceLog::where('action', 'check_in');
 
-        return match ($type) {
-            'hourly'  => response()->json($this->hourly($request->input('date', today()->toDateString()))),
-            'weekly'  => response()->json($this->weekly()),
-            'monthly' => response()->json($this->monthly()),
-            default   => response()->json(['error' => 'Invalid type'], 422),
-        };
-    }
-
-    private function hourly(string $date): array
-    {
-        $from = "{$date} 00:00:00";
-        $to   = "{$date} 23:59:59";
-
-        $rows = AttendanceLog::selectRaw('HOUR(logged_at) as h, COUNT(*) as cnt')
-            ->where('action', 'check_in')
-            ->whereBetween('logged_at', [$from, $to])
-            ->groupBy('h')
-            ->pluck('cnt', 'h')
-            ->toArray();
-
-        $labels = [];
-        $data   = [];
-        for ($h = 6; $h <= 22; $h++) {
-            $labels[] = $h < 12 ? "{$h}AM" : ($h === 12 ? "12PM" : ($h - 12) . "PM");
-            $data[]   = $rows[$h] ?? 0;
-        }
-
-        return compact('labels', 'data');
-    }
-
-    private function weekly(): array
-    {
-        $now    = now();
-        $dow    = $now->dayOfWeek; // 0=Sun
-        $monday = $now->copy()->subDays($dow === 0 ? 6 : $dow - 1)->startOfDay();
-
-        $rows = AttendanceLog::selectRaw('DAYOFWEEK(logged_at) as dow, COUNT(*) as cnt')
-            ->where('action', 'check_in')
-            ->where('logged_at', '>=', $monday)
-            ->groupBy('dow')
-            ->pluck('cnt', 'dow')
-            ->toArray();
-
-        // MySQL: 1=Sun,2=Mon,...,7=Sat  →  remap to Mon–Sun
-        $dayMap = [2 => 'Mon', 3 => 'Tue', 4 => 'Wed', 5 => 'Thu', 6 => 'Fri', 7 => 'Sat', 1 => 'Sun'];
-        $labels = array_values($dayMap);
-        $data   = array_map(fn($k) => $rows[$k] ?? 0, array_keys($dayMap));
-
-        return compact('labels', 'data');
-    }
-
-    private function monthly(): array
-    {
-        $start = now()->startOfMonth();
-        $end   = now()->endOfMonth();
-
-        $rows = AttendanceLog::selectRaw('DAY(logged_at) as d, COUNT(*) as cnt')
-            ->where('action', 'check_in')
-            ->whereBetween('logged_at', [$start, $end])
-            ->groupBy('d')
-            ->pluck('cnt', 'd')
-            ->toArray();
-
-        $labels = [];
-        $data   = [];
-        for ($w = 1; $w <= 5; $w++) {
-            $labels[] = "Week {$w}";
-            $weekTotal = 0;
-            for ($d = ($w - 1) * 7 + 1; $d <= $w * 7; $d++) {
-                $weekTotal += $rows[$d] ?? 0;
+        // If an Academic Term is selected, restrict the query to its date range
+        if ($termId) {
+            $term = \App\Models\AcademicTerm::find($termId);
+            if ($term) {
+                // When term is selected, we want to see the traffic across the entire term
+                // Since term can span months, we'll just group by month or week
+                $query->whereBetween('logged_at', [
+                    $term->start_date->startOfDay(), 
+                    $term->end_date->endOfDay()
+                ]);
             }
-            $data[] = $weekTotal;
         }
 
-        return compact('labels', 'data');
+        // We fetch the data from the query and process it
+        $logs = $query->get();
+
+        // If no term is selected, we filter by the selected period
+        if (!$termId) {
+            $now = now();
+            if ($period === 'today') {
+                $logs = $logs->where('logged_at', '>=', $now->startOfDay());
+            } elseif ($period === 'week') {
+                $logs = $logs->where('logged_at', '>=', $now->copy()->startOfWeek());
+            } elseif ($period === 'month') {
+                $logs = $logs->where('logged_at', '>=', $now->copy()->startOfMonth());
+            } elseif ($period === 'year') {
+                $logs = $logs->where('logged_at', '>=', $now->copy()->startOfYear());
+            }
+        }
+
+        // Process Traffic Data (Line chart)
+        $trafficLabels = [];
+        $trafficValues = [];
+
+        if ($termId || $period === 'year') {
+            // Group by Month
+            $grouped = $logs->groupBy(fn($log) => $log->logged_at->format('M Y'));
+            foreach ($grouped as $label => $group) {
+                $trafficLabels[] = $label;
+                $trafficValues[] = $group->count();
+            }
+        } elseif ($period === 'month' || $period === 'week') {
+            // Group by Day
+            $grouped = $logs->groupBy(fn($log) => $log->logged_at->format('M d (D)'));
+            foreach ($grouped as $label => $group) {
+                $trafficLabels[] = $label;
+                $trafficValues[] = $group->count();
+            }
+        } else {
+            // Group by Hour (Today)
+            for ($h = 6; $h <= 22; $h++) {
+                $label = $h < 12 ? "{$h}AM" : ($h === 12 ? "12PM" : ($h - 12) . "PM");
+                $trafficLabels[] = $label;
+                $trafficValues[] = $logs->filter(fn($l) => $l->logged_at->hour === $h)->count();
+            }
+        }
+
+        // Process Department Data (Doughnut chart)
+        // Ensure student relation is loaded
+        $logs->load('student');
+        
+        $deptCounts = [];
+        foreach ($logs as $log) {
+            $dept = $log->student?->department ?? 'Unknown';
+            if (!isset($deptCounts[$dept])) {
+                $deptCounts[$dept] = 0;
+            }
+            $deptCounts[$dept]++;
+        }
+        
+        // Sort descending
+        arsort($deptCounts);
+        
+        return response()->json([
+            'traffic' => [
+                'labels' => $trafficLabels,
+                'values' => $trafficValues
+            ],
+            'departments' => [
+                'labels' => array_keys($deptCounts),
+                'values' => array_values($deptCounts)
+            ]
+        ]);
     }
 }

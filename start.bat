@@ -1,5 +1,6 @@
 @echo off
 cd /d "%~dp0"
+cd "C:\Users\Alfie Lynard\OneDrive\Desktop\archive\LEMS"
 set PATH=C:\xampp\php;%PATH%
 
 :: Check if Laravel server is already running on port 8000

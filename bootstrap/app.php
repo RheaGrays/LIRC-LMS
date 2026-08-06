@@ -17,5 +17,15 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        $exceptions->render(function (\Illuminate\Database\QueryException $e, \Illuminate\Http\Request $request) {
+            // Check for connection-related errors
+            if (str_contains($e->getMessage(), 'SQLSTATE[HY000] [2002]') || str_contains($e->getMessage(), 'Connection refused') || str_contains($e->getMessage(), 'No such host is known')) {
+                return response()->view('errors.db_offline', [], 500);
+            }
+        });
+        $exceptions->render(function (\PDOException $e, \Illuminate\Http\Request $request) {
+            if (str_contains($e->getMessage(), 'SQLSTATE[HY000] [2002]') || str_contains($e->getMessage(), 'Connection refused') || str_contains($e->getMessage(), 'No such host is known')) {
+                return response()->view('errors.db_offline', [], 500);
+            }
+        });
     })->create();

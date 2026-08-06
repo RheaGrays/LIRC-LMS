@@ -94,7 +94,7 @@ body {
 .sidebar {
   width: 240px;
   min-height: 100vh;
-  background: var(--cjc-navy);
+  background: #681622;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -176,6 +176,16 @@ body {
 .input:focus {
   border-color: var(--cjc-red-dark);
   box-shadow: 0 0 0 3px rgba(154,24,32,0.10);
+}
+
+/* Hide number input spinners */
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type=number] {
+  -moz-appearance: textfield;
 }
 
 /* ── Status badges ──────────────────────────────────────────── */
