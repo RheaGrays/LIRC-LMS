@@ -9,6 +9,7 @@ const registerApp = () => {
         suggestions: [],
         showSuggestions: false,
         searchDebounce: null,
+        barcodeBuffer: '',
         isProcessing: false,
         result: null,
         resetTimeout: null,
@@ -79,7 +80,7 @@ const registerApp = () => {
         startClock() {
             const tick = () => {
                 const now = new Date();
-                this.clockHm = now.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: false });
+                this.clockHm = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
                 this.clockSec = now.toLocaleTimeString('en-PH', { second: '2-digit' }).padStart(2, '0');
                 this.clockDate = now.toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
             };
@@ -132,6 +133,20 @@ const registerApp = () => {
 
         handleKey(e) {
             this.handleActivity();
+            
+            // Ignore if typing in an actual input field
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+            // Global barcode scanner capture
+            if (e.key === 'Enter') {
+                if (this.barcodeBuffer.trim()) {
+                    this.manualId = this.barcodeBuffer.trim();
+                    this.submitManual();
+                }
+                this.barcodeBuffer = '';
+            } else if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                this.barcodeBuffer += e.key;
+            }
         },
 
         async fetchSuggestions() {
@@ -227,7 +242,7 @@ const registerApp = () => {
                 this.isProcessing = false;
                 this.manualId = '';
                 
-                // Keep result visible until next scan (no timeout, per librarian's request)
+                // No timeout! Result stays on screen permanently until the next scan.
                 this.$nextTick(() => {
                     this.handleActivity();
                 });

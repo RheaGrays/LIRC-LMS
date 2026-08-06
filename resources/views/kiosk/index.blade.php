@@ -141,15 +141,15 @@
 
             <!-- Main Scanner Box -->
             <main class="flex-1 flex items-center justify-center p-10 pb-20">
-                <div class="flex flex-col items-center w-full max-w-[500px]">
-                    <div class="fade-in-up bg-white border border-[var(--border-light)] rounded-[24px] shadow-[var(--shadow-lg)] w-full relative overflow-hidden">
+                <div class="flex flex-col items-center w-full max-w-[800px] min-h-[500px] transition-all duration-300">
+                    <div class="fade-in-up bg-white border border-[var(--border-light)] rounded-[24px] shadow-[var(--shadow-lg)] w-full relative overflow-hidden flex flex-col h-full min-h-[500px]">
                         
-                        <div class="px-8 pt-8">
+                        <div class="px-8 pt-8" x-show="!result && !isProcessing">
                             <h1 class="font-['Fraunces'] text-[26px] font-bold text-[var(--cjc-navy)] m-0 mb-2 tracking-tight">Scan ID</h1>
                             <p class="text-[14px] text-[var(--text-muted)] font-['Inter'] m-0 mb-7">Present your Student ID to check in or out.</p>
 
                             <!-- Tabs -->
-                            <div x-show="!isProcessing" class="flex border-b border-[var(--border-light)] gap-6 mb-8">
+                            <div x-show="!result && !isProcessing" class="flex border-b border-[var(--border-light)] gap-6 mb-8">
                                 <button class="pb-3 text-[14px] font-semibold transition-colors"
                                     :class="tab === 'scan' ? 'text-[var(--cjc-navy)] border-b-2 border-[var(--cjc-navy)]' : 'text-gray-400 hover:text-gray-600'"
                                     @click="tab = 'scan'; handleActivity()">Barcode / QR</button>
@@ -162,10 +162,10 @@
                             </div>
                         </div>
 
-                        <div class="px-8 pb-8 min-h-[220px]">
+                        <div class="min-h-[220px]" :class="result ? 'p-0' : 'px-8 pb-8'">
                             
-                            <!-- Form Content (Hidden while processing) -->
-                            <div x-show="!isProcessing">
+                            <!-- Form Content (Hidden while processing or showing result) -->
+                            <div x-show="!result && !isProcessing">
                                 <!-- Tab: Scan -->
                                 <div x-show="tab === 'scan'" class="flex flex-col gap-4 animate-slide-in">
                                     <label class="flex flex-col gap-2">
@@ -242,7 +242,7 @@
                             </div>
 
                             <!-- Result Overlay -->
-                            <div x-show="result && !isProcessing" class="mt-8 border-t border-[var(--border-light)] pt-8 fade-in-up animate-slide-in pb-4">
+                            <div x-show="result && !isProcessing" class="fade-in-up animate-slide-in pb-4">
                                 <x-kiosk.status-card />
                             </div>
                         </div>

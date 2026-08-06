@@ -44,7 +44,7 @@
             <div class="w-[1px] h-7 bg-[var(--border-warm)] hidden sm:block"></div>
 
             <div class="w-9 h-9 rounded-full overflow-hidden border border-[var(--border-warm)] bg-white shrink-0 hidden sm:block">
-                <img src="/cjc-logo.jpeg" alt="CJC" class="w-full h-full object-cover" />
+                <img src="/CorJesu Logo.png" alt="CJC" class="w-full h-full object-cover" />
             </div>
             <div class="hidden sm:block">
                 <p class="m-0 text-xs font-semibold tracking-wide uppercase text-[var(--cjc-navy)] font-['Inter'] leading-tight">
