@@ -14,12 +14,12 @@
             <div class="flex items-center justify-between mb-8">
                 <div class="flex items-center gap-4">
                     <div>
-                        <h1 class="font-['Fraunces'] text-2xl font-bold text-[var(--cjc-navy)] m-0 tracking-tight">CJC Library</h1>
+                        <h1 class="text-2xl font-bold text-[var(--cjc-navy)] m-0 tracking-tight">CJC Library</h1>
                         <p class="text-sm text-[var(--text-muted)] font-medium m-0">Seat Availability Kiosk</p>
                     </div>
                 </div>
                 <div class="text-right">
-                    <div class="font-['Fraunces'] text-4xl font-bold text-[var(--cjc-navy)] leading-none tracking-tight">
+                    <div class="text-4xl font-bold text-[var(--cjc-navy)] leading-none tracking-tight">
                         <span x-text="clockHm">--:--</span><span class="text-[0.4em] text-[var(--text-muted)] ml-1 font-semibold align-text-top" x-text="clockSec">--</span>
                     </div>
                     <div class="text-xs text-[var(--text-subtle)] font-medium mt-1 uppercase tracking-wider" x-text="clockDate">
@@ -34,19 +34,19 @@
                 <div class="flex-1 flex justify-between pr-12 border-r border-gray-100">
                     <div>
                         <p class="text-xs font-bold text-[var(--text-subtle)] uppercase tracking-wider mb-2">Total Seats</p>
-                        <p class="font-['Fraunces'] text-4xl font-black text-[var(--cjc-navy)] m-0" x-text="totalSeats">0</p>
+                        <p class="text-3xl font-bold text-[var(--cjc-navy)] m-0" x-text="totalSeats">0</p>
                     </div>
                     <div>
                         <p class="text-xs font-bold text-[var(--text-subtle)] uppercase tracking-wider mb-2">Occupied</p>
-                        <p class="font-['Fraunces'] text-4xl font-black text-[var(--cjc-navy)] m-0" x-text="totalOccupied">0</p>
+                        <p class="text-3xl font-bold text-[var(--cjc-navy)] m-0" x-text="totalOccupied">0</p>
                     </div>
                     <div>
                         <p class="text-xs font-bold text-[var(--text-subtle)] uppercase tracking-wider mb-2">Available</p>
-                        <p class="font-['Fraunces'] text-4xl font-black text-[var(--cjc-navy)] m-0" x-text="availableSeats">0</p>
+                        <p class="text-3xl font-bold text-[var(--cjc-navy)] m-0" x-text="availableSeats">0</p>
                     </div>
                     <div>
                         <p class="text-xs font-bold text-[var(--text-subtle)] uppercase tracking-wider mb-2">Overall</p>
-                        <p class="font-['Fraunces'] text-4xl font-black text-[var(--cjc-navy)] m-0" x-text="overallPercent + '%'">0%</p>
+                        <p class="text-3xl font-bold text-[var(--cjc-navy)] m-0" x-text="overallPercent + '%'">0%</p>
                     </div>
                 </div>
                 
@@ -98,7 +98,7 @@
                                     </div>
                                 </td>
                                 <td class="px-6 py-4">
-                                    <h3 class="font-['Fraunces'] text-lg font-bold text-[var(--cjc-navy)] m-0" x-text="section.name"></h3>
+                                    <h3 class="text-lg font-bold text-[var(--cjc-navy)] m-0" x-text="section.name"></h3>
                                     <p class="text-xs text-[var(--text-subtle)] mt-1 font-medium"><span x-text="section.total"></span> total capacity</p>
                                 </td>
                                 <td class="px-6 py-4 min-w-[200px]">
@@ -142,7 +142,7 @@
             
             <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 z-10" x-show="isAddModalOpen" x-transition.scale.origin.bottom>
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="font-['Fraunces'] text-2xl font-bold text-[var(--cjc-navy)]">Add New Section</h2>
+                    <h2 class="text-2xl font-bold text-[var(--cjc-navy)]">Add New Section</h2>
                     <button @click="closeAddModal()" class="text-gray-400 hover:text-gray-600">
                         <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
@@ -191,7 +191,7 @@
                 <div class="inline-block px-3 py-1 bg-gray-100 text-[var(--text-muted)] font-bold text-xs rounded-md mb-3 tracking-wider">
                     <span x-text="activeSection?.id"></span>
                 </div>
-                <h3 class="font-['Fraunces'] text-3xl font-bold text-[var(--cjc-navy)] leading-tight mb-2" x-text="activeSection?.name"></h3>
+                <h3 class="text-3xl font-bold text-[var(--cjc-navy)] leading-tight mb-2" x-text="activeSection?.name"></h3>
                 <p class="text-[var(--text-subtle)] text-sm font-medium">
                     <span :class="activeSection?.occupied >= activeSection?.total ? 'text-[var(--cjc-red)]' : ''">
                         <span x-text="activeSection?.occupied"></span> / <span x-text="activeSection?.total"></span> Seats Occupied
@@ -209,7 +209,7 @@
                 
                 <!-- Center Number -->
                 <div class="w-20 text-center flex-shrink-0">
-                    <span class="font-['Fraunces'] text-6xl font-black transition-colors duration-300" 
+                    <span class="text-6xl font-black transition-colors duration-300" 
                           :class="activeSection?.occupied >= activeSection?.total ? 'text-[var(--cjc-red)]' : 'text-[var(--cjc-navy)]'" 
                           x-text="activeSection?.occupied"></span>
                 </div>

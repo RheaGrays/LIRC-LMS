@@ -18,6 +18,15 @@ class SectionController extends Controller
         return view('admin.sections.index', compact('admin', 'logs', 'settings'));
     }
 
+    /** Statistics view */
+    public function statistics()
+    {
+        $admin    = Auth::guard('admin')->user();
+        $logs     = $this->latestSections();
+        $settings = \App\Models\SystemSetting::allSettings();
+        return view('admin.statistics.index', compact('admin', 'logs', 'settings'));
+    }
+
     /** GET /admin/sections/latest — JSON for Alpine.js */
     public function latest(): JsonResponse
     {
