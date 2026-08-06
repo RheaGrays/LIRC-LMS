@@ -227,12 +227,10 @@ const registerApp = () => {
                 this.isProcessing = false;
                 this.manualId = '';
                 
-                const timeoutMs = (this.result?.status === 'success' || this.result?.status === 'offline') ? 8000 : 5000;
-                
-                this.resetTimeout = setTimeout(() => {
-                    this.result = null;
+                // Keep result visible until next scan (no timeout, per librarian's request)
+                this.$nextTick(() => {
                     this.handleActivity();
-                }, timeoutMs);
+                });
             }
         },
         
