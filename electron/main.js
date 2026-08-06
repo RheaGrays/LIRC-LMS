@@ -45,6 +45,8 @@ function createWindow() {
     mainWindow = new BrowserWindow({
         width: 1280,
         height: 800,
+        kiosk: !isAdmin,
+        fullscreen: !isAdmin,
         title: isAdmin ? 'LEMS Admin - Cor Jesu College Library' : 'LEMS Kiosk - Cor Jesu College Library',
         icon: iconPath,
         autoHideMenuBar: true,
@@ -55,7 +57,28 @@ function createWindow() {
         }
     });
 
-    mainWindow.maximize();
+    if (isAdmin) {
+        mainWindow.maximize();
+    }
+
+    // Security: Block all external navigation
+    mainWindow.webContents.on('will-navigate', (event, url) => {
+        if (!url.startsWith('http://127.0.0.1:8000')) {
+            event.preventDefault();
+        }
+    });
+
+    // Security: Block new windows/popups
+    mainWindow.webContents.setWindowOpenHandler(() => {
+        return { action: 'deny' };
+    });
+
+    // Security: Block DevTools shortcuts (F12, Ctrl+Shift+I)
+    mainWindow.webContents.on('before-input-event', (event, input) => {
+        if (input.key === 'F12' || (input.control && input.shift && input.key.toLowerCase() === 'i')) {
+            event.preventDefault();
+        }
+    });
 
     const targetUrl = `http://127.0.0.1:8000${targetRoute}`;
 
