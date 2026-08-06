@@ -45,6 +45,72 @@ class AttendanceController extends Controller
     }
 
     /**
+     * Process a student scan (lookup, check last action, and log) in a single request.
+     */
+    public function process(Request $request): JsonResponse
+    {
+        $term = trim($request->input('student_id', ''));
+        if (!$term) {
+            return response()->json(['status' => 'error', 'message' => 'No student ID or name provided.'], 422);
+        }
+
+        $student = $this->resolveStudent($term);
+        if ($student === 'AMBIGUOUS') {
+            return response()->json(['status' => 'error', 'message' => 'Multiple students match that name. Please use your exact Student ID.']);
+        }
+        if (!$student) {
+            return response()->json(['status' => 'error', 'message' => 'Student ID not found in the system.']);
+        }
+
+        if ($student->status === 'inactive') {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Student account is inactive.',
+                'student' => $this->formatStudent($student),
+            ]);
+        }
+
+        // ── Cooldown Buffer (Prevents duplicate scans within 5 minutes) ──
+        $cooldownMinutes = (int) \App\Models\SystemSetting::get('checkin_cooldown_minutes', 5);
+        $recentLog = AttendanceLog::where('student_id', $student->id)
+            ->where('logged_at', '>=', now()->subMinutes($cooldownMinutes))
+            ->orderByDesc('logged_at')
+            ->first();
+
+        if ($recentLog) {
+            return response()->json([
+                'status'    => 'success',
+                'action'    => $recentLog->action,
+                'message'   => 'Duplicate scan ignored (within 5-minute cooldown).',
+                'student'   => $this->formatStudent($student)
+            ]);
+        }
+
+        // Determine next action
+        $today = now()->startOfDay();
+        $lastLog = AttendanceLog::where('student_id', $student->id)
+            ->where('logged_at', '>=', $today)
+            ->orderByDesc('logged_at')
+            ->first();
+            
+        $nextAction = ($lastLog && $lastLog->action === 'check_in') ? 'check_out' : 'check_in';
+
+        // Log action
+        AttendanceLog::create([
+            'student_id' => $student->id,
+            'action'     => $nextAction,
+            'logged_at'  => now(),
+        ]);
+
+        return response()->json([
+            'status'  => 'success',
+            'action'  => $nextAction,
+            'message' => $nextAction === 'check_in' ? 'Successfully checked in.' : 'Successfully checked out.',
+            'student' => $this->formatStudent($student)
+        ]);
+    }
+
+    /**
      * Log an attendance action (check_in or check_out).
      */
     public function log(Request $request): JsonResponse

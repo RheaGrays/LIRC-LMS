@@ -204,39 +204,18 @@ const registerApp = () => {
         },
         
         async performOnlineCheckin(id) {
-            const lookupRes = await fetch('/kiosk/lookup', {
+            const processRes = await fetch('/kiosk/process', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
                 body: JSON.stringify({ student_id: id })
             });
-            const lookupData = await lookupRes.json();
+            const processData = await processRes.json();
             
-            if (!lookupData.found) return { status: 'error', message: 'Student ID not found in the system.' };
-            if (lookupData.denied) return { status: 'error', message: lookupData.reason, student: lookupData.student };
-            
-            const lastActionRes = await fetch('/kiosk/last', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
-                body: JSON.stringify({ student_id: id })
-            });
-            const lastActionData = await lastActionRes.json();
-            const nextAction = lastActionData.action === 'check_in' ? 'check_out' : 'check_in';
-            
-            const logRes = await fetch('/kiosk/log', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
-                body: JSON.stringify({ student_id: id, action: nextAction })
-            });
-            
-            if (logRes.ok) {
-                return {
-                    status: 'success',
-                    action: nextAction,
-                    message: nextAction === 'check_in' ? 'Successfully checked in.' : 'Successfully checked out.',
-                    student: lookupData.student
-                };
+            if (processData.status === 'error') {
+                return { status: 'error', message: processData.message, student: processData.student };
             }
-            throw new Error("Failed to log");
+            
+            return processData;
         },
         
         async fetchOccupancy() {
