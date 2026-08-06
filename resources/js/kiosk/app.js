@@ -24,12 +24,18 @@ const registerApp = () => {
         selectedCamera: '',
         isCameraActive: false,
 
+        // Slideshow
+        slides: window._kioskCollections || [],
+        currentSlide: 0,
+        slideTimer: null,
+
         init() {
             this.codeReader = new BrowserMultiFormatReader();
             this.startClock();
             this.fetchOccupancy();
             setInterval(() => this.fetchOccupancy(), 30000);
             QueueManager.startSyncTimer();
+            this.startSlideshow();
 
             // Listen for keydown globally to wake up from idle
             window.addEventListener('keydown', (e) => {
@@ -38,6 +44,33 @@ const registerApp = () => {
                     this.activate();
                 }
             });
+        },
+
+        // --- Slideshow Logic ---
+        startSlideshow() {
+            if (this.slideTimer) clearInterval(this.slideTimer);
+            this.slideTimer = setInterval(() => {
+                if (this.state === 'idle' && this.slides.length > 1) {
+                    this.currentSlide = (this.currentSlide + 1) % this.slides.length;
+                }
+            }, 5000);
+        },
+
+        nextSlide() {
+            if (this.slides.length < 2) return;
+            this.currentSlide = (this.currentSlide + 1) % this.slides.length;
+            this.startSlideshow(); // reset timer on manual navigation
+        },
+
+        prevSlide() {
+            if (this.slides.length < 2) return;
+            this.currentSlide = (this.currentSlide - 1 + this.slides.length) % this.slides.length;
+            this.startSlideshow();
+        },
+
+        goToSlide(idx) {
+            this.currentSlide = idx;
+            this.startSlideshow();
         },
 
         startClock() {
@@ -181,7 +214,13 @@ const registerApp = () => {
             if (!lookupData.found) return { status: 'error', message: 'Student ID not found in the system.' };
             if (lookupData.denied) return { status: 'error', message: lookupData.reason, student: lookupData.student };
             
-            const nextAction = 'check_in';
+            const lastActionRes = await fetch('/kiosk/last', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+                body: JSON.stringify({ student_id: id })
+            });
+            const lastActionData = await lastActionRes.json();
+            const nextAction = lastActionData.action === 'check_in' ? 'check_out' : 'check_in';
             
             const logRes = await fetch('/kiosk/log', {
                 method: 'POST',
@@ -193,7 +232,7 @@ const registerApp = () => {
                 return {
                     status: 'success',
                     action: nextAction,
-                    message: 'Successfully checked in.',
+                    message: nextAction === 'check_in' ? 'Successfully checked in.' : 'Successfully checked out.',
                     student: lookupData.student
                 };
             }

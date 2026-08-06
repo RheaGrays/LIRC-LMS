@@ -12,6 +12,7 @@ use App\Http\Controllers\SectionController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\AdminSignupController;
+use App\Http\Controllers\LibraryCollectionController;
 use Illuminate\Support\Facades\Route;
 
 // ── Root ─────────────────────────────────────────────────────
@@ -78,6 +79,12 @@ Route::prefix('admin')->name('admin.')->middleware('auth.admin')->group(function
     Route::get('/sections',        [SectionController::class, 'index'])->name('sections.index');
     Route::get('/sections/latest', [SectionController::class, 'latest'])->name('sections.latest');
     Route::post('/sections/upsert',[SectionController::class, 'upsert'])->name('sections.upsert');
+
+    // Library Collections (kiosk slideshow) — all admin roles
+    Route::get('/library-collections',                   [LibraryCollectionController::class, 'index'])->name('library-collections.index');
+    Route::post('/library-collections',                  [LibraryCollectionController::class, 'store'])->name('library-collections.store');
+    Route::put('/library-collections/{libraryCollection}',   [LibraryCollectionController::class, 'update'])->name('library-collections.update');
+    Route::delete('/library-collections/{libraryCollection}',[LibraryCollectionController::class, 'destroy'])->name('library-collections.destroy');
 
     // Settings (Super Admin only)
     Route::middleware('admin.role:Super Admin')->group(function () {
