@@ -2,6 +2,7 @@ import { app, BrowserWindow } from 'electron';
 import { spawn } from 'child_process';
 import path from 'path';
 import http from 'http';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -22,28 +23,57 @@ function checkServerReady(url, callback) {
     });
 }
 
+function findPhpExecutable() {
+    const candidatePaths = [
+        'C:\\xampp\\php\\php.exe',
+        'D:\\xampp\\php\\php.exe',
+        'C:\\php\\php.exe',
+        'C:\\laragon\\bin\\php\\current\\php.exe',
+        'C:\\Program Files\\PHP\\php.exe',
+        'C:\\tools\\php\\php.exe'
+    ];
+
+    for (const p of candidatePaths) {
+        if (fs.existsSync(p)) {
+            return p;
+        }
+    }
+    return 'php'; // default system PATH fallback
+}
+
 function startPhpServer() {
-    const projectPath = path.join(__dirname, '..');
-    const systemPhp = 'php';
-    const xamppPhp = 'C:\\xampp\\php\\php.exe';
+    const projectPath = app.isPackaged 
+        ? path.join(process.resourcesPath, 'app')
+        : path.join(__dirname, '..');
+
+    const phpExec = findPhpExecutable();
 
     try {
-        phpProcess = spawn(systemPhp, ['artisan', 'serve', '--port=8000'], {
+        phpProcess = spawn(phpExec, ['artisan', 'serve', '--port=8000'], {
             cwd: projectPath,
             detached: false,
             stdio: 'ignore'
         });
-        
-        phpProcess.on('error', () => {
-            // Fallback to XAMPP PHP path if system 'php' fails
-            phpProcess = spawn(xamppPhp, ['artisan', 'serve', '--port=8000'], {
-                cwd: projectPath,
-                detached: false,
-                stdio: 'ignore'
-            });
+
+        phpProcess.on('error', (err) => {
+            console.error('PHP spawn error:', err);
+            // If custom path failed, try system 'php' safely without throwing modal exception
+            if (phpExec !== 'php') {
+                try {
+                    const fallbackProcess = spawn('php', ['artisan', 'serve', '--port=8000'], {
+                        cwd: projectPath,
+                        detached: false,
+                        stdio: 'ignore'
+                    });
+                    fallbackProcess.on('error', (e) => console.error('System PHP error:', e));
+                    phpProcess = fallbackProcess;
+                } catch (e) {
+                    console.error('Fallback spawn exception:', e);
+                }
+            }
         });
     } catch (e) {
-        console.error('Failed to spawn PHP:', e);
+        console.error('Failed to spawn PHP server:', e);
     }
 }
 
