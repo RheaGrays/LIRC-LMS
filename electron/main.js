@@ -97,6 +97,25 @@ function startPhpServer() {
         }
     });
 
+    // Auto-heal missing server.php if installer failed to bundle it
+    const serverPhpPath = path.join(projectPath, 'server.php');
+    if (!fs.existsSync(serverPhpPath)) {
+        try {
+            const serverPhpContent = `<?php
+$uri = urldecode(
+    parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)
+);
+if ($uri !== '/' && file_exists(__DIR__.'/public'.$uri)) {
+    return false;
+}
+require_once __DIR__.'/public/index.php';
+`;
+            fs.writeFileSync(serverPhpPath, serverPhpContent);
+        } catch (e) {
+            console.error('Failed to auto-heal server.php:', e);
+        }
+    }
+
     try {
         const env = { 
             ...process.env, 
