@@ -39,7 +39,9 @@
             "storage/**/*",
             "vendor/**/*",
             "artisan",
-            ".env"
+            ".env",
+            "composer.json",
+            "composer.lock"
         ],
         "win": {
             "target": "nsis",

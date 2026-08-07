@@ -134,16 +134,11 @@ function createWindow() {
         }
     });
 
-    mainWindow.once('ready-to-show', () => {
-        mainWindow.show();
-    });
-
-    // Safety fallback: force show window after 800ms if ready-to-show hasn't fired yet
-    setTimeout(() => {
+    mainWindow.webContents.once('did-finish-load', () => {
         if (mainWindow && !mainWindow.isVisible()) {
             mainWindow.show();
         }
-    }, 800);
+    });
 
     if (isAdmin) {
         mainWindow.maximize();
