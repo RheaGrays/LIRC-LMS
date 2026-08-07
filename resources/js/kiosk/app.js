@@ -127,7 +127,7 @@ const registerApp = () => {
             if (this.tab === 'webcam') {
                 if (!this.isCameraActive) this.initScanner();
             } else {
-                this.stopScanning();
+                if (this.isCameraActive) this.stopScanning();
             }
 
             // Focus appropriate input
@@ -236,9 +236,31 @@ const registerApp = () => {
         },
 
         stopScanning() {
-            if (this.codeReader) {
-                this.codeReader.reset();
-            }
+            if (!this.isCameraActive) return;
+
+            try {
+                if (this.codeReader) {
+                    if (typeof this.codeReader.reset === 'function') {
+                        this.codeReader.reset();
+                    } else if (typeof this.codeReader.stopAsyncDecode === 'function') {
+                        this.codeReader.stopAsyncDecode();
+                    } else if (typeof this.codeReader.stopContinuousDecode === 'function') {
+                        this.codeReader.stopContinuousDecode();
+                    }
+                }
+            } catch (e) {}
+
+            try {
+                const videoEl = document.getElementById('kiosk-video');
+                if (videoEl && videoEl.srcObject) {
+                    const stream = videoEl.srcObject;
+                    if (stream && stream.getTracks) {
+                        stream.getTracks().forEach(track => track.stop());
+                    }
+                    videoEl.srcObject = null;
+                }
+            } catch (e) {}
+
             this.isCameraActive = false;
         },
 
