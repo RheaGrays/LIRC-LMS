@@ -8,6 +8,8 @@
 
     <!-- CINEMATIC ANIMATED SPLASH SCREEN OVERLAY (MATCHING OFFICIAL DESIGN MOCKUP) -->
     <div x-show="showSplash" 
+         x-cloak
+         style="display: none !important;"
          x-transition:leave="transition ease-out duration-700"
          x-transition:leave-start="opacity-100 scale-100"
          x-transition:leave-end="opacity-0 scale-98 pointer-events-none"
