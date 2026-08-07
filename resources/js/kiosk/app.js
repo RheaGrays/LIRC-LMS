@@ -34,7 +34,8 @@ const registerApp = () => {
         slideTimer: null,
 
         init() {
-            this.codeReader = new BrowserMultiFormatReader();
+            // Pass 150ms interval to prevent continuous CPU decoding loops and eliminate video lag
+            this.codeReader = new BrowserMultiFormatReader(null, 150);
             this.startClock();
             this.fetchOccupancy();
             setInterval(() => this.fetchOccupancy(), 30000);
@@ -200,8 +201,19 @@ const registerApp = () => {
 
         async startScanning() {
             const videoEl = document.getElementById('kiosk-video');
+            if (!videoEl) return;
+
             try {
-                await this.codeReader.decodeFromVideoDevice(this.selectedCamera, videoEl, (result, err) => {
+                const constraints = {
+                    video: {
+                        deviceId: this.selectedCamera ? { exact: this.selectedCamera } : undefined,
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        frameRate: { ideal: 30, max: 60 }
+                    }
+                };
+
+                await this.codeReader.decodeFromConstraints(constraints, videoEl, (result, err) => {
                     if (result && !this.isProcessing) {
                         this.manualId = result.text;
                         this.submitManual();
@@ -209,7 +221,17 @@ const registerApp = () => {
                 });
                 this.isCameraActive = true;
             } catch (err) {
-                console.error("Scanner start error:", err);
+                try {
+                    await this.codeReader.decodeFromVideoDevice(this.selectedCamera, videoEl, (result, err) => {
+                        if (result && !this.isProcessing) {
+                            this.manualId = result.text;
+                            this.submitManual();
+                        }
+                    });
+                    this.isCameraActive = true;
+                } catch (e) {
+                    console.error("Scanner start error:", e);
+                }
             }
         },
 
