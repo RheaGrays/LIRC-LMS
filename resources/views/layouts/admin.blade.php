@@ -6,42 +6,63 @@
     <link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/airbnb.css">
     <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
     <style>
-        /* Custom Tom Select Styling to match theme */
+        /* Custom Modern Tom Select Styling */
+        .ts-wrapper {
+            position: relative !important;
+            width: 100% !important;
+        }
         .ts-control {
             border: 1px solid #d1d5db !important;
-            border-radius: 6px !important;
-            padding: 9px 12px !important;
+            border-radius: 8px !important;
+            padding: 8px 36px 8px 12px !important;
             font-size: 13px !important;
-            box-shadow: none !important;
+            font-weight: 500 !important;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
             background-color: #fff !important;
             color: var(--cjc-navy) !important;
-            min-height: 40px !important;
-            transition: all 150ms !important;
+            min-height: 38px !important;
+            cursor: pointer !important;
+            transition: all 150ms ease !important;
+            display: flex !important;
+            align-items: center !important;
         }
-        .ts-wrapper.input {
-            padding: 0 !important;
-            border: none !important;
-            box-shadow: none !important;
-            background: transparent !important;
-        }
-        .ts-control.focus {
-            border-color: var(--cjc-red-dark) !important;
-            box-shadow: 0 0 0 3px rgba(154,24,32,0.10) !important;
+        .ts-control.focus, .ts-wrapper.focus .ts-control {
+            border-color: var(--cjc-red) !important;
+            box-shadow: 0 0 0 3px rgba(196, 30, 42, 0.12) !important;
         }
         .ts-dropdown {
-            border-radius: 6px !important;
-            border: 1px solid #d1d5db !important;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+            border-radius: 12px !important;
+            border: 1px solid #e5e7eb !important;
+            box-shadow: 0 12px 30px -5px rgba(0, 0, 0, 0.12), 0 4px 10px -4px rgba(0, 0, 0, 0.05) !important;
             font-size: 13px !important;
             color: var(--cjc-navy) !important;
-            margin-top: 4px !important;
+            margin-top: 6px !important;
+            padding: 6px !important;
+            background: #ffffff !important;
+            z-index: 100 !important;
+            overflow: hidden !important;
         }
         .ts-dropdown .option {
-            padding: 10px 12px !important;
+            padding: 9px 12px !important;
+            border-radius: 8px !important;
+            font-weight: 500 !important;
+            color: #374151 !important;
+            cursor: pointer !important;
+            transition: all 120ms ease !important;
+            margin-bottom: 2px !important;
         }
-        .ts-dropdown .active {
-            background-color: rgba(154,24,32,0.05) !important;
-            color: var(--cjc-red-dark) !important;
+        .ts-dropdown .option:last-child {
+            margin-bottom: 0 !important;
+        }
+        .ts-dropdown .option:hover, .ts-dropdown .option.active {
+            background-color: #f3f4f6 !important;
+            color: var(--cjc-navy) !important;
+            font-weight: 600 !important;
+        }
+        .ts-dropdown .option.selected {
+            background-color: #fef2f2 !important;
+            color: var(--cjc-red) !important;
+            font-weight: 700 !important;
         }
     </style>
 @endpush
