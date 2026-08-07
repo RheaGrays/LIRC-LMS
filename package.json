@@ -39,6 +39,7 @@
             "storage/**/*",
             "vendor/**/*",
             "artisan",
+            "server.php",
             "cacert.pem",
             ".env",
             "composer.json",
