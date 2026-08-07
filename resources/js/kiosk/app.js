@@ -45,7 +45,7 @@ const registerApp = () => {
             window.addEventListener('keydown', (e) => {
                 if (this.state === 'idle' && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
                     this.manualId = e.key;
-                    this.activate();
+                    this.activate(true);
                 }
             });
         },
@@ -88,11 +88,16 @@ const registerApp = () => {
             this.clockInterval = setInterval(tick, 1000);
         },
 
-        activate() {
+        activate(fromKey = false) {
             if (this.state === 'active') return;
             this.state = 'active';
             this.tab = 'scan';
             this.result = null;
+            this.isProcessing = false;
+            this.barcodeBuffer = '';
+            if (!fromKey) {
+                this.manualId = '';
+            }
             this.handleActivity();
             
             // Focus barcode input after DOM updates
@@ -103,6 +108,10 @@ const registerApp = () => {
 
         deactivate() {
             this.state = 'idle';
+            this.result = null;
+            this.isProcessing = false;
+            this.manualId = '';
+            this.barcodeBuffer = '';
             this.stopScanning();
             clearTimeout(this.inactivityTimeout);
         },
