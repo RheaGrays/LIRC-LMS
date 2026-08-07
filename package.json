@@ -6,7 +6,38 @@
         "build": "vite build",
         "dev": "vite",
         "electron": "electron .",
-        "electron:admin": "electron . --admin"
+        "electron:admin": "electron . --admin",
+        "dist": "electron-builder --win"
+    },
+    "build": {
+        "appId": "com.cjc.lirc.lms",
+        "productName": "LIRC Library Management System",
+        "directories": {
+            "output": "dist"
+        },
+        "files": [
+            "electron/**/*",
+            "public/**/*",
+            "app/**/*",
+            "bootstrap/**/*",
+            "config/**/*",
+            "database/**/*",
+            "resources/**/*",
+            "routes/**/*",
+            "storage/**/*",
+            "vendor/**/*",
+            "artisan"
+        ],
+        "win": {
+            "target": "nsis",
+            "icon": "public/CorJesu Logo.png"
+        },
+        "nsis": {
+            "oneClick": false,
+            "allowToChangeInstallationDirectory": true,
+            "createDesktopShortcut": true,
+            "createStartMenuShortcut": true
+        }
     },
     "devDependencies": {
         "@tailwindcss/forms": "^0.5.2",
@@ -16,6 +47,7 @@
         "axios": "^1.7.4",
         "concurrently": "^9.0.1",
         "electron": "^43.2.0",
+        "electron-builder": "^25.1.8",
         "laravel-vite-plugin": "^1.2.0",
         "postcss": "^8.4.31",
         "tailwindcss": "^3.1.0",
