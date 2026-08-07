@@ -6,59 +6,133 @@
 <div x-data="kioskApp()" class="w-full h-screen flex flex-col relative z-10 bg-transparent cursor-pointer select-none overflow-hidden" 
      @mousemove="handleActivity()" @keydown="handleKey($event)" @click="activate()">
 
-    <!-- CINEMATIC ANIMATED SPLASH SCREEN OVERLAY -->
+    <!-- CINEMATIC ANIMATED SPLASH SCREEN OVERLAY (MATCHING OFFICIAL DESIGN MOCKUP) -->
     <div x-show="showSplash" 
          x-transition:leave="transition ease-out duration-700"
          x-transition:leave-start="opacity-100 scale-100"
-         x-transition:leave-end="opacity-0 scale-95 pointer-events-none"
-         class="fixed inset-0 z-[9999] bg-[#0f2744] flex flex-col items-center justify-between p-10 overflow-hidden text-white font-['Inter']">
+         x-transition:leave-end="opacity-0 scale-98 pointer-events-none"
+         class="fixed inset-0 z-[9999] bg-[#fcf9f2] flex flex-col justify-between p-8 md:p-12 overflow-hidden text-[#1e293b] font-['Inter'] select-none">
         
-        <!-- Glowing Background Aura & Ambient Orbs -->
-        <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(196,30,42,0.25)_0%,transparent_70%)] pointer-events-none"></div>
-        <div class="absolute -top-32 -left-32 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none animate-pulse"></div>
-        <div class="absolute -bottom-32 -right-32 w-96 h-96 bg-red-600/15 rounded-full blur-3xl pointer-events-none animate-pulse"></div>
-
-        <!-- Top Header Status -->
-        <div class="relative z-10 w-full flex justify-between items-center opacity-80 pt-2">
-            <div class="flex items-center gap-2">
-                <div class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></div>
-                <span class="text-[11px] font-semibold tracking-wider uppercase text-slate-300 font-['Inter']">LIRC Kiosk OS v1.0</span>
-            </div>
-            <span class="text-[11px] font-bold tracking-widest text-slate-400 font-['Inter'] uppercase">Cor Jesu College</span>
+        <!-- Background Campus Watermark & Seals -->
+        <div class="absolute inset-0 z-0 opacity-15 pointer-events-none bg-cover bg-right-bottom mix-blend-multiply"
+             style="background-image: url('/bg.jpg');"></div>
+        
+        <!-- Left CJC Seal Watermark -->
+        <div class="absolute -left-20 top-1/2 -translate-y-1/2 z-0 opacity-10 pointer-events-none w-[550px] h-[550px]">
+            <img src="/CorJesu Logo.png" class="w-full h-full object-contain filter grayscale">
         </div>
 
-        <!-- Center Crest & Branding Animation -->
-        <div class="relative z-10 flex flex-col items-center text-center my-auto">
-            <!-- Pulsing Logo Emblem Ring -->
+        <!-- Top-Right Crimson & Gold Curved Ribbon Graphic -->
+        <div class="absolute -top-16 -right-16 z-0 pointer-events-none w-[450px] h-[350px]">
+            <svg viewBox="0 0 400 300" fill="none" class="w-full h-full">
+                <path d="M100 0 C 250 80, 320 180, 400 300 L 400 0 Z" fill="#7f1d1d"/>
+                <path d="M140 0 C 270 90, 340 200, 400 330 L 400 0 Z" fill="#991b1b" opacity="0.8"/>
+                <path d="M80 0 C 230 70, 300 170, 400 280" stroke="#d97706" stroke-width="6" fill="none"/>
+            </svg>
+        </div>
+
+        <!-- Bottom-Left Crimson & Gold Curved Ribbon Graphic -->
+        <div class="absolute -bottom-16 -left-16 z-0 pointer-events-none w-[450px] h-[350px]">
+            <svg viewBox="0 0 400 300" fill="none" class="w-full h-full">
+                <path d="M0 300 C 150 220, 250 100, 320 0 L 0 0 Z" fill="#7f1d1d"/>
+                <path d="M0 300 C 130 200, 230 80, 300 0 L 0 0 Z" fill="#991b1b" opacity="0.8"/>
+                <path d="M0 300 C 170 230, 270 120, 340 0" stroke="#d97706" stroke-width="6" fill="none"/>
+            </svg>
+        </div>
+
+        <!-- Dot Matrix Accent (Top Right) -->
+        <div class="absolute top-12 right-64 z-0 pointer-events-none opacity-20 hidden md:block">
+            <div class="grid grid-cols-6 gap-2">
+                <template x-for="i in 24">
+                    <div class="w-1.5 h-1.5 rounded-full bg-[#7f1d1d]"></div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Dot Matrix Accent (Bottom Right) -->
+        <div class="absolute bottom-12 right-16 z-0 pointer-events-none opacity-20 hidden md:block">
+            <div class="grid grid-cols-6 gap-2">
+                <template x-for="i in 24">
+                    <div class="w-1.5 h-1.5 rounded-full bg-[#7f1d1d]"></div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Top Navigation / Branding Bar -->
+        <div class="relative z-10 w-full flex justify-between items-center">
+            <div class="flex items-center gap-2.5 bg-white/60 backdrop-blur-sm px-3.5 py-1.5 rounded-full border border-stone-200/80 shadow-xs">
+                <svg class="w-4 h-4 text-[#7f1d1d]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+                <span class="text-xs font-bold tracking-wider text-[#1e293b] font-['Inter'] uppercase">LIRC KIOSK OS V1.0</span>
+            </div>
+
+            <div class="flex items-center gap-3 text-right">
+                <div class="flex flex-col items-end">
+                    <span class="text-xs font-black tracking-wider text-[#7f1d1d] font-['Fraunces'] uppercase leading-none">COR JESU COLLEGE</span>
+                    <span class="text-[9px] font-bold tracking-widest text-amber-600 font-['Inter'] uppercase mt-0.5">EXCELLENCE | SERVICE | FAITH</span>
+                </div>
+                <div class="w-8 h-8 rounded-full bg-white p-0.5 shadow-sm border border-stone-200 shrink-0">
+                    <img src="/CorJesu Logo.png" alt="CJC Shield" class="w-full h-full object-contain">
+                </div>
+            </div>
+        </div>
+
+        <!-- Center Emblem, Title & Subtitles -->
+        <div class="relative z-10 flex flex-col items-center text-center my-auto px-4">
+            <!-- Sunburst Radiance Glow Emblem -->
             <div class="relative mb-6">
-                <div class="absolute -inset-4 rounded-full bg-gradient-to-r from-red-600 to-amber-500 opacity-75 blur-md animate-pulse"></div>
-                <div class="relative w-28 h-28 md:w-32 md:h-32 rounded-full p-1.5 bg-white/10 backdrop-blur-xl border border-white/30 shadow-2xl flex items-center justify-center">
-                    <img src="/CorJesu Logo.png" alt="CJC Logo" class="w-full h-full object-contain p-1 filter drop-shadow-lg">
+                <!-- Radiant Sunburst Glow -->
+                <div class="absolute -inset-8 rounded-full bg-gradient-to-r from-amber-400/30 via-red-500/20 to-amber-400/30 blur-xl animate-pulse"></div>
+                <!-- Outer Gold Ring -->
+                <div class="relative w-36 h-36 md:w-44 md:h-44 rounded-full p-2 bg-gradient-to-b from-amber-300 via-amber-500 to-amber-700 shadow-2xl flex items-center justify-center">
+                    <div class="w-full h-full rounded-full bg-white p-2 shadow-inner flex items-center justify-center">
+                        <img src="/CorJesu Logo.png" alt="CJC Crest" class="w-full h-full object-contain filter drop-shadow-md">
+                    </div>
                 </div>
             </div>
 
-            <!-- Title & Subtitle -->
-            <h1 class="text-2xl md:text-3xl font-black tracking-wider font-['Fraunces'] text-white m-0 uppercase drop-shadow-md">
+            <!-- Main Title: COR JESU COLLEGE -->
+            <h1 class="text-3xl md:text-5xl font-extrabold tracking-tight font-['Fraunces'] text-[#7f1d1d] m-0 uppercase drop-shadow-xs">
                 COR JESU COLLEGE
             </h1>
-            <p class="text-xs md:text-sm font-bold tracking-[0.2em] text-amber-400 uppercase mt-2 mb-1 font-['Inter']">
-                Library Information & Resource Center
-            </p>
-            <p class="text-[11px] text-slate-300 font-medium tracking-wide font-['Inter']">
+
+            <!-- Elegant Divider with Center Diamond -->
+            <div class="flex items-center justify-center gap-3 w-full max-w-lg my-3">
+                <div class="h-px bg-gradient-to-r from-transparent via-stone-300 to-amber-500 flex-1"></div>
+                <div class="w-2 h-2 rotate-45 bg-amber-500 shrink-0"></div>
+                <div class="h-px bg-gradient-to-l from-transparent via-stone-300 to-amber-500 flex-1"></div>
+            </div>
+
+            <!-- Subheader: LIBRARY INFORMATION & RESOURCE CENTER -->
+            <h2 class="text-xs md:text-sm font-extrabold tracking-[0.2em] text-[#7f1d1d] uppercase m-0 font-['Inter']">
+                LIBRARY INFORMATION & RESOURCE CENTER
+            </h2>
+            <p class="text-[11px] md:text-xs text-slate-500 font-medium tracking-wide mt-1 mb-6 font-['Inter']">
                 Library Entrance Monitoring & Attendance System
             </p>
+
+            <!-- Motto Badge -->
+            <div class="flex items-center gap-2 bg-white/80 border border-amber-200/80 px-4 py-1.5 rounded-full shadow-xs">
+                <svg class="w-3.5 h-3.5 text-[#7f1d1d]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+                <span class="text-[10px] font-bold tracking-widest text-[#7f1d1d] font-['Inter'] uppercase">❖ KNOWLEDGE. FAITH. SERVICE. ❖</span>
+            </div>
         </div>
 
-        <!-- Bottom Loading Bar & Status -->
-        <div class="relative z-10 w-full max-w-sm flex flex-col items-center gap-3 pb-6">
-            <div class="w-full h-1.5 bg-white/10 rounded-full overflow-hidden p-0.5 border border-white/15 backdrop-blur-sm">
-                <div class="h-full bg-gradient-to-r from-red-600 via-amber-400 to-emerald-400 rounded-full transition-all duration-150 ease-out"
-                     :style="`width: ${splashProgress}%`"></div>
+        <!-- Bottom Loading Bar & Status Indicator -->
+        <div class="relative z-10 w-full max-w-md mx-auto flex flex-col items-center gap-2 pb-4">
+            <div class="w-full flex items-center gap-3">
+                <div class="flex-1 h-3 bg-stone-200/80 rounded-full overflow-hidden p-0.5 border border-stone-300/60 shadow-inner">
+                    <div class="h-full bg-gradient-to-r from-[#7f1d1d] via-red-600 to-amber-500 rounded-full transition-all duration-150 ease-out shadow-sm"
+                         :style="`width: ${splashProgress}%`"></div>
+                </div>
+                <span class="font-mono text-xs font-black text-[#7f1d1d] shrink-0" x-text="`${splashProgress}%`">0%</span>
             </div>
-            <div class="flex items-center justify-between w-full text-[11px] font-medium text-slate-300 font-['Inter']">
-                <span x-text="splashStatus">Initializing System...</span>
-                <span class="font-mono text-amber-400 font-bold" x-text="`${splashProgress}%`">0%</span>
-            </div>
+            <p class="text-[11px] font-semibold text-slate-600 font-['Inter'] m-0" x-text="splashStatus">
+                Welcome to CJC Library!
+            </p>
         </div>
     </div>
 

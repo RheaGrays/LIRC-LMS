@@ -90,7 +90,7 @@ function createWindow() {
         width: 1280,
         height: 800,
         show: false,
-        backgroundColor: '#0f2744',
+        backgroundColor: '#fcf9f2',
         kiosk: !isAdmin,
         fullscreen: !isAdmin,
         title: isAdmin ? 'LEMS Admin - Cor Jesu College Library' : 'LEMS Kiosk - Cor Jesu College Library',
