@@ -77,6 +77,26 @@ function startPhpServer() {
     const phpExec = findPhpExecutable();
     const phpDir = path.dirname(phpExec);
 
+    // Ensure Laravel required storage directories exist (prevents 500 Internal Server Error in packaged app)
+    const requiredDirs = [
+        'storage/framework/cache/data',
+        'storage/framework/sessions',
+        'storage/framework/views',
+        'storage/logs',
+        'bootstrap/cache'
+    ];
+    
+    requiredDirs.forEach(dir => {
+        const fullPath = path.join(projectPath, dir);
+        if (!fs.existsSync(fullPath)) {
+            try {
+                fs.mkdirSync(fullPath, { recursive: true });
+            } catch (err) {
+                console.error(`Failed to create directory ${fullPath}:`, err);
+            }
+        }
+    });
+
     try {
         const env = { 
             ...process.env, 
