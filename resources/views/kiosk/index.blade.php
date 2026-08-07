@@ -230,7 +230,8 @@
                                             @keydown.enter.prevent="if(manualId.trim()) submitManual()"
                                             @input="handleActivity()"
                                             placeholder="Scan ID here..." 
-                                            class="w-full bg-transparent border-none text-[18px] font-sans text-gray-800 outline-none placeholder:text-gray-400">
+                                            style="outline: none !important; border: none !important; box-shadow: none !important;"
+                                            class="w-full bg-transparent border-none text-[18px] font-sans text-gray-800 outline-none focus:outline-none focus:ring-0 focus:border-none shadow-none placeholder:text-gray-400">
                                     </div>
                                 </label>
 
