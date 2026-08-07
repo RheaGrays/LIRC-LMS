@@ -46,7 +46,7 @@
                     <!-- Category Filter -->
                     <div>
                         <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Patron Category</label>
-                        <select name="category" onchange="this.form.submit()" class="w-full p-2 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-[var(--cjc-navy)] appearance-none cursor-pointer">
+                        <select name="category" onchange="this.form.submit()" class="no-tomselect w-full p-2 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-[var(--cjc-navy)] appearance-none cursor-pointer">
                             <option value="">All Categories</option>
                             @foreach($patronCategories as $cat)
                                 <option value="{{ $cat }}" {{ request('category') === $cat ? 'selected' : '' }}>{{ $cat }}</option>
@@ -57,7 +57,7 @@
                     <!-- Department / Program Filter -->
                     <div>
                         <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Department / Program</label>
-                        <select name="department" onchange="this.form.submit()" class="w-full p-2 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-[var(--cjc-navy)] appearance-none cursor-pointer">
+                        <select name="department" onchange="this.form.submit()" class="no-tomselect w-full p-2 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-[var(--cjc-navy)] appearance-none cursor-pointer">
                             <option value="">All Departments</option>
                             @foreach($departmentsList as $dept)
                                 <option value="{{ $dept }}" {{ request('department') === $dept ? 'selected' : '' }}>{{ $dept }}</option>
@@ -68,7 +68,7 @@
                     <!-- Year Level Filter -->
                     <div>
                         <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Year Level</label>
-                        <select name="year_level" onchange="this.form.submit()" class="w-full p-2 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-[var(--cjc-navy)] appearance-none cursor-pointer">
+                        <select name="year_level" onchange="this.form.submit()" class="no-tomselect w-full p-2 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-[var(--cjc-navy)] appearance-none cursor-pointer">
                             <option value="">All Year Levels</option>
                             @foreach($yearLevelsList as $yl)
                                 <option value="{{ $yl }}" {{ request('year_level') === $yl ? 'selected' : '' }}>{{ $yl }}</option>
@@ -82,7 +82,7 @@
                     <!-- Sort By Dropdown -->
                     <div class="flex items-center gap-2">
                         <span class="text-xs font-semibold text-gray-500">Sort By:</span>
-                        <select name="sort_by" onchange="this.form.submit()" class="p-1.5 text-xs font-medium bg-white border border-gray-300 rounded-md focus:outline-none appearance-none cursor-pointer">
+                        <select name="sort_by" onchange="this.form.submit()" class="no-tomselect p-1.5 text-xs font-medium bg-white border border-gray-300 rounded-md focus:outline-none appearance-none cursor-pointer">
                             <option value="last_name" {{ request('sort_by', 'last_name') === 'last_name' ? 'selected' : '' }}>Name (Last Name)</option>
                             <option value="id" {{ request('sort_by') === 'id' ? 'selected' : '' }}>ID Number</option>
                             <option value="department" {{ request('sort_by') === 'department' ? 'selected' : '' }}>Department / Program</option>
@@ -90,7 +90,7 @@
                             <option value="patron_category" {{ request('sort_by') === 'patron_category' ? 'selected' : '' }}>Patron Category</option>
                         </select>
 
-                        <select name="sort_dir" onchange="this.form.submit()" class="p-1.5 text-xs font-medium bg-white border border-gray-300 rounded-md focus:outline-none appearance-none cursor-pointer">
+                        <select name="sort_dir" onchange="this.form.submit()" class="no-tomselect p-1.5 text-xs font-medium bg-white border border-gray-300 rounded-md focus:outline-none appearance-none cursor-pointer">
                             <option value="asc" {{ request('sort_dir', 'asc') === 'asc' ? 'selected' : '' }}>Ascending (A-Z, 1-9)</option>
                             <option value="desc" {{ request('sort_dir') === 'desc' ? 'selected' : '' }}>Descending (Z-A, 9-1)</option>
                         </select>
