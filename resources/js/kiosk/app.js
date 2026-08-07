@@ -91,9 +91,9 @@ const registerApp = () => {
                             const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
                             window.history.replaceState({path: cleanUrl}, '', cleanUrl);
                         }
-                    }, 1000);
+                    }, 500);
                 }
-            }, 30);
+            }, 40);
         },
 
         // --- Slideshow Logic ---
