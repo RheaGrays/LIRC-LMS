@@ -34,7 +34,7 @@ const registerApp = () => {
         slideTimer: null,
 
         // Splash Screen State
-        showSplash: true,
+        showSplash: !sessionStorage.getItem('lems_kiosk_splash_shown'),
         splashProgress: 0,
         splashStatus: 'Initializing System Hardware...',
 
