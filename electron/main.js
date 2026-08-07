@@ -23,14 +23,24 @@ function checkServerReady(url, callback) {
 }
 
 function startPhpServer() {
-    const phpPath = 'C:\\xampp\\php\\php.exe';
     const projectPath = path.join(__dirname, '..');
+    const systemPhp = 'php';
+    const xamppPhp = 'C:\\xampp\\php\\php.exe';
 
     try {
-        phpProcess = spawn(phpPath, ['artisan', 'serve', '--port=8000'], {
+        phpProcess = spawn(systemPhp, ['artisan', 'serve', '--port=8000'], {
             cwd: projectPath,
             detached: false,
             stdio: 'ignore'
+        });
+        
+        phpProcess.on('error', () => {
+            // Fallback to XAMPP PHP path if system 'php' fails
+            phpProcess = spawn(xamppPhp, ['artisan', 'serve', '--port=8000'], {
+                cwd: projectPath,
+                detached: false,
+                stdio: 'ignore'
+            });
         });
     } catch (e) {
         console.error('Failed to spawn PHP:', e);
