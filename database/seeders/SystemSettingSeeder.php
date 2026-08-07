@@ -19,6 +19,7 @@ class SystemSettingSeeder extends Seeder
             'alert_capacity'        => true,
             'alert_daily_summary'   => false,
             'alert_repeated_denied' => true,
+            'patron_categories'     => ['Student', 'Employee', 'Post Graduate', 'Alumni', 'Visitor'],
         ];
 
         foreach ($defaults as $key => $value) {

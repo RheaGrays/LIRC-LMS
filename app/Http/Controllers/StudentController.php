@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Student;
+use App\Models\SystemSetting;
 use Illuminate\Http\Request;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -11,67 +12,111 @@ class StudentController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Student::withCount('violations')->with('violations')->orderBy('last_name')->orderBy('first_name');
+        $query = Student::withCount('violations')->with('violations');
 
+        // Search ID, Name, Department/Program, Patron Category
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
                 $q->where('id', 'like', "%{$search}%")
                   ->orWhere('last_name', 'like', "%{$search}%")
                   ->orWhere('first_name', 'like', "%{$search}%")
-                  ->orWhere('department', 'like', "%{$search}%");
+                  ->orWhere('department', 'like', "%{$search}%")
+                  ->orWhere('patron_category', 'like', "%{$search}%");
             });
         }
 
-        $students = $query->paginate(20)->withQueryString();
+        // Filter by Patron Category
+        if ($request->filled('category')) {
+            $query->where('patron_category', $request->category);
+        }
 
-        return view('admin.students.index', compact('students'));
+        // Filter by Department / Program
+        if ($request->filled('department')) {
+            $query->where('department', $request->department);
+        }
+
+        // Filter by Year Level
+        if ($request->filled('year_level')) {
+            $query->where('year_level', $request->year_level);
+        }
+
+        // Sorting
+        $sortBy = $request->input('sort_by', 'last_name');
+        $sortDir = strtolower($request->input('sort_dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+
+        $sortFieldsMap = [
+            'name'            => ['last_name', 'first_name'],
+            'last_name'       => ['last_name', 'first_name'],
+            'id'              => ['id'],
+            'department'      => ['department', 'last_name'],
+            'year_level'      => ['year_level', 'last_name'],
+            'patron_category' => ['patron_category', 'last_name'],
+            'violations_count'=> ['violations_count'],
+        ];
+
+        if (isset($sortFieldsMap[$sortBy])) {
+            foreach ($sortFieldsMap[$sortBy] as $col) {
+                $query->orderBy($col, $sortDir);
+            }
+        } else {
+            $query->orderBy('last_name', 'asc')->orderBy('first_name', 'asc');
+        }
+
+        $students = $query->paginate(20)->withQueryString();
+        $patronCategories = SystemSetting::get('patron_categories', ['Student', 'Employee', 'Post Graduate', 'Alumni', 'Visitor']);
+        
+        $departmentsList = Student::whereNotNull('department')->where('department', '!=', '')->distinct()->pluck('department')->sort()->values();
+        $yearLevelsList  = Student::whereNotNull('year_level')->where('year_level', '!=', '')->distinct()->pluck('year_level')->sort()->values();
+
+        return view('admin.students.index', compact('students', 'patronCategories', 'departmentsList', 'yearLevelsList'));
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'id' => 'required|string|max:50|unique:students,id',
-            'first_name' => 'required|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'middle_name' => 'nullable|string|max:255',
-            'department' => 'required|string|max:255',
-            'year_level' => 'required|string|max:50',
-            'email' => 'nullable|email|max:255',
-            'contact' => 'nullable|string|max:50',
+            'id'              => 'required|string|max:50|unique:students,id',
+            'first_name'      => 'required|string|max:255',
+            'last_name'       => 'required|string|max:255',
+            'middle_name'     => 'nullable|string|max:255',
+            'patron_category' => 'required|string|max:100',
+            'department'      => 'nullable|string|max:255',
+            'year_level'      => 'nullable|string|max:50',
+            'email'           => 'nullable|email|max:255',
         ]);
 
         Student::create($validated);
-        return back()->with('success', 'Student created successfully.');
+        return back()->with('success', 'Patron created successfully.');
     }
 
     public function update(Request $request, $id)
     {
         $student = Student::findOrFail($id);
         $validated = $request->validate([
-            'first_name' => 'required|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'middle_name' => 'nullable|string|max:255',
-            'department' => 'required|string|max:255',
-            'year_level' => 'required|string|max:50',
-            'email' => 'nullable|email|max:255',
-            'contact' => 'nullable|string|max:50',
+            'first_name'      => 'required|string|max:255',
+            'last_name'       => 'required|string|max:255',
+            'middle_name'     => 'nullable|string|max:255',
+            'patron_category' => 'required|string|max:100',
+            'department'      => 'nullable|string|max:255',
+            'year_level'      => 'nullable|string|max:50',
+            'email'           => 'nullable|email|max:255',
         ]);
 
         $student->update($validated);
-        return back()->with('success', 'Student updated successfully.');
+        return back()->with('success', 'Patron updated successfully.');
     }
 
     public function destroy($id)
     {
         Student::findOrFail($id)->delete();
-        return back()->with('success', 'Student deleted successfully.');
+        return back()->with('success', 'Patron deleted successfully.');
     }
 
     public function edit($id)
     {
         $student = Student::findOrFail($id);
-        return view('admin.students.edit', compact('student'));
+        $patronCategories = SystemSetting::get('patron_categories', ['Student', 'Employee', 'Post Graduate', 'Alumni', 'Visitor']);
+        return view('admin.students.edit', compact('student', 'patronCategories'));
     }
 
     public function import(Request $request)
@@ -87,7 +132,6 @@ class StudentController extends Controller
         
         $count = 0;
         
-        // Wrap in transaction and limit to 5000 rows max to prevent partial data and timeouts
         \Illuminate\Support\Facades\DB::transaction(function () use ($rows, &$count) {
             foreach (array_slice($rows, 1, 5000) as $row) {
                 $id = $row[0] ?? null;
@@ -96,20 +140,20 @@ class StudentController extends Controller
                 Student::updateOrCreate(
                     ['id' => $id],
                     [
-                        'last_name' => $row[1] ?? '',
-                        'first_name' => $row[2] ?? '',
-                        'middle_name' => $row[3] ?? null,
-                        'department' => $row[4] ?? '',
-                        'year_level' => $row[5] ?? '',
-                        'email' => $row[6] ?? null,
-                        'contact' => $row[7] ?? null,
+                        'last_name'       => $row[1] ?? '',
+                        'first_name'      => $row[2] ?? '',
+                        'middle_name'     => $row[3] ?? null,
+                        'patron_category' => $row[4] ?? 'Student',
+                        'department'      => $row[5] ?? '',
+                        'year_level'      => $row[6] ?? '',
+                        'email'           => $row[7] ?? null,
                     ]
                 );
                 $count++;
             }
         });
 
-        return back()->with('success', "Successfully imported {$count} students.");
+        return back()->with('success', "Successfully imported {$count} patrons.");
     }
 
     public function export()
@@ -117,7 +161,7 @@ class StudentController extends Controller
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
-        $headers = ['ID', 'Last Name', 'First Name', 'Middle Name', 'Department', 'Year Level', 'Email', 'Contact', 'Status'];
+        $headers = ['ID', 'Last Name', 'First Name', 'Middle Name', 'Patron Category', 'Department', 'Year Level', 'Email', 'Status'];
         $sheet->fromArray($headers, null, 'A1');
 
         $row = 2;
@@ -128,10 +172,10 @@ class StudentController extends Controller
                     $student->last_name,
                     $student->first_name,
                     $student->middle_name,
+                    $student->patron_category,
                     $student->department,
                     $student->year_level,
                     $student->email,
-                    $student->contact,
                     $student->status,
                 ], null, 'A' . $row);
                 $row++;
@@ -142,6 +186,6 @@ class StudentController extends Controller
 
         return response()->streamDownload(function() use ($writer) {
             $writer->save('php://output');
-        }, 'students.xlsx');
+        }, 'patrons.xlsx');
     }
 }

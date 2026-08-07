@@ -14,7 +14,7 @@ class Student extends Model
     protected $fillable = [
         'id', 'last_name', 'first_name', 'middle_name',
         'department', 'year_level', 'email', 'contact',
-        'photo_path', 'status',
+        'patron_category', 'photo_path', 'status',
     ];
 
     protected $casts = [
@@ -59,6 +59,11 @@ class Student extends Model
     public function scopeDepartment($query, $dept)
     {
         return $query->where('department', $dept);
+    }
+
+    public function scopePatronCategory($query, $category)
+    {
+        return $query->where('patron_category', $category);
     }
 
     public function scopeSearch($query, $term)

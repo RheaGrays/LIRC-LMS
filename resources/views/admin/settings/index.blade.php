@@ -88,6 +88,55 @@
                 </div>
             </div>
 
+            <!-- Patron Categories -->
+            <div class="p-6 border-b border-gray-100" x-data="{
+                categories: {{ json_encode($settings['patron_categories'] ?? ['Student', 'Employee', 'Post Graduate', 'Alumni', 'Visitor']) }},
+                newCategory: '',
+                addCategory() {
+                    const val = this.newCategory.trim();
+                    if (val !== '' && !this.categories.includes(val)) {
+                        this.categories.push(val);
+                        this.newCategory = '';
+                    }
+                },
+                removeCategory(index) {
+                    this.categories.splice(index, 1);
+                }
+            }">
+                <h3 class="text-lg font-bold text-[var(--cjc-navy)] mb-1">Patron Categories</h3>
+                <p class="text-sm text-gray-500 mb-5">Define who can register and check in to the library. The <strong class="text-[var(--cjc-navy)]">Student</strong> category enables the academic cascade (Department → Program → Year Level) in the registration form.</p>
+
+                <div class="space-y-3 mb-4 max-w-md">
+                    <template x-for="(cat, index) in categories" :key="index">
+                        <div class="flex items-center gap-2">
+                            <div class="flex-1 flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-md">
+                                <span class="w-2 h-2 rounded-full bg-[var(--cjc-navy)] shrink-0"></span>
+                                <input type="text" x-model="categories[index]" :name="'patron_categories['+index+']'" class="flex-1 bg-transparent text-sm font-medium text-[var(--cjc-navy)] outline-none border-none focus:ring-0 p-0">
+                            </div>
+                            <button type="button" @click="removeCategory(index)" class="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors" title="Remove">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                        </div>
+                    </template>
+                    <template x-if="categories.length === 0">
+                        <p class="text-sm text-gray-400 italic">No categories defined. Add at least one.</p>
+                    </template>
+                </div>
+
+                <div class="flex items-center gap-2 max-w-md">
+                    <input type="text" x-model="newCategory" @keydown.enter.prevent="addCategory()" placeholder="New category name..." class="input flex-1">
+                    <button type="button" @click="addCategory()" class="btn-secondary whitespace-nowrap">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                        Add
+                    </button>
+                </div>
+
+                <div class="mt-5 flex items-center gap-2.5 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg max-w-md">
+                    <svg class="w-4 h-4 text-blue-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <p class="text-xs text-blue-700 m-0">Departments, Programs, and Year Levels are managed in the <a href="{{ route('admin.academics.index') }}" class="font-semibold underline hover:text-blue-900">Academic Setup →</a> page.</p>
+                </div>
+            </div>
+
             <!-- Library Sections (AlpineJS Dynamic List) -->
             <div class="p-6 border-b border-gray-100" x-data="{
                 sections: {{ json_encode($settings['library_sections'] ?? ['General Reading', 'Discussion Room', 'Internet Section', 'Periodicals']) }},

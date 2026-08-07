@@ -75,7 +75,7 @@
                 <svg class="w-5 h-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
-                Students
+                Patrons
             </a>
 
             <a href="{{ route('admin.library-collections.index') }}" class="sidebar-nav-item {{ request()->routeIs('admin.library-collections.*') ? 'active' : '' }}">
@@ -204,15 +204,14 @@
                 allowInput: true
             });
 
-            // Initialize Tom Select for all select elements except flatpickr's internal ones
-            document.querySelectorAll('select:not(.flatpickr-monthDropdown-months)').forEach((el) => {
-                new TomSelect(el, {
-                    create: false,
-                    sortField: {
-                        field: "text",
-                        direction: "asc"
-                    }
-                });
+            // Initialize Tom Select for filter dropdowns only (exclude modals and flatpickr)
+            document.querySelectorAll('select:not(.flatpickr-monthDropdown-months):not(.no-tomselect)').forEach((el) => {
+                if (!el.closest('.fixed') && !el.closest('#add-dept-modal') && !el.closest('#edit-dept-modal') && !el.closest('#add-prog-modal') && !el.closest('#edit-prog-modal')) {
+                    new TomSelect(el, {
+                        create: false,
+                        sortField: false
+                    });
+                }
             });
         });
     </script>

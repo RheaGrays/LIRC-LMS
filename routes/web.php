@@ -45,6 +45,9 @@ Route::middleware('throttle:5,1')->group(function () {
 // Public API for Academic Departments (Needed for Student Registration dropdowns)
 Route::get('/api/academics', [AcademicController::class, 'apiData'])->name('api.academics');
 
+// Public API for Patron Categories (needed for Registration form)
+Route::get('/api/patron-categories', [SettingsController::class, 'patronCategories'])->name('api.patron-categories');
+
 // ── Admin Auth ────────────────────────────────────────────────
 Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/login',  [AdminAuthController::class, 'showLogin'])->name('login');

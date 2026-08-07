@@ -16,6 +16,8 @@ class SettingsController extends Controller
         $terms = \App\Models\AcademicTerm::orderBy('start_date', 'desc')->get();
         $latestTerm = $terms->first();
 
+        $defaultCategories = ['Student', 'Employee', 'Post Graduate', 'Alumni', 'Visitor'];
+
         // Defaults
         $defaults = [
             'active_term'           => $latestTerm ? $latestTerm->id : null,
@@ -27,6 +29,7 @@ class SettingsController extends Controller
             'alert_capacity'        => true,
             'alert_daily_summary'   => false,
             'alert_repeated_denied' => true,
+            'patron_categories'     => $defaultCategories,
         ];
 
         $settings = array_merge($defaults, $settings);
@@ -46,6 +49,10 @@ class SettingsController extends Controller
             'alert_capacity'        => ['boolean'],
             'alert_daily_summary'   => ['boolean'],
             'alert_repeated_denied' => ['boolean'],
+            'library_sections'      => ['nullable', 'array'],
+            'library_sections.*'    => ['string', 'max:100'],
+            'patron_categories'     => ['nullable', 'array'],
+            'patron_categories.*'   => ['string', 'max:100'],
         ]);
 
         // Booleans default to false if unchecked
@@ -53,11 +60,24 @@ class SettingsController extends Controller
             $data[$key] = $request->boolean($key);
         }
 
+        // Arrays
+        $data['library_sections'] = array_values(array_filter($request->input('library_sections', []), fn($v) => trim($v) !== ''));
+        $data['patron_categories'] = array_values(array_filter($request->input('patron_categories', []), fn($v) => trim($v) !== ''));
+
         foreach ($data as $key => $value) {
             SystemSetting::set($key, $value);
         }
 
         return back()->with('success', 'Settings saved successfully.');
+    }
+
+    /**
+     * Public API: return the current patron categories list.
+     */
+    public function patronCategories()
+    {
+        $categories = SystemSetting::get('patron_categories', ['Student', 'Employee', 'Post Graduate', 'Alumni', 'Visitor']);
+        return response()->json($categories);
     }
 
     public function storeTerm(Request $request)
