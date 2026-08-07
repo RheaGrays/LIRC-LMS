@@ -65,6 +65,9 @@ class KioskController extends Controller
             ];
         }
 
-        return view('kiosk.index', compact('settings', 'collections', 'defaultFacilities', 'slideshowImages'));
+        $splashShown = session('splash_shown', false);
+        session(['splash_shown' => true]);
+
+        return view('kiosk.index', compact('settings', 'collections', 'defaultFacilities', 'slideshowImages', 'splashShown'));
     }
 }

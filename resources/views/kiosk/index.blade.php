@@ -3,6 +3,9 @@
 @section('title', ' | Kiosk')
 
 @section('kiosk_content')
+<script>
+    window.LEMS_SPLASH_SHOWN = @json($splashShown ?? false);
+</script>
 <div x-data="kioskApp()" class="w-full h-screen flex flex-col relative z-10 bg-transparent cursor-pointer select-none overflow-hidden" 
      @mousemove="handleActivity()" @keydown="handleKey($event)" @click="activate()">
 

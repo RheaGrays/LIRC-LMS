@@ -34,7 +34,7 @@ const registerApp = () => {
         slideTimer: null,
 
         // Splash Screen State
-        showSplash: !sessionStorage.getItem('lems_kiosk_splash_shown'),
+        showSplash: !(window.LEMS_SPLASH_SHOWN || sessionStorage.getItem('lems_kiosk_splash_shown')),
         splashProgress: 0,
         splashStatus: 'Initializing System Hardware...',
 
@@ -58,7 +58,7 @@ const registerApp = () => {
         },
 
         runSplashSequence() {
-            if (sessionStorage.getItem('lems_kiosk_splash_shown')) {
+            if (window.LEMS_SPLASH_SHOWN || sessionStorage.getItem('lems_kiosk_splash_shown')) {
                 this.showSplash = false;
                 return;
             }

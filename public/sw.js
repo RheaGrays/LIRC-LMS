@@ -27,6 +27,9 @@ self.addEventListener('fetch', (event) => {
         event.request.url.includes('/kiosk/last') || 
         event.request.url.includes('/kiosk/occupancy')) return;
 
+    // ONLY intercept http/https requests. Caching chrome-extension:// causes a crash.
+    if (!event.request.url.startsWith('http')) return;
+
     // BYPASS CACHE FOR DEVELOPMENT: Always fetch from network first.
     event.respondWith(
         fetch(event.request).then((response) => {
