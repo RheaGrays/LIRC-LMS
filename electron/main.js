@@ -135,7 +135,7 @@ function startPhpServer() {
 function createWindow() {
     const iconPath = path.join(__dirname, '../public/CorJesu Logo.png');
     const isAdmin = process.argv.includes('--admin');
-    const targetRoute = isAdmin ? '/admin/login' : '/kiosk';
+    const targetRoute = isAdmin ? '/admin/login' : '/kiosk?boot=1';
 
     mainWindow = new BrowserWindow({
         width: 1280,
