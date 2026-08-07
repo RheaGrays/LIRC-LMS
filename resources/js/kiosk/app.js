@@ -212,6 +212,16 @@ const registerApp = () => {
             this.isCameraActive = false;
         },
 
+        resetScan() {
+            this.result = null;
+            this.barcodeBuffer = '';
+            this.manualId = '';
+            this.$nextTick(() => {
+                if (this.tab === 'scan') this.$refs.barcodeInput?.focus();
+                if (this.tab === 'manual') this.$refs.manualInput?.focus();
+            });
+        },
+
         // --- Processing Logic ---
         submitManual() {
             if (!this.manualId) return;
