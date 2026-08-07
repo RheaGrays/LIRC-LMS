@@ -39,6 +39,7 @@
             "storage/**/*",
             "vendor/**/*",
             "artisan",
+            "cacert.pem",
             ".env",
             "composer.json",
             "composer.lock"
