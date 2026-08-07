@@ -118,7 +118,7 @@
                     <div class="w-px h-8 bg-[var(--border-light)] mx-2"></div>
 
                     <div class="w-10 h-10 rounded-full overflow-hidden border border-[var(--border-light)] bg-white shrink-0">
-                        <img src="/cjc-logo.jpeg" alt="CJC" class="w-full h-full object-cover">
+                        <img src="/CorJesu Logo.png" alt="CJC" class="w-full h-full object-cover">
                     </div>
                     <div>
                         <p class="m-0 text-[13px] font-bold tracking-[0.06em] uppercase text-[var(--cjc-navy)] font-['Inter'] leading-[1.2]">

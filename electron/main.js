@@ -48,7 +48,7 @@ function startPhpServer() {
 }
 
 function createWindow() {
-    const iconPath = path.join(__dirname, '../public/cjc-logo.jpeg');
+    const iconPath = path.join(__dirname, '../public/CorJesu Logo.png');
     const isAdmin = process.argv.includes('--admin');
     const targetRoute = isAdmin ? '/admin/login' : '/kiosk';
 

@@ -5,8 +5,8 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <link rel="icon" type="image/jpeg" href="/cjc-logo.jpeg">
-        <link rel="apple-touch-icon" href="/cjc-logo.jpeg">
+        <link rel="icon" type="image/png" href="/CorJesu Logo.png">
+        <link rel="apple-touch-icon" href="/CorJesu Logo.png">
         <link rel="manifest" href="/manifest.json">
         <meta name="theme-color" content="#0f2744">
 

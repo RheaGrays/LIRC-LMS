@@ -71,7 +71,7 @@
     <aside class="sidebar flex-shrink-0 z-20">
         <div class="px-6 py-6 mb-4 flex items-center gap-3 border-b border-white/10">
             <div class="w-9 h-9 rounded-full overflow-hidden bg-white shrink-0 shadow-sm border border-white/20 p-0.5">
-                <img src="/cjc-logo.jpeg" alt="CJC Logo" class="w-full h-full object-cover rounded-full">
+                <img src="/CorJesu Logo.png" alt="CJC Logo" class="w-full h-full object-cover rounded-full">
             </div>
             <div class="flex flex-col justify-center">
                 <h1 class="text-[22px] font-black text-amber-500 font-['Fraunces'] leading-none tracking-wide drop-shadow-md">LIRC</h1>
