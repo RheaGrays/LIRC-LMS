@@ -1,4 +1,8 @@
 {
+    "name": "lems-kiosk",
+    "version": "1.0.0",
+    "description": "Cor Jesu College Library Entrance Monitoring & Management System",
+    "author": "Cor Jesu College LIRC",
     "private": true,
     "type": "module",
     "main": "electron/main.js",
@@ -29,8 +33,7 @@
             "artisan"
         ],
         "win": {
-            "target": "nsis",
-            "icon": "public/CorJesu Logo.png"
+            "target": "nsis"
         },
         "nsis": {
             "oneClick": false,
