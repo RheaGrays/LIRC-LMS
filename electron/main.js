@@ -12,15 +12,29 @@ let mainWindow = null;
 let phpProcess = null;
 
 function checkServerReady(url, callback) {
-    http.get(url, (res) => {
-        if (res.statusCode === 200 || res.statusCode === 302 || res.statusCode === 404 || res.statusCode === 500) {
-            callback(true);
-        } else {
-            setTimeout(() => checkServerReady(url, callback), 300);
-        }
-    }).on('error', () => {
-        setTimeout(() => checkServerReady(url, callback), 300);
-    });
+    let attempts = 0;
+    const maxAttempts = 25; // max 7.5 seconds wait
+
+    const doCheck = () => {
+        attempts++;
+        http.get(url, (res) => {
+            if (res.statusCode === 200 || res.statusCode === 302 || res.statusCode === 404 || res.statusCode === 500) {
+                callback(true);
+            } else if (attempts < maxAttempts) {
+                setTimeout(doCheck, 300);
+            } else {
+                callback(false);
+            }
+        }).on('error', () => {
+            if (attempts < maxAttempts) {
+                setTimeout(doCheck, 300);
+            } else {
+                callback(false);
+            }
+        });
+    };
+
+    doCheck();
 }
 
 function findPhpExecutable() {
@@ -31,6 +45,7 @@ function findPhpExecutable() {
         path.join(userProfile, '.config\\herd\\bin\\php82\\php.exe'),
         'C:\\xampp\\php\\php.exe',
         'D:\\xampp\\php\\php.exe',
+        'E:\\xampp\\php\\php.exe',
         'C:\\php\\php.exe',
         'C:\\laragon\\bin\\php\\current\\php.exe',
         'C:\\Program Files\\PHP\\php.exe',
@@ -106,6 +121,13 @@ function createWindow() {
     mainWindow.once('ready-to-show', () => {
         mainWindow.show();
     });
+
+    // Safety fallback: force show window after 800ms if ready-to-show hasn't fired yet
+    setTimeout(() => {
+        if (mainWindow && !mainWindow.isVisible()) {
+            mainWindow.show();
+        }
+    }, 800);
 
     if (isAdmin) {
         mainWindow.maximize();
