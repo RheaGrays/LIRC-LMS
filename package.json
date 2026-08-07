@@ -16,6 +16,7 @@
     "build": {
         "appId": "com.cjc.lirc.lems",
         "productName": "Library Entrance Monitoring System (LEMS)",
+        "asar": false,
         "directories": {
             "output": "dist"
         },
@@ -37,7 +38,8 @@
             "routes/**/*",
             "storage/**/*",
             "vendor/**/*",
-            "artisan"
+            "artisan",
+            ".env"
         ],
         "win": {
             "target": "nsis",
