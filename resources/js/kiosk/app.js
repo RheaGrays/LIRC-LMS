@@ -66,7 +66,7 @@ const registerApp = () => {
             this.showSplash = true;
             let p = 0;
             const timer = setInterval(() => {
-                p += 2;
+                p += 1;
                 this.splashProgress = Math.min(p, 100);
 
                 if (p < 30) {
@@ -84,9 +84,9 @@ const registerApp = () => {
                     setTimeout(() => {
                         this.showSplash = false;
                         sessionStorage.setItem('lems_splash_shown', 'true');
-                    }, 600);
+                    }, 800);
                 }
-            }, 45);
+            }, 32);
         },
 
         // --- Slideshow Logic ---
