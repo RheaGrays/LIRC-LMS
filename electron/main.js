@@ -135,7 +135,7 @@ function createWindow() {
 
     // Security: Block all external navigation
     mainWindow.webContents.on('will-navigate', (event, url) => {
-        if (!url.startsWith('http://127.0.0.1:8000')) {
+        if (!url.startsWith('http://127.0.0.1:8000') && !url.startsWith('http://192.168.100.14:8000')) {
             event.preventDefault();
         }
     });
@@ -152,11 +152,20 @@ function createWindow() {
         }
     });
 
-    const targetUrl = `http://127.0.0.1:8000${targetRoute}`;
+    // Try local server first, then host network IP
+    const localTargetUrl = `http://127.0.0.1:8000${targetRoute}`;
+    const networkTargetUrl = `http://192.168.100.14:8000${targetRoute}`;
 
-    checkServerReady('http://127.0.0.1:8000/kiosk', () => {
-        if (mainWindow) {
-            mainWindow.loadURL(targetUrl);
+    checkServerReady('http://127.0.0.1:8000/kiosk', (isLocalReady) => {
+        if (!mainWindow) return;
+        if (isLocalReady) {
+            mainWindow.loadURL(localTargetUrl);
+        } else {
+            // Check network host IP if local server is not running
+            checkServerReady('http://192.168.100.14:8000/kiosk', (isNetworkReady) => {
+                if (!mainWindow) return;
+                mainWindow.loadURL(isNetworkReady ? networkTargetUrl : localTargetUrl);
+            });
         }
     });
 
