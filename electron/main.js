@@ -77,49 +77,31 @@ function startPhpServer() {
     const phpExec = findPhpExecutable();
     const phpDir = path.dirname(phpExec);
 
-    // Ensure Laravel required storage directories exist (prevents 500 Internal Server Error in packaged app)
-    const requiredDirs = [
-        'storage/framework/cache/data',
-        'storage/framework/sessions',
-        'storage/framework/views',
-        'storage/logs',
-        'bootstrap/cache'
-    ];
-    
-    requiredDirs.forEach(dir => {
-        const fullPath = path.join(projectPath, dir);
-        if (!fs.existsSync(fullPath)) {
-            try {
-                fs.mkdirSync(fullPath, { recursive: true });
-            } catch (err) {
-                console.error(`Failed to create directory ${fullPath}:`, err);
-            }
-        }
-    });
-
-    // Auto-heal missing server.php if installer failed to bundle it
-    const serverPhpPath = path.join(projectPath, 'server.php');
-    if (!fs.existsSync(serverPhpPath)) {
-        try {
-            const serverPhpContent = `<?php
-$uri = urldecode(
-    parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)
-);
-if ($uri !== '/' && file_exists(__DIR__.'/public'.$uri)) {
-    return false;
-}
-require_once __DIR__.'/public/index.php';
-`;
-            fs.writeFileSync(serverPhpPath, serverPhpContent);
-        } catch (e) {
-            console.error('Failed to auto-heal server.php:', e);
-        }
-    }
-
     try {
+        // Move storage to AppData to avoid Read-Only errors in Program Files
+        const userStoragePath = path.join(app.getPath('userData'), 'laravel_storage');
+        const requiredDirs = [
+            'framework/cache/data',
+            'framework/sessions',
+            'framework/views',
+            'logs'
+        ];
+        
+        if (!fs.existsSync(userStoragePath)) {
+            fs.mkdirSync(userStoragePath, { recursive: true });
+        }
+
+        requiredDirs.forEach(dir => {
+            const fullPath = path.join(userStoragePath, dir);
+            if (!fs.existsSync(fullPath)) {
+                fs.mkdirSync(fullPath, { recursive: true });
+            }
+        });
+
         const env = { 
             ...process.env, 
-            PATH: `${phpDir};${process.env.PATH}` 
+            PATH: `${phpDir};${process.env.PATH}`,
+            LARAVEL_STORAGE_PATH: userStoragePath
         };
 
         phpProcess = spawn(phpExec, ['artisan', 'serve', '--port=8000'], {
