@@ -301,14 +301,21 @@ const registerApp = () => {
             try {
                 if (!navigator.onLine) {
                     await QueueManager.enqueue(id);
-                    this.result = { status: 'offline', message: 'Saved offline.', student_id: id };
+                    this.result = { status: 'offline', message: 'Saved offline (No Internet).', student_id: id };
                 } else {
-                    const res = await this.performOnlineCheckin(id);
-                    this.result = res;
-                    if(res?.status === 'success') this.fetchOccupancy();
+                    try {
+                        const res = await this.performOnlineCheckin(id);
+                        this.result = res;
+                        if(res?.status === 'success') this.fetchOccupancy();
+                    } catch (networkErr) {
+                        // Automatic fallback to offline queue if network or server drops during scan
+                        await QueueManager.enqueue(id);
+                        this.result = { status: 'offline', message: 'Saved offline (Connection Dropped).', student_id: id };
+                    }
                 }
             } catch (err) {
-                this.result = { status: 'error', message: 'A system error occurred. Please try again.' };
+                await QueueManager.enqueue(id);
+                this.result = { status: 'offline', message: 'Saved offline.', student_id: id };
             } finally {
                 clearTimeout(safetyTimeout);
                 this.isProcessing = false;
