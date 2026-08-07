@@ -20,7 +20,7 @@
         
         @stack('styles')
     </head>
-    <body class="font-sans antialiased bg-[var(--bg-cream)] text-[var(--cjc-navy)]">
+    <body class="font-sans antialiased bg-[#0f2744] text-[var(--cjc-navy)]">
         @yield('content')
 
         @stack('scripts')

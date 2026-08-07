@@ -89,6 +89,8 @@ function createWindow() {
     mainWindow = new BrowserWindow({
         width: 1280,
         height: 800,
+        show: false,
+        backgroundColor: '#0f2744',
         kiosk: !isAdmin,
         fullscreen: !isAdmin,
         title: isAdmin ? 'LEMS Admin - Cor Jesu College Library' : 'LEMS Kiosk - Cor Jesu College Library',
@@ -99,6 +101,10 @@ function createWindow() {
             contextIsolation: true,
             preload: path.join(__dirname, 'preload.js')
         }
+    });
+
+    mainWindow.once('ready-to-show', () => {
+        mainWindow.show();
     });
 
     if (isAdmin) {
