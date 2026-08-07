@@ -16,25 +16,25 @@
 
 ---
 
-## 📌 Unsa ang LIRC-LMS System? (About The System)
+## 📌 About The System
 
-Ang **LIRC-LMS** (*Library Information & Resource Center - Library Management & Entrance Monitoring System*) ay usa ka automated, real-time digital entrance monitoring ug library administration system nga gihimo alang sa **Cor Jesu College (CJC)**.
+**LIRC-LMS** (*Library Information & Resource Center - Library Management & Entrance Monitoring System*) is an automated, real-time digital entrance monitoring and library management solution built specifically for **Cor Jesu College (CJC)**.
 
-Ang panguna nga katuyoan niining sistema ay ang **pag-ganti sa karaan nga manwal nga logbook** pinaagi sa usa ka paspas, contactless, ug digital Kiosk system. Naga-record kini sa matag pagsulod ug paggawas sa mga estudyante ug empleyado sa librarya, samtang naga-hatag sa mga librarian og real-time dashboard para sa occupancy tracking, patron management, ug statistical analytics.
+The primary objective of LIRC-LMS is to replace manual paper logbooks with a seamless, contactless, and intelligent digital kiosk system. It registers student and staff attendance upon entering or leaving the library, while providing library administrators with real-time occupancy monitoring, patron record management, and comprehensive attendance analytics.
 
 ---
 
-## 🏛️ Duha ka Sumpay nga Component sa Sistema (System Architecture)
+## 🏛️ System Architecture
 
-Ang LIRC-LMS naga-operate pinaagi sa duha ka importanteng bahin:
+The LIRC-LMS ecosystem operates across two primary interconnected modules:
 
 ```
 ┌──────────────────────────────────────────┐      ┌──────────────────────────────────────────┐
 │        🚪 PUBLIC ENTRANCE KIOSK          │      │       🛡️ ADMIN CONTROL DASHBOARD          │
 ├──────────────────────────────────────────┤      ├──────────────────────────────────────────┤
 │ • Barcode / QR Scanner Engine            │      │ • Live Occupancy & Headcount Tracker     │
-│ • Real-Time 60FPS Webcam Scanner         │  ──► │ • Patron Directory & Student Records     │
-│ • Manual Name / ID Lookup                │  ◄── │ • Violation & Penalty Enforcement        │
+│ • Real-Time 60 FPS Webcam Scanner        │  ──► │ • Patron Directory & Student Records     │
+│ • Manual Name / ID Lookup Autocomplete   │  ◄── │ • Violation & Penalty Enforcement        │
 │ • Offline Attendance Queue (IndexedDB)   │      │ • Department & Academic Program Setup    │
 │ • Audio-Visual Status Verification Cards │      │ • Attendance Analytics & Audit Logs      │
 └──────────────────────────────────────────┘      └──────────────────────────────────────────┘
@@ -42,59 +42,33 @@ Ang LIRC-LMS naga-operate pinaagi sa duha ka importanteng bahin:
 
 ---
 
-## ✨ Mga Main Feature sa Kiosk (Entrance Terminal)
+## ✨ Key Features
 
-### 1. ⚡ Fast Barcode & QR Code ID Scanning
-* Naga-support sa handheld laser barcode scanners ug QR readers (via high-speed keyboard-wedge listener).
-* Mupagawas dayon og **Instant Visual Status Card** ug **Audio Beep Alert** pag scan sa ID.
+### 🚪 Public Entrance Kiosk
+1. **⚡ Multi-Format Barcode & QR ID Scanning**: Compatible with handheld laser barcode scanners and QR readers via rapid keyboard-wedge detection.
+2. **📷 High-Speed 60 FPS Webcam Scanner**: Integrated camera scanning interface powered by the `@zxing/browser` engine with zero input lag for decoding barcodes directly from smartphones or physical IDs.
+3. **💾 Offline Attendance Queue Manager**: In the event of campus network or server downtime, attendance check-ins are recorded locally in the browser's **IndexedDB** storage and automatically synchronized to the cloud database once connection is restored.
+4. **🔍 Manual Lookup & Autocomplete Search**: Allows patrons with damaged or missing ID cards to search by Name or Student ID, complete with real-time autocomplete suggestions and photo verification.
+5. **🖼️ Facilities Slideshow & Live Campus Clock**: Features a dynamic slideshow highlighting CJC Library facilities (Discussion Rooms, Quiet Study Zones, E-Library Digital Stations) alongside a real-time campus clock.
 
-### 2. 📷 High-Speed 60 FPS Webcam Scanner
-* Built-in camera scanning interface nga gipaspasan gamit ang `@zxing/browser` engine.
-* Paspas nga muread og ID barcode diretso gikan sa phone screen o physical Student ID nga walay lag.
-
-### 3. 💾 Offline Attendance Queue Manager
-* Kung maputol man gani ang internet o server connection sa campus, dili ma-interupt ang kiosk.
-* Naga-save kini sa check-ins sulod sa browser's local database (**IndexedDB**) ug **automatic nga mag-sync pabalik sa database** sa moment nga mubalik ang connection.
-
-### 4. 🔍 Manual Lookup & Autocomplete Search
-* Para sa mga patron nga naguba o nakalimtan ang ID card, pwedeng i-type ang pangalan o Student ID.
-* Naay real-time autocomplete dropdown nga mupakita sa ilang litrato ug impormasyon para dali nga ma-verify.
-
-### 5. 🖼️ Facilities Slideshow & Live Campus Clock
-* Nagapakita sa mga pasilidad sa CJC Library (Discussion Rooms, Quiet Study Zone, E-Library Digital Station) ug sa live campus time and date.
-
----
-
-## 🛡️ Mga Main Feature sa Admin Dashboard (Management Suite)
-
-### 1. 📊 Live Occupancy & Capacity Monitor
-* Nagapakita sa eksaktong gidaghanon sa mga tawo nga **kasamtangang naa sa sulod sa librarya** kumpara sa Maximum Seating Capacity limit.
-* Paspas nga mualerto sa librarian kung hapit na mapuno ang seating capacity.
-
-### 2. 👥 Complete Patron Directory
-* Centralized nga rekord sa tanang patrons ubos sa lain-laing categories:
-  * **Students** (Undergraduate, Senior High, College)
-  * **Employees / Faculty**
-  * **Post Graduate Students**
-  * **Alumni**
-  * **Campus Visitors**
-
-### 3. 🏫 Academic Departments & Programs Manager
-* Dito gina-manage ang tanang departamento (e.g., Computer Studies, Engineering, Business & Governance, Arts & Sciences, Nursing) ug mga degree programs (gikan 1st Year hangtod 5th Year engineering levels).
-
-### 4. 🚨 Violation System & Account Suspension
-* Gina-record ang mga supak sa patakaran sa librarya (e.g., noise violations, unreturned books, dress code).
-* Automatic nga mag-flag ug **"Access Denied"** sa Kiosk kung ang usa ka patron suspended o inactive ang account.
-
-### 5. 📈 Analytics & Statistical Reports
-* Nagahatag og visual charts ug datos bahin sa peak library usage hours, pinaka-busy nga adlaw sa semana, ug department attendance distribution.
+### 🛡️ Admin Management Suite
+1. **📊 Live Occupancy & Capacity Monitor**: Displays real-time headcounts of patrons currently inside the library against maximum seating capacity limits, alerting staff before overcapacity occurs.
+2. **👥 Complete Patron Directory**: Centralized database managing patrons across various categories:
+   - **Students** (Undergraduate, Senior High, College)
+   - **Faculty & Employees**
+   - **Post-Graduate Researchers**
+   - **Alumni**
+   - **Campus Visitors**
+3. **🏫 Academic Departments & Programs Manager**: Configurable management of college departments and degree programs, supporting 1st Year to 5th Year engineering levels.
+4. **🚨 Violation System & Penalty Enforcement**: Logs patron infractions (e.g., noise violations, unreturned materials, dress code infractions) and automatically triggers **"Access Denied"** warnings at the kiosk for suspended accounts.
+5. **📈 Analytics & Attendance Reports**: Generates graphical data visualizers highlighting peak library usage hours, busiest days of the week, and department attendance distribution.
 
 ---
 
-## 🔄 Unsaon Pag-Function sa Entrance Process (System Workflow)
+## 🔄 Entrance Workflow
 
 ```
-[1. Student approaches Kiosk] ──► [2. Scans Barcode / QR ID] 
+[1. Patron Approaches Kiosk] ──► [2. Scans Barcode / QR ID] 
                                             │
                                             ▼
                              [3. System Verifies Account Status]
@@ -102,27 +76,27 @@ Ang LIRC-LMS naga-operate pinaagi sa duha ka importanteng bahin:
                ┌────────────────────────────┴────────────────────────────┐
                ▼                                                         ▼
      【 Account Active 】                                      【 Account Suspended / Inactive 】
-  • Screen shows Student Card                               • Screen shows Red Warning Card
-  • Plays Success Beep Alert                                • Plays Denied Alert Sound
-  • Adds 1 to Live Occupancy Count                          • Directs student to Librarian Desk
+  • Displays Student Profile Card                            • Displays Red Warning Card
+  • Plays Verification Sound Alert                           • Plays Access Denied Sound Alert
+  • Increments Live Occupancy Count                          • Directs Patron to Librarian Desk
                │
                ▼
-[4. Instant Sync to Admin Dashboard]
+[4. Real-Time Sync to Admin Dashboard]
 ```
 
 ---
 
-## ⚙️ System Requirements & Architecture Specs
+## ⚙️ System Specifications
 
-* **Core Platform**: Web Application + Desktop Electron Wrapper
-* **Framework**: Laravel 11 (PHP 8.2+)
+* **Platform**: Web Application & Desktop Electron Wrapper
+* **Backend Framework**: Laravel 11 (PHP 8.2+)
 * **Database**: TiDB Cloud Serverless / MySQL (SSL Secured)
-* **Frontend Engine**: TailwindCSS, Alpine.js, Blade Templates
-* **Target Users**: Cor Jesu College Students, Faculty, Staff, and LIRC Librarians
+* **Frontend Technologies**: TailwindCSS, Alpine.js, Blade Templates
+* **Target Audience**: Cor Jesu College Students, Faculty, Staff, and LIRC Librarians
 
 ---
 
 ## 🔒 Copyright & Rights
 
 Copyright © 2026 **Cor Jesu College — Library Information & Resource Center (LIRC)**.  
-Designed and developed for Cor Jesu College Library Operations.
+All rights reserved. Designed and developed for CJC Library Operations.
