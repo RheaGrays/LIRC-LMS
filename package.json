@@ -1,7 +1,7 @@
 {
     "name": "lems-kiosk",
     "version": "1.0.0",
-    "description": "Cor Jesu College Library Entrance Monitoring & Management System",
+    "description": "Library Entrance Monitoring System (LEMS) - Cor Jesu College",
     "author": "Cor Jesu College LIRC",
     "private": true,
     "type": "module",
@@ -14,8 +14,8 @@
         "dist": "electron-builder --win"
     },
     "build": {
-        "appId": "com.cjc.lirc.lms",
-        "productName": "LIRC Library Management System",
+        "appId": "com.cjc.lirc.lems",
+        "productName": "Library Entrance Monitoring System (LEMS)",
         "directories": {
             "output": "dist"
         },

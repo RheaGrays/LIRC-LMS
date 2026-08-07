@@ -93,7 +93,7 @@ function createWindow() {
         backgroundColor: '#fcf9f2',
         kiosk: !isAdmin,
         fullscreen: !isAdmin,
-        title: isAdmin ? 'LEMS Admin - Cor Jesu College Library' : 'LEMS Kiosk - Cor Jesu College Library',
+        title: isAdmin ? 'LEMS Admin - Library Entrance Monitoring System' : 'LEMS Kiosk - Library Entrance Monitoring System',
         icon: iconPath,
         autoHideMenuBar: true,
         webPreferences: {

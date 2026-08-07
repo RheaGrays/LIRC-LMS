@@ -1,7 +1,7 @@
 {
-  "name": "LEMS - Cor Jesu College Library",
+  "name": "Library Entrance Monitoring System (LEMS)",
   "short_name": "LEMS Kiosk",
-  "description": "Library Entrance Monitoring System",
+  "description": "Library Entrance Monitoring System - Cor Jesu College",
   "start_url": "/kiosk",
   "display": "standalone",
   "orientation": "any",
