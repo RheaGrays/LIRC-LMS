@@ -24,7 +24,11 @@ function checkServerReady(url, callback) {
 }
 
 function findPhpExecutable() {
+    const userProfile = process.env.USERPROFILE || 'C:\\Users\\Default';
     const candidatePaths = [
+        path.join(userProfile, '.config\\herd\\bin\\php84\\php.exe'),
+        path.join(userProfile, '.config\\herd\\bin\\php83\\php.exe'),
+        path.join(userProfile, '.config\\herd\\bin\\php82\\php.exe'),
         'C:\\xampp\\php\\php.exe',
         'D:\\xampp\\php\\php.exe',
         'C:\\php\\php.exe',
