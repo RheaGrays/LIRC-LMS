@@ -58,12 +58,8 @@ const registerApp = () => {
         },
 
         runSplashSequence() {
-            if (sessionStorage.getItem('lems_splash_shown')) {
-                this.showSplash = false;
-                return;
-            }
-
             this.showSplash = true;
+            this.splashProgress = 0;
             let p = 0;
             const timer = setInterval(() => {
                 p += 1;
@@ -83,10 +79,9 @@ const registerApp = () => {
                     clearInterval(timer);
                     setTimeout(() => {
                         this.showSplash = false;
-                        sessionStorage.setItem('lems_splash_shown', 'true');
-                    }, 800);
+                    }, 1000);
                 }
-            }, 32);
+            }, 30);
         },
 
         // --- Slideshow Logic ---
