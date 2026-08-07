@@ -39,8 +39,8 @@ const registerApp = () => {
         splashStatus: 'Initializing System Hardware...',
 
         init() {
-            // Set 250ms decoding interval (4 scans/sec) to eliminate CPU lag and keep video feed 60fps smooth
-            this.codeReader = new BrowserMultiFormatReader(null, 250);
+            // Set 350ms decoding interval (3 scans/sec) to eliminate CPU lag and keep video feed 60fps smooth
+            this.codeReader = new BrowserMultiFormatReader(null, 350);
             this.runSplashSequence();
             this.startClock();
             this.fetchOccupancy();
@@ -229,7 +229,14 @@ const registerApp = () => {
                 this.cameras = videoInputDevices;
                 
                 if (this.cameras.length > 0) {
-                    this.selectedCamera = this.cameras[0].deviceId;
+                    // Filter out mobile phone links (e.g. Phone Link / DroidCam) and prefer built-in / USB Webcams
+                    const preferredCam = this.cameras.find(c => {
+                        const label = (c.label || '').toLowerCase();
+                        return (label.includes('usb') || label.includes('integrated') || label.includes('webcam') || label.includes('camera') || label.includes('hd')) 
+                            && !label.includes('phone') && !label.includes('droid') && !label.includes('virtual');
+                    });
+
+                    this.selectedCamera = preferredCam ? preferredCam.deviceId : this.cameras[0].deviceId;
                     this.startScanning();
                 }
             } catch (err) {
@@ -247,10 +254,11 @@ const registerApp = () => {
                         deviceId: this.selectedCamera ? { exact: this.selectedCamera } : undefined,
                         width: { ideal: 640, max: 1280 },
                         height: { ideal: 480, max: 720 },
-                        frameRate: { ideal: 30 }
+                        frameRate: { ideal: 30, max: 60 }
                     }
                 };
 
+                // Decode throttle set to 350ms to keep live video stream 60fps fluid
                 await this.codeReader.decodeFromConstraints(constraints, videoEl, (result, err) => {
                     if (result && !this.isProcessing) {
                         this.manualId = result.text;
