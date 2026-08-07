@@ -115,7 +115,7 @@ function startPhpServer() {
 function createWindow() {
     const iconPath = path.join(__dirname, '../public/CorJesu Logo.png');
     const isAdmin = process.argv.includes('--admin');
-    const targetRoute = isAdmin ? '/admin/login' : '/kiosk?boot=1';
+    const targetRoute = isAdmin ? '/admin/login' : '/kiosk';
 
     mainWindow = new BrowserWindow({
         width: 1280,
@@ -196,7 +196,18 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
     if (phpProcess) {
-        try { phpProcess.kill(); } catch (e) {}
+        try {
+            if (process.platform === 'win32') {
+                import('child_process').then(cp => {
+                    cp.exec(`taskkill /pid ${phpProcess.pid} /T /F`, (err, stdout, stderr) => {
+                        if (process.platform !== 'darwin') app.quit();
+                    });
+                });
+                return; // wait for taskkill to finish before quitting
+            } else {
+                phpProcess.kill();
+            }
+        } catch (e) {}
     }
     if (process.platform !== 'darwin') app.quit();
 });

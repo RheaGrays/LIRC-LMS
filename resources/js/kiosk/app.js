@@ -9,7 +9,6 @@ const registerApp = () => {
         suggestions: [],
         showSuggestions: false,
         searchDebounce: null,
-        barcodeBuffer: '',
         isProcessing: false,
         result: null,
         resetTimeout: null,
@@ -34,7 +33,7 @@ const registerApp = () => {
         slideTimer: null,
 
         // Splash Screen State
-        showSplash: new URLSearchParams(window.location.search).has('boot'),
+        showSplash: new URLSearchParams(window.location.search).has('boot') && !sessionStorage.getItem('splashShown'),
         splashProgress: 0,
         splashStatus: 'Initializing System Hardware...',
 
@@ -48,13 +47,16 @@ const registerApp = () => {
             QueueManager.startSyncTimer();
             this.startSlideshow();
 
-            // Listen for keydown globally to wake up from idle
-            window.addEventListener('keydown', (e) => {
-                if (this.state === 'idle' && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
-                    this.manualId = e.key;
-                    this.activate(true);
-                }
-            });
+            // CSRF Token Keepalive (Refreshes token every 4 mins to prevent 419 Page Expired)
+            setInterval(async () => {
+                try {
+                    const tokenRes = await fetch('/csrf-token');
+                    if (tokenRes.ok) {
+                        const tokenData = await tokenRes.json();
+                        if (tokenData.token) document.querySelector('meta[name="csrf-token"]').content = tokenData.token;
+                    }
+                } catch (e) {}
+            }, 240000);
         },
 
         runSplashSequence() {
@@ -62,6 +64,7 @@ const registerApp = () => {
                 return;
             }
 
+            sessionStorage.setItem('splashShown', 'true');
             this.showSplash = true;
             this.splashProgress = 0;
             let p = 0;
@@ -131,13 +134,14 @@ const registerApp = () => {
             this.clockInterval = setInterval(tick, 1000);
         },
 
-        activate(fromKey = false) {
+        activate(fromKey = false, initialChar = '') {
             this.state = 'active';
             this.tab = 'scan';
             this.result = null;
             this.isProcessing = false;
-            this.barcodeBuffer = '';
-            if (!fromKey) {
+            if (fromKey) {
+                this.manualId = initialChar;
+            } else {
                 this.manualId = '';
             }
             this.handleActivity();
@@ -153,7 +157,6 @@ const registerApp = () => {
             this.result = null;
             this.isProcessing = false;
             this.manualId = '';
-            this.barcodeBuffer = '';
             this.stopScanning();
             clearTimeout(this.inactivityTimeout);
         },
@@ -183,6 +186,12 @@ const registerApp = () => {
         },
 
         handleKey(e) {
+            // Wake up from idle
+            if (this.state === 'idle' && e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                this.activate(true, e.key);
+                return;
+            }
+
             this.handleActivity();
             
             // Ignore if typing in an actual input field
@@ -190,13 +199,11 @@ const registerApp = () => {
 
             // Global barcode scanner capture
             if (e.key === 'Enter') {
-                if (this.barcodeBuffer.trim()) {
-                    this.manualId = this.barcodeBuffer.trim();
+                if (this.manualId.trim()) {
                     this.submitManual();
                 }
-                this.barcodeBuffer = '';
             } else if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
-                this.barcodeBuffer += e.key;
+                this.manualId += e.key;
             }
         },
 
@@ -317,8 +324,8 @@ const registerApp = () => {
         resetScan() {
             this.result = null;
             this.isProcessing = false;
-            this.barcodeBuffer = '';
             this.manualId = '';
+            this.handleActivity();
             this.$nextTick(() => {
                 if (this.tab === 'scan') this.$refs.barcodeInput?.focus();
                 if (this.tab === 'manual') this.$refs.manualInput?.focus();
@@ -385,7 +392,8 @@ const registerApp = () => {
                 const processRes = await fetch('/kiosk/process', {
                     method: 'POST',
                     headers: { 
-                        'Content-Type': 'application/json', 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '' 
                     },
                     body: JSON.stringify({ student_id: id }),

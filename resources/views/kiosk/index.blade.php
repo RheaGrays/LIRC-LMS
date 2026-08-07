@@ -4,7 +4,7 @@
 
 @section('kiosk_content')
 <div x-data="kioskApp()" class="w-full h-screen flex flex-col relative z-10 bg-transparent cursor-pointer select-none overflow-hidden" 
-     @mousemove="handleActivity()" @keydown="handleKey($event)" @click="activate()">
+     @mousemove.window="handleActivity()" @touchstart.window="handleActivity()" @keydown.window="handleKey($event)" @click="activate()">
 
     <!-- CINEMATIC ANIMATED SPLASH SCREEN OVERLAY (MATCHING OFFICIAL DESIGN MOCKUP) -->
     <div x-show="showSplash" 
@@ -145,7 +145,7 @@
     <template x-if="state === 'idle'">
         <div class="flex-1 flex flex-col relative z-10 overflow-hidden h-full">
             <!-- Header -->
-            <header class="fade-in-up flex items-center justify-between px-12 py-5 shrink-0 z-20">
+            <header class="flex items-center justify-between px-12 py-5 shrink-0 z-20">
                 <div class="flex items-center gap-3.5">
                     <div class="w-12 h-12 rounded-full overflow-hidden border border-[var(--border-warm)] bg-white shrink-0 shadow-sm">
                         <img src="/cjc-logo.jpeg" alt="CJC Logo" class="w-full h-full object-cover">
@@ -183,12 +183,12 @@
                 
                 <!-- Headline & Clock (Grouped) -->
                 <div class="flex flex-col items-center gap-1 shrink-0">
-                    <div class="fade-in-up delay-1 text-center">
+                    <div class="text-center">
                         <h1 class="font-['Fraunces'] text-[clamp(40px,6vw,65px)] font-[800] text-[var(--cjc-navy)] m-0 leading-[1] tracking-[-0.02em]">
                             Welcome to <span class="text-[var(--cjc-red)]">LIRC</span>, CorJesian!
                         </h1>
                     </div>
-                    <div class="fade-in-up delay-2 text-center">
+                    <div class="text-center">
                         <div class="font-['Fraunces'] text-[clamp(35px,5vw,55px)] font-bold text-[var(--cjc-navy)] leading-none tracking-[-0.02em]">
                             <span x-text="clockHm">--:--</span><span class="text-[0.4em] text-[var(--cjc-red)] font-bold ml-1 align-middle">:<span x-text="clockSec">--</span></span>
                         </div>
@@ -199,7 +199,7 @@
                 </div>
 
                 <!-- CTA Button (Above container) -->
-                <div class="fade-in-up delay-3 shrink-0">
+                <div class="shrink-0">
                     <div class="flex items-center gap-3 bg-white/80 backdrop-blur-md px-7 py-3 rounded-full border border-[var(--border-warm)] shadow-md cursor-pointer hover:bg-white hover:scale-105 transition-all animate-bounce-slow" @click="activate()">
                         <span class="font-['Inter'] text-[15px] font-bold text-[var(--cjc-navy)] tracking-wide">
                             Present your ID to begin
@@ -208,7 +208,7 @@
                 </div>
 
                 <!-- Slideshow Wrapper -->
-                <div class="fade-in-up delay-4 w-full flex flex-col items-center shrink-0 mt-6" x-data="kioskSlideshow()">
+                <div class="w-full flex flex-col items-center shrink-0 mt-6" x-data="kioskSlideshow()">
                     <!-- Glassmorphism Image Slider Container -->
                     <div class="relative w-full max-w-[800px] h-[350px] bg-white/40 backdrop-blur-xl border border-white/60 rounded-[28px] shadow-[0_12px_40px_rgba(15,39,68,0.12)] overflow-hidden flex shrink-0">
                         
@@ -274,7 +274,7 @@
             <!-- Main Scanner Box -->
             <main class="flex-1 flex items-center justify-center p-6 pb-16">
                 <div class="flex flex-col items-center w-full max-w-[900px] transition-all duration-300">
-                    <div class="fade-in-up bg-white border border-gray-100 rounded-[28px] shadow-[0_20px_50px_rgba(0,0,0,0.06)] w-full relative overflow-hidden flex flex-col min-h-[480px]">
+                    <div class="bg-white border border-gray-100 rounded-[28px] shadow-[0_20px_50px_rgba(0,0,0,0.06)] w-full relative overflow-hidden flex flex-col min-h-[480px]">
                         
                         <div class="px-10 pt-10 pb-20 relative z-10" x-show="!result && !isProcessing">
                             <!-- Header Area -->
