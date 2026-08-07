@@ -26,3 +26,4 @@ yarn-error.log
 composer
 composer-setup.php
 /dist
+/php_bundle

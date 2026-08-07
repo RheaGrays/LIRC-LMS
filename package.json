@@ -19,6 +19,13 @@
         "directories": {
             "output": "dist"
         },
+        "extraResources": [
+            {
+                "from": "php_bundle",
+                "to": "php_bundle",
+                "filter": ["**/*"]
+            }
+        ],
         "files": [
             "electron/**/*",
             "public/**/*",

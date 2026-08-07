@@ -38,6 +38,15 @@ function checkServerReady(url, callback) {
 }
 
 function findPhpExecutable() {
+    const projectPath = app.isPackaged 
+        ? path.join(process.resourcesPath, 'php_bundle')
+        : path.join(__dirname, '../php_bundle');
+
+    const bundledPhp = path.join(projectPath, 'php.exe');
+    if (fs.existsSync(bundledPhp)) {
+        return bundledPhp;
+    }
+
     const userProfile = process.env.USERPROFILE || 'C:\\Users\\Default';
     const candidatePaths = [
         path.join(userProfile, '.config\\herd\\bin\\php84\\php.exe'),
