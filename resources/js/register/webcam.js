@@ -18,8 +18,26 @@ export default () => ({
         this.status = 'loading';
         this.errorMsg = '';
         try {
+            let chosenDeviceId = undefined;
+            if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoDevices = devices.filter(d => d.kind === 'videoinput');
+                const physicalCam = videoDevices.find(d => {
+                    const label = (d.label || '').toLowerCase();
+                    return (label.includes('usb') || label.includes('integrated') || label.includes('webcam') || label.includes('camera') || label.includes('hd'))
+                        && !label.includes('phone') && !label.includes('droid') && !label.includes('virtual');
+                });
+                if (physicalCam) {
+                    chosenDeviceId = physicalCam.deviceId;
+                }
+            }
+
+            const videoConstraints = chosenDeviceId 
+                ? { deviceId: { exact: chosenDeviceId }, width: { ideal: 640 }, height: { ideal: 480 } }
+                : { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" };
+
             const mediaStream = await navigator.mediaDevices.getUserMedia({
-                video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" },
+                video: videoConstraints,
                 audio: false,
             });
             this.stream = mediaStream;

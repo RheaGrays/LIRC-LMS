@@ -58,6 +58,11 @@ const registerApp = () => {
         },
 
         runSplashSequence() {
+            if (sessionStorage.getItem('lems_kiosk_splash_shown')) {
+                this.showSplash = false;
+                return;
+            }
+
             this.showSplash = true;
             this.splashProgress = 0;
             let p = 0;
@@ -79,6 +84,7 @@ const registerApp = () => {
                     clearInterval(timer);
                     setTimeout(() => {
                         this.showSplash = false;
+                        sessionStorage.setItem('lems_kiosk_splash_shown', 'true');
                     }, 1000);
                 }
             }, 30);
