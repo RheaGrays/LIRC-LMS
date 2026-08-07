@@ -34,8 +34,8 @@ const registerApp = () => {
         slideTimer: null,
 
         init() {
-            // Pass 150ms interval to prevent continuous CPU decoding loops and eliminate video lag
-            this.codeReader = new BrowserMultiFormatReader(null, 150);
+            // Set 250ms decoding interval (4 scans/sec) to eliminate CPU lag and keep video feed 60fps smooth
+            this.codeReader = new BrowserMultiFormatReader(null, 250);
             this.startClock();
             this.fetchOccupancy();
             setInterval(() => this.fetchOccupancy(), 30000);
@@ -207,9 +207,9 @@ const registerApp = () => {
                 const constraints = {
                     video: {
                         deviceId: this.selectedCamera ? { exact: this.selectedCamera } : undefined,
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 },
-                        frameRate: { ideal: 30, max: 60 }
+                        width: { ideal: 640, max: 1280 },
+                        height: { ideal: 480, max: 720 },
+                        frameRate: { ideal: 30 }
                     }
                 };
 
