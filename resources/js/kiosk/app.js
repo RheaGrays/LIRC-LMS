@@ -89,7 +89,6 @@ const registerApp = () => {
         },
 
         activate(fromKey = false) {
-            if (this.state === 'active') return;
             this.state = 'active';
             this.tab = 'scan';
             this.result = null;
@@ -223,6 +222,7 @@ const registerApp = () => {
 
         resetScan() {
             this.result = null;
+            this.isProcessing = false;
             this.barcodeBuffer = '';
             this.manualId = '';
             this.$nextTick(() => {
@@ -233,16 +233,24 @@ const registerApp = () => {
 
         // --- Processing Logic ---
         submitManual() {
-            if (!this.manualId) return;
+            if (!this.manualId || !this.manualId.trim()) return;
             this.showSuggestions = false;
-            this.processId(this.manualId);
+            this.processId(this.manualId.trim());
         },
 
         async processId(id) {
+            if (this.isProcessing) return;
             this.isProcessing = true;
             this.result = null;
             clearTimeout(this.resetTimeout);
             
+            const safetyTimeout = setTimeout(() => {
+                if (this.isProcessing) {
+                    this.isProcessing = false;
+                    this.result = { status: 'error', message: 'Request timed out. Please try again.' };
+                }
+            }, 8000);
+
             const audio = new Audio('/beep.mp3');
             audio.play().catch(e => {});
 
@@ -253,15 +261,15 @@ const registerApp = () => {
                 } else {
                     const res = await this.performOnlineCheckin(id);
                     this.result = res;
-                    if(res.status === 'success') this.fetchOccupancy();
+                    if(res?.status === 'success') this.fetchOccupancy();
                 }
             } catch (err) {
                 this.result = { status: 'error', message: 'A system error occurred. Please try again.' };
             } finally {
+                clearTimeout(safetyTimeout);
                 this.isProcessing = false;
                 this.manualId = '';
                 
-                // No timeout! Result stays on screen permanently until the next scan.
                 this.$nextTick(() => {
                     this.handleActivity();
                 });
@@ -269,18 +277,33 @@ const registerApp = () => {
         },
         
         async performOnlineCheckin(id) {
-            const processRes = await fetch('/kiosk/process', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
-                body: JSON.stringify({ student_id: id })
-            });
-            const processData = await processRes.json();
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 7000);
             
-            if (processData.status === 'error') {
-                return { status: 'error', message: processData.message, student: processData.student };
+            try {
+                const processRes = await fetch('/kiosk/process', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json', 
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '' 
+                    },
+                    body: JSON.stringify({ student_id: id }),
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+                
+                const processData = await processRes.json();
+                if (processData.status === 'error') {
+                    return { status: 'error', message: processData.message, student: processData.student };
+                }
+                return processData;
+            } catch (e) {
+                clearTimeout(timeoutId);
+                if (e.name === 'AbortError') {
+                    return { status: 'error', message: 'Database query timed out. Please try again.' };
+                }
+                return { status: 'error', message: 'A system error occurred. Please try again.' };
             }
-            
-            return processData;
         },
         
         async fetchOccupancy() {
