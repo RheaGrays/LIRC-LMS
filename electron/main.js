@@ -75,23 +75,30 @@ function startPhpServer() {
         : path.join(__dirname, '..');
 
     const phpExec = findPhpExecutable();
+    const phpDir = path.dirname(phpExec);
 
     try {
+        const env = { 
+            ...process.env, 
+            PATH: `${phpDir};${process.env.PATH}` 
+        };
+
         phpProcess = spawn(phpExec, ['artisan', 'serve', '--port=8000'], {
             cwd: projectPath,
             detached: false,
-            stdio: 'ignore'
+            stdio: 'ignore',
+            env: env
         });
 
         phpProcess.on('error', (err) => {
             console.error('PHP spawn error:', err);
-            // If custom path failed, try system 'php' safely without throwing modal exception
             if (phpExec !== 'php') {
                 try {
                     const fallbackProcess = spawn('php', ['artisan', 'serve', '--port=8000'], {
                         cwd: projectPath,
                         detached: false,
-                        stdio: 'ignore'
+                        stdio: 'ignore',
+                        env: env
                     });
                     fallbackProcess.on('error', (e) => console.error('System PHP error:', e));
                     phpProcess = fallbackProcess;
