@@ -33,9 +33,15 @@ const registerApp = () => {
         currentSlide: 0,
         slideTimer: null,
 
+        // Splash Screen State
+        showSplash: true,
+        splashProgress: 0,
+        splashStatus: 'Initializing System Hardware...',
+
         init() {
             // Set 250ms decoding interval (4 scans/sec) to eliminate CPU lag and keep video feed 60fps smooth
             this.codeReader = new BrowserMultiFormatReader(null, 250);
+            this.runSplashSequence();
             this.startClock();
             this.fetchOccupancy();
             setInterval(() => this.fetchOccupancy(), 30000);
@@ -49,6 +55,38 @@ const registerApp = () => {
                     this.activate(true);
                 }
             });
+        },
+
+        runSplashSequence() {
+            if (sessionStorage.getItem('lems_splash_shown')) {
+                this.showSplash = false;
+                return;
+            }
+
+            this.showSplash = true;
+            let p = 0;
+            const timer = setInterval(() => {
+                p += 4;
+                this.splashProgress = Math.min(p, 100);
+
+                if (p < 30) {
+                    this.splashStatus = 'Initializing Hardware Scanners...';
+                } else if (p < 65) {
+                    this.splashStatus = 'Connecting to Library Cloud Database...';
+                } else if (p < 90) {
+                    this.splashStatus = 'Loading Kiosk Interface...';
+                } else {
+                    this.splashStatus = 'Welcome to CJC Library!';
+                }
+
+                if (p >= 100) {
+                    clearInterval(timer);
+                    setTimeout(() => {
+                        this.showSplash = false;
+                        sessionStorage.setItem('lems_splash_shown', 'true');
+                    }, 250);
+                }
+            }, 35);
         },
 
         // --- Slideshow Logic ---

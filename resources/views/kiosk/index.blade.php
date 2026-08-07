@@ -6,6 +6,62 @@
 <div x-data="kioskApp()" class="w-full h-screen flex flex-col relative z-10 bg-transparent cursor-pointer select-none overflow-hidden" 
      @mousemove="handleActivity()" @keydown="handleKey($event)" @click="activate()">
 
+    <!-- CINEMATIC ANIMATED SPLASH SCREEN OVERLAY -->
+    <div x-show="showSplash" 
+         x-transition:leave="transition ease-out duration-700"
+         x-transition:leave-start="opacity-100 scale-100"
+         x-transition:leave-end="opacity-0 scale-95 pointer-events-none"
+         class="fixed inset-0 z-[9999] bg-[#0f2744] flex flex-col items-center justify-between p-10 overflow-hidden text-white font-['Inter']">
+        
+        <!-- Glowing Background Aura & Ambient Orbs -->
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(196,30,42,0.25)_0%,transparent_70%)] pointer-events-none"></div>
+        <div class="absolute -top-32 -left-32 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none animate-pulse"></div>
+        <div class="absolute -bottom-32 -right-32 w-96 h-96 bg-red-600/15 rounded-full blur-3xl pointer-events-none animate-pulse"></div>
+
+        <!-- Top Header Status -->
+        <div class="relative z-10 w-full flex justify-between items-center opacity-80 pt-2">
+            <div class="flex items-center gap-2">
+                <div class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></div>
+                <span class="text-[11px] font-semibold tracking-wider uppercase text-slate-300 font-['Inter']">LIRC Kiosk OS v1.0</span>
+            </div>
+            <span class="text-[11px] font-bold tracking-widest text-slate-400 font-['Inter'] uppercase">Cor Jesu College</span>
+        </div>
+
+        <!-- Center Crest & Branding Animation -->
+        <div class="relative z-10 flex flex-col items-center text-center my-auto">
+            <!-- Pulsing Logo Emblem Ring -->
+            <div class="relative mb-6">
+                <div class="absolute -inset-4 rounded-full bg-gradient-to-r from-red-600 to-amber-500 opacity-75 blur-md animate-pulse"></div>
+                <div class="relative w-28 h-28 md:w-32 md:h-32 rounded-full p-1.5 bg-white/10 backdrop-blur-xl border border-white/30 shadow-2xl flex items-center justify-center">
+                    <img src="/CorJesu Logo.png" alt="CJC Logo" class="w-full h-full object-contain p-1 filter drop-shadow-lg">
+                </div>
+            </div>
+
+            <!-- Title & Subtitle -->
+            <h1 class="text-2xl md:text-3xl font-black tracking-wider font-['Fraunces'] text-white m-0 uppercase drop-shadow-md">
+                COR JESU COLLEGE
+            </h1>
+            <p class="text-xs md:text-sm font-bold tracking-[0.2em] text-amber-400 uppercase mt-2 mb-1 font-['Inter']">
+                Library Information & Resource Center
+            </p>
+            <p class="text-[11px] text-slate-300 font-medium tracking-wide font-['Inter']">
+                Library Entrance Monitoring & Attendance System
+            </p>
+        </div>
+
+        <!-- Bottom Loading Bar & Status -->
+        <div class="relative z-10 w-full max-w-sm flex flex-col items-center gap-3 pb-6">
+            <div class="w-full h-1.5 bg-white/10 rounded-full overflow-hidden p-0.5 border border-white/15 backdrop-blur-sm">
+                <div class="h-full bg-gradient-to-r from-red-600 via-amber-400 to-emerald-400 rounded-full transition-all duration-150 ease-out"
+                     :style="`width: ${splashProgress}%`"></div>
+            </div>
+            <div class="flex items-center justify-between w-full text-[11px] font-medium text-slate-300 font-['Inter']">
+                <span x-text="splashStatus">Initializing System...</span>
+                <span class="font-mono text-amber-400 font-bold" x-text="`${splashProgress}%`">0%</span>
+            </div>
+        </div>
+    </div>
+
     <!-- Transparent Background to allow hero-pattern to show through -->
     <div class="absolute inset-0 z-0 overflow-hidden pointer-events-none bg-transparent"></div>
     
