@@ -44,7 +44,13 @@ class Student extends Model
     {
         if (!$this->photo_path) return null;
         if (str_starts_with($this->photo_path, 'http')) return $this->photo_path;
-        return asset('storage/' . $this->photo_path);
+        
+        $relative = ltrim($this->photo_path, '/');
+        if (file_exists(public_path('storage/' . $relative)) || file_exists(storage_path('app/public/' . $relative))) {
+            return asset('storage/' . $relative);
+        }
+
+        return null;
     }
     public function scopeActive($query)
     {

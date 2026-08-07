@@ -55,11 +55,18 @@
                         <tr class="hover:bg-gray-50/50 transition-colors">
                             <td class="px-6 py-3">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-9 h-9 rounded-full bg-gray-100 overflow-hidden flex-shrink-0">
+                                    <div class="w-9 h-9 rounded-full bg-gray-100 overflow-hidden flex-shrink-0 relative">
                                         @if($log['photo_url'])
-                                            <img src="{{ $log['photo_url'] }}" class="w-full h-full object-cover">
+                                            <img src="{{ $log['photo_url'] }}" 
+                                                 onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';" 
+                                                 class="w-full h-full object-cover">
+                                            <div class="w-full h-full items-center justify-center bg-gray-100 text-gray-400" style="display: none;">
+                                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                                            </div>
                                         @else
-                                            <svg class="w-full h-full text-gray-300 p-2" fill="currentColor" viewBox="0 0 24 24"><path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                                            <div class="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
+                                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                                            </div>
                                         @endif
                                     </div>
                                     <div>
