@@ -6,15 +6,68 @@
 
     <!-- Error State -->
     <template x-if="result?.status === 'error'">
-        <div class="p-8 text-center flex-1 flex flex-col items-center justify-center">
-            <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <svg class="w-10 h-10 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
+        <div class="p-8 pb-10 text-center flex-1 flex flex-col items-center justify-center relative w-full overflow-hidden">
+            
+            <!-- Floating Sparkles (Background) -->
+            <div class="absolute inset-0 pointer-events-none z-0">
+                <div class="absolute top-[15%] left-[25%] w-2 h-2 bg-red-600 transform rotate-45 opacity-80 rounded-sm"></div>
+                <div class="absolute top-[22%] left-[28%] w-2 h-2 border border-red-300 transform rotate-45 opacity-60"></div>
+                <div class="absolute top-[35%] left-[22%] text-red-600 font-bold opacity-80 rotate-[15deg] text-xl leading-none">&times;</div>
+                
+                <div class="absolute top-[18%] right-[25%] w-2 h-2 bg-red-600 transform rotate-45 opacity-80 rounded-sm"></div>
+                <div class="absolute top-[26%] right-[28%] w-2 h-2 border border-red-300 transform rotate-45 opacity-60"></div>
+                <div class="absolute top-[32%] right-[20%] w-2.5 h-2.5 border-[1.5px] border-red-600 transform rotate-45 opacity-80 rounded-sm"></div>
             </div>
-            <h3 class="text-3xl font-bold text-gray-900 mb-3">Access Denied</h3>
-            <p class="text-xl text-red-600 font-medium" x-text="result?.message"></p>
-            <button @click="resetScan()" class="mt-8 w-full p-4 bg-red-600 text-white rounded-[12px] text-[16px] font-bold shadow-md hover:bg-red-700 transition-colors">Scan Another ID</button>
+
+            <!-- Warning Icon -->
+            <div class="relative z-10 mb-4 mt-2">
+                <div class="w-32 h-32 rounded-full bg-red-50/50 flex items-center justify-center mx-auto relative before:absolute before:inset-2 before:rounded-full before:bg-red-50 before:shadow-[0_0_30px_rgba(220,38,38,0.15)]">
+                    <div class="w-[85px] h-[85px] rounded-full bg-white border-[3px] border-red-100 flex items-center justify-center shadow-md relative z-10">
+                        <svg class="w-[45px] h-[45px] text-[#e31818]" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Text Content -->
+            <h3 class="text-[34px] font-extrabold text-[#08152c] mb-1 relative z-10 tracking-tight">Access Denied</h3>
+            
+            <!-- Decorative Line -->
+            <div class="flex items-center justify-center gap-2 mb-3 relative z-10">
+                <div class="h-[1.5px] w-8 bg-red-400"></div>
+                <div class="w-1.5 h-1.5 rounded-full bg-red-600"></div>
+                <div class="h-[1.5px] w-8 bg-red-400"></div>
+            </div>
+
+            <p class="text-[17px] text-[#e31818] font-medium relative z-10" x-text="result?.message"></p>
+
+            <!-- Info Box -->
+            <div class="mt-8 mb-6 w-full max-w-[550px] bg-white border border-gray-100 rounded-[16px] p-5 flex items-center gap-5 shadow-[0_4px_20px_rgba(0,0,0,0.03)] relative z-10 text-left mx-auto">
+                <div class="w-[52px] h-[52px] rounded-[14px] bg-red-50 flex items-center justify-center shrink-0">
+                    <svg class="w-7 h-7 text-[#e31818]" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <rect x="3" y="7" width="18" height="12" rx="2" />
+                        <circle cx="8" cy="12" r="2" />
+                        <path d="M5 16c0-1.5 1.5-3 3-3s3 1.5 3 3" />
+                        <path d="M14 12h4M14 15h2" stroke-linecap="round" />
+                        <circle cx="12" cy="7" r="1.5" fill="currentColor" stroke="currentColor" />
+                    </svg>
+                </div>
+                <div class="h-10 w-px bg-gray-200 shrink-0"></div>
+                <div>
+                    <h4 class="text-[#08152c] font-bold text-[15px] mb-0.5">Please check the Student ID</h4>
+                    <p class="text-gray-500 text-[13px] m-0">Make sure the ID is correct and try again.</p>
+                </div>
+            </div>
+
+            <!-- Button -->
+            <button @click="resetScan()" class="w-full max-w-[550px] mx-auto p-[18px] bg-gradient-to-b from-[#e31818] to-[#bd0e0e] text-white rounded-[14px] flex items-center justify-center gap-3 shadow-[0_8px_20px_rgba(227,24,24,0.25)] hover:shadow-[0_8px_25px_rgba(227,24,24,0.35)] hover:from-[#f01919] hover:to-[#a80c0c] transition-all relative z-10">
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 8V6a2 2 0 012-2h3M5 16v2a2 2 0 002 2h3M19 8V6a2 2 0 00-2-2h-3M19 16v2a2 2 0 01-2 2h-3" />
+                    <line x1="10" y1="12" x2="14" y2="12" stroke-width="2" stroke-linecap="round" />
+                </svg>
+                <span class="text-[17px] font-bold tracking-wide">Scan Another ID</span>
+            </button>
         </div>
     </template>
 
