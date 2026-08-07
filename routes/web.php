@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Route;
 
 // ── Root ─────────────────────────────────────────────────────
 Route::get('/', fn() => redirect()->route('kiosk.index'));
+Route::get('/csrf-token', fn() => response()->json(['token' => csrf_token()]))->name('csrf.token');
 
 // ── Kiosk (public) ────────────────────────────────────────────
 Route::get('/kiosk', [KioskController::class, 'index'])->name('kiosk.index');

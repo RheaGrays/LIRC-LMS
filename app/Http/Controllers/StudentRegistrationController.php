@@ -17,9 +17,15 @@ class StudentRegistrationController extends Controller
 
     public function store(Request $request)
     {
-        $allowedCategories = SystemSetting::get('patron_categories', ['Student', 'Employee', 'Post Graduate', 'Alumni', 'Visitor']);
-        $isStudent = $request->input('patronCategory') === 'Student';
-        $isVisitor = $request->input('patronCategory') === 'Visitor';
+        $inputCategory = trim($request->input('patronCategory', ''));
+        if (in_array(strtolower($inputCategory), ['staff', 'faculty', 'employee'])) {
+            $inputCategory = 'Employee';
+            $request->merge(['patronCategory' => 'Employee']);
+        }
+
+        $allowedCategories = SystemSetting::get('patron_categories', ['Student', 'Employee', 'Staff', 'Faculty', 'Post Graduate', 'Alumni', 'Visitor']);
+        $isStudent = $inputCategory === 'Student';
+        $isVisitor = $inputCategory === 'Visitor';
 
         $validated = $request->validate([
             'studentId'     => $isVisitor
@@ -28,7 +34,7 @@ class StudentRegistrationController extends Controller
             'lastName'      => 'required|string|max:255',
             'firstName'     => 'required|string|max:255',
             'middleName'    => 'nullable|string|max:255',
-            'patronCategory'=> ['required', 'string', \Illuminate\Validation\Rule::in($allowedCategories)],
+            'patronCategory'=> ['required', 'string', \Illuminate\Validation\Rule::in(array_merge($allowedCategories, ['Employee', 'Staff', 'Faculty']))],
             'level'         => $isStudent ? 'required|in:college,basic_ed' : 'nullable|in:college,basic_ed',
             'college'       => $isStudent ? 'required|string|max:255' : 'nullable|string|max:255',
             'department'    => $isStudent ? 'required_if:level,college|nullable|string|max:255' : 'nullable|string|max:255',

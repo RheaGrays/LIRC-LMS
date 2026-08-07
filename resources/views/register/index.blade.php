@@ -750,6 +750,19 @@
                 this.updateTime();
                 setInterval(() => this.updateTime(), 30000);
 
+                // CSRF Token Keepalive (Refreshes token every 4 mins to prevent 419 Page Expired)
+                setInterval(async () => {
+                    try {
+                        const tokenRes = await fetch('/csrf-token');
+                        if (tokenRes.ok) {
+                            const tokenData = await tokenRes.json();
+                            if (tokenData.token) {
+                                document.querySelector('meta[name="csrf-token"]').content = tokenData.token;
+                            }
+                        }
+                    } catch (e) {}
+                }, 240000);
+
                 // Fetch academics and patron categories in parallel
                 const [acadRes, catRes] = await Promise.allSettled([
                     fetch('/api/academics'),
@@ -857,7 +870,7 @@
                 this.submitting = true;
                 this.submitError = '';
 
-                const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+                let csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
                 try {
                     const response = await fetch("{{ route('register.store') }}", {
@@ -872,6 +885,19 @@
                             photoDataUrl: this.capturedImage
                         })
                     });
+
+                    if (response.status === 419) {
+                        try {
+                            const freshTokenRes = await fetch('/csrf-token');
+                            if (freshTokenRes.ok) {
+                                const freshData = await freshTokenRes.json();
+                                document.querySelector('meta[name="csrf-token"]').content = freshData.token;
+                            }
+                        } catch (e) {}
+                        
+                        this.submitError = "Your security token expired. We refreshed it — please click 'Submit Registration' again!";
+                        return;
+                    }
 
                     const data = await response.json();
 
