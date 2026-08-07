@@ -23,25 +23,25 @@
         </div>
 
         <!-- Top-Right Crimson & Gold Curved Ribbon Graphic -->
-        <div class="absolute -top-16 -right-16 z-0 pointer-events-none w-[450px] h-[350px]">
-            <svg viewBox="0 0 400 300" fill="none" class="w-full h-full">
-                <path d="M100 0 C 250 80, 320 180, 400 300 L 400 0 Z" fill="#7f1d1d"/>
-                <path d="M140 0 C 270 90, 340 200, 400 330 L 400 0 Z" fill="#991b1b" opacity="0.8"/>
-                <path d="M80 0 C 230 70, 300 170, 400 280" stroke="#d97706" stroke-width="6" fill="none"/>
+        <div class="absolute top-0 right-0 z-0 pointer-events-none w-[300px] md:w-[420px] h-[200px] md:h-[280px]">
+            <svg viewBox="0 0 450 300" preserveAspectRatio="none" fill="none" class="w-full h-full">
+                <path d="M450 0 L 150 0 C 260 80, 370 190, 450 300 Z" fill="#7f1d1d"/>
+                <path d="M450 0 L 180 0 C 280 90, 380 200, 450 300 Z" fill="#991b1b" opacity="0.6"/>
+                <path d="M140 0 C 250 80, 360 185, 450 290" stroke="#d97706" stroke-width="6" fill="none"/>
             </svg>
         </div>
 
-        <!-- Bottom-Left Crimson & Gold Curved Ribbon Graphic -->
-        <div class="absolute -bottom-16 -left-16 z-0 pointer-events-none w-[450px] h-[350px]">
-            <svg viewBox="0 0 400 300" fill="none" class="w-full h-full">
-                <path d="M0 300 C 150 220, 250 100, 320 0 L 0 0 Z" fill="#7f1d1d"/>
-                <path d="M0 300 C 130 200, 230 80, 300 0 L 0 0 Z" fill="#991b1b" opacity="0.8"/>
-                <path d="M0 300 C 170 230, 270 120, 340 0" stroke="#d97706" stroke-width="6" fill="none"/>
+        <!-- Bottom-Left Crimson & Gold Curved Ribbon Graphic (PERFECT CORNER WAVE) -->
+        <div class="absolute bottom-0 left-0 z-0 pointer-events-none w-[300px] md:w-[420px] h-[200px] md:h-[280px]">
+            <svg viewBox="0 0 450 300" preserveAspectRatio="none" fill="none" class="w-full h-full">
+                <path d="M0 300 L 0 60 C 120 180, 260 250, 450 300 Z" fill="#7f1d1d"/>
+                <path d="M0 300 L 0 90 C 140 195, 270 255, 450 300 Z" fill="#991b1b" opacity="0.6"/>
+                <path d="M0 50 C 120 175, 260 248, 440 300" stroke="#d97706" stroke-width="6" fill="none"/>
             </svg>
         </div>
 
         <!-- Dot Matrix Accent (Top Right) -->
-        <div class="absolute top-12 right-64 z-0 pointer-events-none opacity-20 hidden md:block">
+        <div class="absolute top-10 right-72 z-0 pointer-events-none opacity-20 hidden lg:block">
             <div class="grid grid-cols-6 gap-2">
                 <template x-for="i in 24">
                     <div class="w-1.5 h-1.5 rounded-full bg-[#7f1d1d]"></div>
@@ -50,7 +50,7 @@
         </div>
 
         <!-- Dot Matrix Accent (Bottom Right) -->
-        <div class="absolute bottom-12 right-16 z-0 pointer-events-none opacity-20 hidden md:block">
+        <div class="absolute bottom-10 right-16 z-0 pointer-events-none opacity-20 hidden lg:block">
             <div class="grid grid-cols-6 gap-2">
                 <template x-for="i in 24">
                     <div class="w-1.5 h-1.5 rounded-full bg-[#7f1d1d]"></div>
@@ -59,20 +59,20 @@
         </div>
 
         <!-- Top Navigation / Branding Bar -->
-        <div class="relative z-10 w-full flex justify-between items-center">
-            <div class="flex items-center gap-2.5 bg-white/60 backdrop-blur-sm px-3.5 py-1.5 rounded-full border border-stone-200/80 shadow-xs">
+        <div class="relative z-20 w-full flex justify-between items-center">
+            <div class="flex items-center gap-2.5 bg-white/70 backdrop-blur-md px-4 py-2 rounded-full border border-stone-200/80 shadow-xs">
                 <svg class="w-4 h-4 text-[#7f1d1d]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                 </svg>
                 <span class="text-xs font-bold tracking-wider text-[#1e293b] font-['Inter'] uppercase">LIRC KIOSK OS V1.0</span>
             </div>
 
-            <div class="flex items-center gap-3 text-right">
+            <div class="flex items-center gap-3 text-right bg-white/70 backdrop-blur-md px-4 py-2 rounded-full border border-stone-200/80 shadow-xs">
                 <div class="flex flex-col items-end">
                     <span class="text-xs font-black tracking-wider text-[#7f1d1d] font-['Fraunces'] uppercase leading-none">COR JESU COLLEGE</span>
                     <span class="text-[9px] font-bold tracking-widest text-amber-600 font-['Inter'] uppercase mt-0.5">COMMUNITY | APOSTLESHIP | EXCELLENCE</span>
                 </div>
-                <div class="w-8 h-8 rounded-full bg-white p-0.5 shadow-sm border border-stone-200 shrink-0">
+                <div class="w-7 h-7 rounded-full bg-white p-0.5 shadow-sm border border-stone-200 shrink-0">
                     <img src="/CorJesu Logo.png" alt="CJC Shield" class="w-full h-full object-contain">
                 </div>
             </div>
