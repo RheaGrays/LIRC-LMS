@@ -34,7 +34,7 @@ const registerApp = () => {
         slideTimer: null,
 
         // Splash Screen State
-        showSplash: !(window.LEMS_SPLASH_SHOWN || sessionStorage.getItem('lems_kiosk_splash_shown')),
+        showSplash: new URLSearchParams(window.location.search).has('boot'),
         splashProgress: 0,
         splashStatus: 'Initializing System Hardware...',
 
@@ -58,8 +58,7 @@ const registerApp = () => {
         },
 
         runSplashSequence() {
-            if (window.LEMS_SPLASH_SHOWN || sessionStorage.getItem('lems_kiosk_splash_shown')) {
-                this.showSplash = false;
+            if (!this.showSplash) {
                 return;
             }
 
@@ -84,7 +83,11 @@ const registerApp = () => {
                     clearInterval(timer);
                     setTimeout(() => {
                         this.showSplash = false;
-                        sessionStorage.setItem('lems_kiosk_splash_shown', 'true');
+                        // Removing URL parameter so reloading the page doesn't replay the splash
+                        if (window.history.replaceState) {
+                            const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+                            window.history.replaceState({path: cleanUrl}, '', cleanUrl);
+                        }
                     }, 1000);
                 }
             }, 30);
