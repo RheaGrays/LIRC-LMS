@@ -192,7 +192,7 @@ export default function App() {
                 <Text style={styles.queueText}>Queue: {queueCount}</Text>
             </View>
             <TouchableOpacity 
-                onPress={() => { setTempUrl(serverUrl); setShowSettings(true); }}
+                onPress={() => { setTempUrl(serverUrl.replace(/\/api\/kiosk\/process$/, '')); setShowSettings(true); }}
                 style={{ padding: 6, backgroundColor: '#f1f5f9', borderRadius: 8 }}>
                 <Ionicons name="settings-outline" size={18} color="#475569" />
             </TouchableOpacity>
