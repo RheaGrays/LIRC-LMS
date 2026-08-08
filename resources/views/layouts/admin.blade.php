@@ -66,9 +66,17 @@
         }
     </style>
 @endpush
-<div class="flex h-screen overflow-hidden">
+<div class="flex h-screen overflow-hidden" x-data="{ sidebarOpen: false }">
+    <!-- Mobile Sidebar Overlay -->
+    <div x-show="sidebarOpen" 
+         x-transition.opacity 
+         @click="sidebarOpen = false"
+         class="fixed inset-0 bg-black/60 z-30 lg:hidden" style="display: none;">
+    </div>
+
     <!-- Sidebar -->
-    <aside class="sidebar flex-shrink-0 z-20">
+    <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'" 
+           class="sidebar fixed lg:static inset-y-0 left-0 w-[260px] transform transition-transform duration-300 ease-in-out flex-shrink-0 z-40 flex flex-col -translate-x-full lg:translate-x-0">
         <div class="px-6 py-6 mb-4 flex items-center gap-3 border-b border-white/10">
             <div class="w-9 h-9 rounded-full overflow-hidden bg-white shrink-0 shadow-sm border border-white/20 p-0.5">
                 <img src="/CorJesu Logo.png" alt="CJC Logo" class="w-full h-full object-cover rounded-full">
@@ -144,9 +152,20 @@
 
             <a href="{{ route('admin.audit.index') }}" class="sidebar-nav-item {{ request()->routeIs('admin.audit.*') ? 'active' : '' }}">
                 <svg class="w-5 h-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                 </svg>
                 Audit Logs
+            </a>
+
+            <div class="px-4 py-2 mt-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                Tools
+            </div>
+            
+            <a href="{{ route('admin.scanner.mobile') }}" class="sidebar-nav-item {{ request()->routeIs('admin.scanner.mobile') ? 'active' : '' }}">
+                <svg class="w-5 h-5 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
+                </svg>
+                Mobile Scanner
             </a>
 
             <a href="{{ route('admin.academics.index') }}" class="sidebar-nav-item {{ request()->routeIs('admin.academics.*') ? 'active' : '' }}">
@@ -192,8 +211,13 @@
 
     <!-- Main Content -->
     <main class="flex-1 flex flex-col h-screen overflow-hidden bg-[var(--bg-cream)]">
-        <header class="h-16 flex-shrink-0 bg-white border-b border-[var(--border-light)] px-8 flex items-center justify-between">
-            <h2 class="text-lg font-semibold text-[var(--cjc-navy)]">@yield('header_title')</h2>
+        <header class="h-16 flex-shrink-0 bg-white border-b border-[var(--border-light)] px-4 lg:px-8 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <button @click="sidebarOpen = true" class="lg:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[var(--cjc-red)]">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                </button>
+                <h2 class="text-base lg:text-lg font-semibold text-[var(--cjc-navy)] truncate max-w-[150px] sm:max-w-xs">@yield('header_title')</h2>
+            </div>
             
             <div class="flex items-center gap-4">
                 <a href="{{ route('kiosk.index') }}" target="_blank" class="text-sm font-medium text-[var(--cjc-red)] hover:text-[var(--cjc-red-dark)] flex items-center gap-1">
@@ -205,7 +229,7 @@
             </div>
         </header>
 
-        <div class="flex-1 overflow-y-auto p-8">
+        <div class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
             @yield('admin_content')
         </div>
     </main>

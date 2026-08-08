@@ -246,7 +246,7 @@
                                     <label class="block text-[10px] font-bold tracking-[0.08em] uppercase text-[var(--text-muted)] font-['Inter'] mb-1.5">
                                         Level <span class="text-[var(--cjc-red)]">*</span>
                                     </label>
-                                    <div class="relative" x-data="{ open: false }">
+                                    <div class="relative" x-data="{ open: false }" :class="open ? 'z-50' : 'z-10'">
                                         <button type="button" @click="open = !open"
                                             class="w-full px-[13px] py-[10px] text-left font-['JetBrains_Mono'] text-sm font-medium bg-white border rounded-[var(--radius-md)] text-[var(--cjc-navy)] outline-none transition-all duration-150 flex justify-between items-center focus:border-[var(--cjc-navy)] focus:shadow-[0_0_0_3px_rgba(15,39,68,0.08)]"
                                             :class="{'border-[#dc2626]': errors.level, 'border-[var(--border-light)]': !errors.level}">
@@ -281,7 +281,7 @@
                                         <span x-text="form.level === 'basic_ed' ? 'Department' : 'College / School'"></span>
                                         <span :class="form.level ? 'text-[var(--cjc-red)]' : 'text-red-300'">*</span>
                                     </label>
-                                    <div class="relative" x-data="{ open: false }">
+                                    <div class="relative" x-data="{ open: false }" :class="open ? 'z-50' : 'z-10'">
                                         <button type="button" @click="if(form.level) open = !open"
                                             :disabled="!form.level"
                                             class="w-full px-[13px] py-[10px] text-left font-['JetBrains_Mono'] text-sm font-medium border rounded-[var(--radius-md)] text-[var(--cjc-navy)] outline-none transition-all duration-150 flex justify-between items-center focus:border-[var(--cjc-navy)] focus:shadow-[0_0_0_3px_rgba(15,39,68,0.08)]"
@@ -321,7 +321,7 @@
                                                    :class="form.college ? 'text-[var(--text-muted)]' : 'text-gray-300'">
                                                 Program / Course <span :class="form.college ? 'text-[var(--cjc-red)]' : 'text-red-300'">*</span>
                                             </label>
-                                            <div class="relative" x-data="{ open: false }">
+                                            <div class="relative" x-data="{ open: false }" :class="open ? 'z-50' : 'z-10'">
                                                 <button type="button" @click="if(form.college) open = !open"
                                                     :disabled="!form.college"
                                                     class="w-full px-[13px] py-[10px] text-left font-['JetBrains_Mono'] text-sm font-medium border rounded-[var(--radius-md)] text-[var(--cjc-navy)] outline-none transition-all duration-150 flex justify-between items-center focus:border-[var(--cjc-navy)] focus:shadow-[0_0_0_3px_rgba(15,39,68,0.08)]"

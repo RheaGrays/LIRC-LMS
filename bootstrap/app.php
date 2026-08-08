@@ -15,6 +15,10 @@ $app = Application::configure(basePath: dirname(__DIR__))
             'auth.admin' => \App\Http\Middleware\EnsureAdminAuthenticated::class,
             'admin.role' => \App\Http\Middleware\EnsureAdminRole::class,
         ]);
+        
+        $middleware->validateCsrfTokens(except: [
+            'api/*',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->render(function (\Illuminate\Database\QueryException $e, \Illuminate\Http\Request $request) {

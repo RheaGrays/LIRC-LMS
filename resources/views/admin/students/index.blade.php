@@ -86,7 +86,7 @@
 
                 <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-gray-200/70">
                     <!-- Sort By Dropdown -->
-                    <div class="flex items-center gap-2">
+                    <div class="flex flex-wrap items-center gap-2">
                         <span class="text-xs font-semibold text-gray-500">Sort By:</span>
                         <select name="sort_by" onchange="this.form.submit()" class="text-xs font-medium">
                             <option value="last_name" {{ request('sort_by', 'last_name') === 'last_name' ? 'selected' : '' }}>Name (Last Name)</option>
@@ -205,7 +205,7 @@
             </div>
             <form action="{{ route('admin.students.store') }}" method="POST" class="p-6">
                 @csrf
-                <div class="grid grid-cols-2 gap-4 mb-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                     <div class="col-span-2">
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Patron Category *</label>
                         <select name="patron_category" required class="w-full p-2 border border-gray-300 rounded focus:border-[var(--cjc-navy)] outline-none text-sm bg-white">
@@ -292,7 +292,7 @@
                     <h4 class="text-sm font-bold text-gray-700 mb-3 border-b pb-2">Record New Violation</h4>
                     <form :action="`/admin/students/${selectedStudent?.id}/violations`" method="POST">
                         @csrf
-                        <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                             <div>
                                 <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Type of Violation</label>
                                 <input type="text" name="type" required placeholder="e.g. Noise, Food" class="w-full p-2 border border-gray-300 rounded focus:border-[var(--cjc-navy)] outline-none text-sm">

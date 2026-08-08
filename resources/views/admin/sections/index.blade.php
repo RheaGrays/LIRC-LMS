@@ -11,14 +11,14 @@
         
         <!-- Header & Dashboard Summary -->
         <div class="mb-8">
-            <div class="flex items-center justify-between mb-8">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                 <div class="flex items-center gap-4">
                     <div>
                         <h1 class="text-2xl font-bold text-[var(--cjc-navy)] m-0 tracking-tight">CJC Library</h1>
                         <p class="text-sm text-[var(--text-muted)] font-medium m-0">Seat Availability Kiosk</p>
                     </div>
                 </div>
-                <div class="text-right">
+                <div class="text-left md:text-right">
                     <div class="text-4xl font-bold text-[var(--cjc-navy)] leading-none tracking-tight">
                         <span x-text="clockHm">--:--</span><span class="text-[0.4em] text-[var(--text-muted)] ml-1 font-semibold align-text-top" x-text="clockSec">--</span>
                     </div>
@@ -29,28 +29,28 @@
             </div>
 
             <!-- Stats Card -->
-            <div class="bg-white rounded-2xl shadow-sm border border-[var(--border-light)] p-8 flex items-center justify-between">
+            <div class="bg-white rounded-2xl shadow-sm border border-[var(--border-light)] p-6 md:p-8 flex flex-col md:flex-row items-start md:items-center justify-between">
                 
-                <div class="flex-1 flex justify-between pr-12 border-r border-gray-100">
+                <div class="flex-1 grid grid-cols-2 gap-4 md:flex md:justify-between w-full pr-0 md:pr-12 border-b md:border-b-0 md:border-r border-gray-100 pb-6 md:pb-0">
                     <div>
                         <p class="text-xs font-bold text-[var(--text-subtle)] uppercase tracking-wider mb-2">Total Seats</p>
-                        <p class="text-3xl font-bold text-[var(--cjc-navy)] m-0" x-text="totalSeats">0</p>
+                        <p class="text-2xl md:text-3xl font-bold text-[var(--cjc-navy)] m-0" x-text="totalSeats">0</p>
                     </div>
                     <div>
                         <p class="text-xs font-bold text-[var(--text-subtle)] uppercase tracking-wider mb-2">Occupied</p>
-                        <p class="text-3xl font-bold text-[var(--cjc-navy)] m-0" x-text="totalOccupied">0</p>
+                        <p class="text-2xl md:text-3xl font-bold text-[var(--cjc-navy)] m-0" x-text="totalOccupied">0</p>
                     </div>
                     <div>
                         <p class="text-xs font-bold text-[var(--text-subtle)] uppercase tracking-wider mb-2">Available</p>
-                        <p class="text-3xl font-bold text-[var(--cjc-navy)] m-0" x-text="availableSeats">0</p>
+                        <p class="text-2xl md:text-3xl font-bold text-[var(--cjc-navy)] m-0" x-text="availableSeats">0</p>
                     </div>
                     <div>
                         <p class="text-xs font-bold text-[var(--text-subtle)] uppercase tracking-wider mb-2">Overall</p>
-                        <p class="text-3xl font-bold text-[var(--cjc-navy)] m-0" x-text="overallPercent + '%'">0%</p>
+                        <p class="text-2xl md:text-3xl font-bold text-[var(--cjc-navy)] m-0" x-text="overallPercent + '%'">0%</p>
                     </div>
                 </div>
                 
-                <div class="pl-12 w-64 shrink-0">
+                <div class="pl-0 md:pl-12 w-full md:w-64 shrink-0 mt-6 md:mt-0">
                     <p class="text-[10px] font-bold text-[var(--text-subtle)] uppercase tracking-wider mb-3">Occupancy</p>
                     <div class="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
                         <div class="bg-[var(--cjc-navy)] h-3 rounded-full transition-all duration-500 ease-out" :style="`width: ${overallPercent}%`"></div>
@@ -61,7 +61,7 @@
         </div>
 
         <!-- Sections Grid -->
-        <div class="mb-4 flex items-center justify-between">
+        <div class="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div class="flex items-center gap-2">
                 <span class="text-xs font-bold text-[var(--text-subtle)] uppercase tracking-widest">Select A Section</span>
                 <span class="w-1 h-1 rounded-full bg-gray-300"></span>

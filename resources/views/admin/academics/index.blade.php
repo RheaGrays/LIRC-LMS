@@ -49,7 +49,7 @@
         <div x-data="{ open: true }" class="bg-white border border-[var(--border-light)] rounded-xl shadow-sm overflow-hidden transition-all duration-200">
             
             <!-- Accordion Header (Department Row) -->
-            <div class="px-5 py-4 bg-white hover:bg-gray-50/70 flex items-center justify-between gap-4 cursor-pointer select-none transition-colors border-b border-transparent"
+            <div class="px-5 py-4 bg-white hover:bg-gray-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer select-none transition-colors border-b border-transparent"
                  :class="open ? 'border-gray-100 bg-gray-50/30' : ''"
                  @click="open = !open">
                 
@@ -108,7 +108,7 @@
             <!-- Accordion Content (Nested Programs Table) -->
             <div x-show="open" x-transition.opacity.duration.200ms class="p-5 bg-gray-50/40 border-t border-gray-100">
                 @if($dept->programs->count() > 0)
-                <div class="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-2xs">
+                <div class="bg-white border border-gray-200 rounded-lg overflow-x-auto shadow-2xs">
                     <table class="w-full text-left text-sm whitespace-nowrap">
                         <thead class="text-[11px] uppercase bg-gray-50 text-gray-500 font-bold tracking-wider border-b border-gray-200">
                             <tr>

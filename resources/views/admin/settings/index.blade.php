@@ -7,7 +7,7 @@
 <div class="max-w-7xl mx-auto space-y-6">
 
     <div class="card mb-6 p-0 overflow-hidden fade-in-up">
-        <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white">
+        <div class="px-6 py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white">
             <div>
                 <h3 class="text-lg font-bold text-[var(--cjc-navy)]">Academic Term Management</h3>
             </div>
@@ -198,7 +198,7 @@
         
         <form action="{{ route('admin.settings.terms.store') }}" method="POST" class="space-y-4">
             @csrf
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Academic Year</label>
                     <input type="text" name="academic_year" class="input" placeholder="e.g. 2025-2026" required>
@@ -212,7 +212,7 @@
                     </select>
                 </div>
             </div>
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Start Date</label>
                     <input type="date" name="start_date" class="input" required>
@@ -222,7 +222,7 @@
                     <input type="date" name="end_date" class="input" required>
                 </div>
             </div>
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Holidays</label>
                     <input type="number" name="holidays" class="input" value="0" min="0" required>
@@ -257,7 +257,7 @@
         <form id="edit-term-form" method="POST" class="space-y-4">
             @csrf
             @method('PUT')
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Academic Year</label>
                     <input type="text" name="academic_year" id="edit-term-ay" class="input" required>
@@ -271,7 +271,7 @@
                     </select>
                 </div>
             </div>
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Start Date</label>
                     <input type="date" name="start_date" id="edit-term-start" class="input" required>
@@ -281,7 +281,7 @@
                     <input type="date" name="end_date" id="edit-term-end" class="input" required>
                 </div>
             </div>
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Holidays</label>
                     <input type="number" name="holidays" id="edit-term-holidays" class="input" min="0" required>

@@ -10,7 +10,7 @@
     <div>
         
         <!-- Header & Dashboard Summary -->
-        <div class="mb-8 flex items-center justify-between">
+        <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div class="flex items-center gap-4">
                 <div>
                     <h1 class="text-3xl font-black text-[var(--cjc-navy)] m-0 tracking-tight">Seating Statistics</h1>
@@ -18,7 +18,7 @@
                 </div>
             </div>
             
-            <div class="flex items-center gap-3">
+            <div class="flex flex-wrap items-center justify-center md:justify-end gap-3">
                 <div class="bg-gray-100 rounded-xl p-1 flex shadow-sm">
                     <button @click="viewMode = 'overview'" :class="viewMode === 'overview' ? 'bg-[var(--cjc-red)] text-white shadow-md' : 'text-gray-500 hover:text-gray-800'" class="px-5 py-2 rounded-lg text-xs font-bold transition-all">Overview</button>
                     <button @click="viewMode = 'seatmap'" :class="viewMode === 'seatmap' ? 'bg-[var(--cjc-red)] text-white shadow-md' : 'text-gray-500 hover:text-gray-800'" class="px-5 py-2 rounded-lg text-xs font-bold transition-all">Seat Map</button>
@@ -39,7 +39,7 @@
         </div>
 
         <!-- 4 Top Cards -->
-        <div class="grid grid-cols-4 gap-6 mb-6">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-6">
             <div class="bg-white/80 backdrop-blur-xl rounded-[24px] shadow-sm border border-white p-6 relative overflow-hidden group">
                 <div class="absolute inset-0 bg-gradient-to-br from-gray-50 to-transparent opacity-50 pointer-events-none"></div>
                 <div class="relative z-10">
@@ -86,7 +86,7 @@
             <div class="w-full h-3.5 bg-gray-100 rounded-full overflow-hidden flex shadow-inner">
                 <div class="h-full bg-gradient-to-r from-orange-400 to-orange-500 transition-all duration-700 ease-out shadow-sm" :style="`width: ${overallPercent}%`"></div>
             </div>
-            <div class="flex items-center gap-8 mt-5">
+            <div class="flex flex-wrap items-center gap-4 md:gap-8 mt-5">
                 <div class="flex items-center gap-2.5"><span class="w-3 h-3 rounded-full bg-orange-500 shadow-sm"></span><span class="text-[13px] text-gray-400 font-semibold">Occupied (<span x-text="overallPercent + '%'"></span>)</span></div>
                 <div class="flex items-center gap-2.5"><span class="w-3 h-3 rounded-full bg-amber-400 shadow-sm"></span><span class="text-[13px] text-gray-400 font-semibold">Reserved (0%)</span></div>
                 <div class="flex items-center gap-2.5"><span class="w-3 h-3 rounded-full bg-gray-200 shadow-sm"></span><span class="text-[13px] text-gray-400 font-semibold">Available (<span x-text="(100-overallPercent) + '%'"></span>)</span></div>
@@ -126,10 +126,10 @@
 
         <!-- Sections Grid Overview -->
         <div x-show="viewMode === 'overview'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0">
-            <div class="mb-4 flex items-center justify-between">
-                <div class="flex items-center gap-3">
+            <div class="mb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="flex flex-col md:flex-row md:items-center gap-3">
                     <span class="text-xs font-bold text-[var(--text-subtle)] uppercase tracking-widest">Filter:</span>
-                    <div class="flex items-center gap-2">
+                    <div class="flex flex-wrap items-center gap-2">
                         <button @click="filter = 'all'" :class="filter === 'all' ? 'bg-[var(--cjc-red)] text-white shadow-sm border-transparent' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'" class="text-[11px] font-bold px-4 py-1.5 rounded-full border transition-colors">All Sections</button>
                         <button @click="filter = 'available'" :class="filter === 'available' ? 'bg-[var(--cjc-red)] text-white shadow-sm border-transparent' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'" class="text-[11px] font-bold px-4 py-1.5 rounded-full border transition-colors">Available</button>
                         <button @click="filter = 'hightraffic'" :class="filter === 'hightraffic' ? 'bg-[var(--cjc-red)] text-white shadow-sm border-transparent' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'" class="text-[11px] font-bold px-4 py-1.5 rounded-full border transition-colors">High Traffic</button>
@@ -146,7 +146,7 @@
             <template x-for="section in filteredSections" :key="section.id">
                 <div class="bg-white rounded-[24px] shadow-sm border border-white p-7 relative group hover:shadow-md transition-shadow">
                     
-                    <div class="flex items-start justify-between mb-8">
+                    <div class="flex flex-col md:flex-row md:items-start justify-between mb-6 md:mb-8 gap-4">
                         <div class="flex items-center gap-5">
                             <div class="w-14 h-14 rounded-full border-[2px] border-red-100 flex items-center justify-center font-black text-[13px] tracking-widest text-[var(--cjc-red)] shadow-sm bg-red-50/50" x-text="section.id">
                             </div>
@@ -156,7 +156,7 @@
                             </div>
                         </div>
 
-                        <div class="flex flex-col items-end gap-3">
+                        <div class="flex flex-col items-start md:items-end gap-3 w-full md:w-auto">
                             <!-- % Badge and Edit/Delete Actions -->
                             <div class="flex items-center gap-4">
                                 <div class="text-right">
@@ -203,8 +203,7 @@
                              :style="`width: ${(section.occupied / section.total) * 100}%`"></div>
                     </div>
                     
-                    <!-- Stats legend -->
-                    <div class="flex items-center gap-6">
+                    <div class="flex flex-wrap items-center gap-4 md:gap-6 mt-3 md:mt-0">
                         <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full shadow-sm" :class="section.occupied >= section.total ? 'bg-[var(--cjc-red)]' : 'bg-green-500'"></span><span class="text-[11px] text-gray-400 font-semibold"><span x-text="section.occupied"></span> Occupied</span></div>
                         <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-amber-400 shadow-sm"></span><span class="text-[11px] text-gray-400 font-semibold">0 Reserved</span></div>
                         <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-gray-300 shadow-sm"></span><span class="text-[11px] text-gray-400 font-semibold"><span x-text="section.total - section.occupied"></span> Available</span></div>
@@ -217,7 +216,7 @@
 
         <!-- Seat Map View -->
         <div x-show="viewMode === 'seatmap'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0" style="display: none;" class="pb-20">
-            <div class="mb-4 flex items-center justify-between">
+            <div class="mb-4 flex flex-col md:flex-row md:items-center justify-between gap-2">
                 <div class="flex items-center gap-3">
                     <span class="text-xs font-bold text-[var(--text-subtle)] uppercase tracking-widest">Zone Map</span>
                 </div>

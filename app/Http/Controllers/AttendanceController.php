@@ -208,6 +208,32 @@ class AttendanceController extends Controller
         return response()->json(\App\Services\OccupancyService::today());
     }
 
+    /**
+     * Polling endpoint for real-time kiosk display updates.
+     */
+    public function latestScan(Request $request): JsonResponse
+    {
+        $afterId = (int) $request->query('after_id', 0);
+        
+        $latestLog = AttendanceLog::query()
+            ->where('id', '>', $afterId)
+            ->with('student')
+            ->orderBy('id', 'asc')
+            ->first();
+
+        if (!$latestLog || !$latestLog->student) {
+            return response()->json(null);
+        }
+
+        return response()->json([
+            'id' => $latestLog->id,
+            'status' => 'success',
+            'action' => $latestLog->action,
+            'message' => 'Scanned via Mobile',
+            'student' => $this->formatStudent($latestLog->student)
+        ]);
+    }
+
     private function resolveStudent(string $term): Student|string|null
     {
         if (!$term) return null;

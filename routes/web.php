@@ -31,6 +31,7 @@ Route::prefix('kiosk')->name('kiosk.')->group(function () {
     Route::post('/log',      [AttendanceController::class, 'log'])->name('log')->middleware('throttle:30,1');
     Route::post('/last',     [AttendanceController::class, 'lastAction'])->name('last')->middleware('throttle:30,1');
     Route::get('/occupancy', [AttendanceController::class, 'occupancy'])->name('occupancy')->middleware('throttle:30,1');
+    Route::get('/latest-scan',[AttendanceController::class, 'latestScan'])->name('latest-scan');
 });
 
 // ── Student Registration (public, rate-limited) ──────────────
@@ -48,6 +49,9 @@ Route::get('/api/academics', [AcademicController::class, 'apiData'])->name('api.
 
 // Public API for Patron Categories (needed for Registration form)
 Route::get('/api/patron-categories', [SettingsController::class, 'patronCategories'])->name('api.patron-categories');
+
+// Public API for Mobile App (Standalone Expo App)
+Route::post('/api/kiosk/process', [AttendanceController::class, 'process'])->name('api.kiosk.process');
 
 // ── Admin Auth ────────────────────────────────────────────────
 Route::prefix('admin')->name('admin.')->group(function () {
@@ -83,6 +87,9 @@ Route::prefix('admin')->name('admin.')->middleware('auth.admin')->group(function
         Route::delete('/students/{id}',   [StudentController::class, 'destroy'])->name('students.destroy');
         Route::post('/students/import',   [StudentController::class, 'import'])->name('students.import');
     });
+
+    // Scanner
+    Route::get('/scanner', [App\Http\Controllers\ScannerController::class, 'mobile'])->name('scanner.mobile');
 
     // Violations (all roles, except destroy)
     Route::get('/students/{id}/violations',        [ViolationController::class, 'index'])->name('violations.index');

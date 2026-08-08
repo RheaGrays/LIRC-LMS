@@ -382,7 +382,7 @@
                                         </svg>
                                     </div>
 
-                                    <video id="kiosk-video" class="w-full h-full object-cover z-10" :class="isCameraActive ? 'block' : 'hidden'"></video>
+                                    <video id="kiosk-video" class="w-full h-full object-cover z-10" style="transform: scaleX(-1);" :class="isCameraActive ? 'block' : 'hidden'"></video>
                                     
                                     <!-- Scanline -->
                                     <template x-if="isCameraActive">
@@ -494,6 +494,8 @@
     </style>
 
     <script>
+        window.kioskLastLogId = {{ \App\Models\AttendanceLog::max('id') ?? 0 }};
+
         function kioskSlideshow() {
             return {
                 images: @json($slideshowImages),

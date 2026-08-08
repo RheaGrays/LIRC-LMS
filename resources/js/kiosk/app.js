@@ -36,6 +36,10 @@ const registerApp = () => {
         showSplash: new URLSearchParams(window.location.search).has('boot') && !sessionStorage.getItem('splashShown'),
         splashProgress: 0,
         splashStatus: 'Initializing System Hardware...',
+        
+        // Real-Time Link
+        lastLogId: window.kioskLastLogId || 0,
+        pollingInterval: null,
 
         init() {
             // Set 350ms decoding interval (3 scans/sec) to eliminate CPU lag and keep video feed 60fps smooth
@@ -46,6 +50,7 @@ const registerApp = () => {
             setInterval(() => this.fetchOccupancy(), 30000);
             QueueManager.startSyncTimer();
             this.startSlideshow();
+            this.startRealtimePolling();
 
             // CSRF Token Keepalive (Refreshes token every 4 mins to prevent 419 Page Expired)
             setInterval(async () => {
@@ -421,6 +426,65 @@ const registerApp = () => {
                 const res = await fetch('/kiosk/occupancy');
                 if (res.ok) this.occupancy = await res.json();
             } catch (e) {}
+        },
+        
+        // --- Real-Time Link Logic ---
+        startRealtimePolling() {
+            if (this.pollingInterval) clearInterval(this.pollingInterval);
+            this.pollingInterval = setInterval(() => {
+                this.pollRealtime();
+            }, 2000); // Check every 2 seconds
+        },
+        
+        async pollRealtime() {
+            if (!navigator.onLine) return;
+            try {
+                const res = await fetch(`/kiosk/latest-scan?after_id=${this.lastLogId}`);
+                if (!res.ok) return;
+                
+                const data = await res.json();
+                if (data && data.id) {
+                    this.lastLogId = data.id; // Update high-water mark
+                    
+                    // If we're already processing something locally, don't interrupt
+                    if (this.isProcessing) return;
+                    
+                    // Trigger the animation for the remote scan!
+                    this.triggerRemoteScan(data);
+                }
+            } catch (e) {}
+        },
+        
+        triggerRemoteScan(data) {
+            // Wake up kiosk if idle
+            if (this.state === 'idle') {
+                this.activate();
+            }
+            
+            // Play success sound
+            const audio = new Audio('/beep.mp3');
+            audio.play().catch(e => {});
+            
+            // Reset state
+            this.isProcessing = true;
+            this.result = null;
+            clearTimeout(this.resetTimeout);
+            
+            // Show result
+            setTimeout(() => {
+                this.isProcessing = false;
+                this.result = data;
+                this.fetchOccupancy();
+                
+                // Clear result after 4 seconds
+                this.resetTimeout = setTimeout(() => {
+                    this.result = null;
+                    if (this.state === 'active' && !this.isCameraActive && this.tab === 'webcam') {
+                         this.initScanner(); // Restart camera if needed
+                    }
+                    this.handleActivity();
+                }, 4000);
+            }, 500); // slight delay to feel natural
         }
     }));
 };
