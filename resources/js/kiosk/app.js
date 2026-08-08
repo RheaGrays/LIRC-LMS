@@ -386,7 +386,7 @@ const registerApp = () => {
         
         async performOnlineCheckin(id) {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 7000);
+            const timeoutId = setTimeout(() => controller.abort(), 20000); // Increased to 20s for slow school networks
             
             try {
                 const processRes = await fetch('/kiosk/process', {
