@@ -19,7 +19,13 @@
         "backgroundColor": "#ffffff",
         "foregroundImage": "./assets/CorJesu_Logo.png"
       },
-      "package": "com.lynard.lemsmobilescanner"
+      "package": "com.lynard.lemsmobilescanner",
+      "usesCleartextTraffic": true,
+      "permissions": [
+        "CAMERA",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
