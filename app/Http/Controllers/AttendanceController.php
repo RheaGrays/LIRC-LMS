@@ -59,15 +59,32 @@ class AttendanceController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Multiple students match that name. Please use your exact Student ID.']);
         }
         if (!$student) {
-            return response()->json(['status' => 'error', 'message' => 'This student is not yet registered in the system. Please register first.']);
+            $event = [
+                'id'       => time() * 1000,
+                'status'   => 'error',
+                'action'   => 'unregistered',
+                'message'  => "Student ID \"{$term}\" is not registered in the system. Please register first.",
+                'student'  => [
+                    'id'    => $term,
+                    'name'  => 'UNREGISTERED PATRON',
+                    'dept'  => 'Registration Required',
+                    'photo_url' => null,
+                ]
+            ];
+            \Illuminate\Support\Facades\Cache::put('kiosk_latest_scan_event', $event, 30);
+            return response()->json($event);
         }
 
         if ($student->status === 'inactive') {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Student account is inactive.',
-                'student' => $this->formatStudent($student),
-            ]);
+            $event = [
+                'id'       => time() * 1000,
+                'status'   => 'error',
+                'action'   => 'inactive',
+                'message'  => 'Student account is inactive.',
+                'student'  => $this->formatStudent($student),
+            ];
+            \Illuminate\Support\Facades\Cache::put('kiosk_latest_scan_event', $event, 30);
+            return response()->json($event);
         }
 
         // ── Cooldown Buffer (Prevents duplicate scans within 5 minutes) ──
@@ -214,7 +231,14 @@ class AttendanceController extends Controller
     public function latestScan(Request $request): JsonResponse
     {
         $afterId = (int) $request->query('after_id', 0);
+
+        // 1. Check for recent unregistered or error scan event
+        $cachedEvent = \Illuminate\Support\Facades\Cache::get('kiosk_latest_scan_event');
+        if ($cachedEvent && isset($cachedEvent['id']) && $cachedEvent['id'] > $afterId) {
+            return response()->json($cachedEvent);
+        }
         
+        // 2. Check for latest valid attendance log
         $latestLog = AttendanceLog::query()
             ->where('id', '>', $afterId)
             ->with('student')
@@ -229,7 +253,7 @@ class AttendanceController extends Controller
             'id' => $latestLog->id,
             'status' => 'success',
             'action' => $latestLog->action,
-            'message' => 'Scanned via Mobile',
+            'message' => 'Successfully checked in.',
             'student' => $this->formatStudent($latestLog->student)
         ]);
     }
