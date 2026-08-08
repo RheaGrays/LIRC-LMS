@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, TextInput, Modal, TouchableOpacity, AppState, Platform, Image, Animated, ImageBackground } from 'react-native';
+import { StyleSheet, Text, View, TextInput, Modal, TouchableOpacity, AppState, Platform, Image, Animated, ImageBackground, KeyboardAvoidingView, ScrollView } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
@@ -269,53 +269,57 @@ export default function App() {
          </TouchableOpacity>
       </View>
 
-      <Modal visible={showManual} transparent animationType="slide">
-         <View style={styles.modalBg}>
-            <View style={styles.modalContent}>
-               <Text style={styles.modalTitle}>Type ID Manually</Text>
-               <TextInput 
-                  style={styles.input} 
-                  placeholder="e.g. 2024-00123" 
-                  placeholderTextColor="#999"
-                  value={manualId} 
-                  onChangeText={setManualId}
-                  autoCapitalize="none"
-                  autoFocus
-               />
-               <TouchableOpacity style={styles.buttonSubmit} onPress={() => { setShowManual(false); processId(manualId); setManualId(''); }}>
-                  <Text style={styles.buttonText}>Submit ID</Text>
+      <Modal visible={showManual} transparent animationType="slide" onRequestClose={() => setShowManual(false)}>
+         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+            <TouchableOpacity activeOpacity={1} onPress={() => setShowManual(false)} style={styles.modalBg}>
+               <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()} style={styles.modalContent}>
+                  <Text style={styles.modalTitle}>Type ID Manually</Text>
+                  <TextInput 
+                     style={styles.input} 
+                     placeholder="e.g. 2024-00123" 
+                     placeholderTextColor="#999"
+                     value={manualId} 
+                     onChangeText={setManualId}
+                     autoCapitalize="none"
+                     autoFocus
+                  />
+                  <TouchableOpacity style={styles.buttonSubmit} onPress={() => { setShowManual(false); processId(manualId); setManualId(''); }}>
+                     <Text style={styles.buttonText}>Submit ID</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.buttonCancel} onPress={() => setShowManual(false)}>
+                     <Text style={styles.buttonTextCancel}>Cancel</Text>
+                  </TouchableOpacity>
                </TouchableOpacity>
-               <TouchableOpacity style={styles.buttonCancel} onPress={() => setShowManual(false)}>
-                  <Text style={styles.buttonTextCancel}>Cancel</Text>
-               </TouchableOpacity>
-            </View>
-         </View>
+            </TouchableOpacity>
+         </KeyboardAvoidingView>
       </Modal>
 
       {/* Server Settings Modal */}
-      <Modal visible={showSettings} transparent animationType="slide">
-         <View style={styles.modalBg}>
-            <View style={styles.modalContent}>
-               <Text style={styles.modalTitle}>Server Connection Settings</Text>
-               <Text style={{ fontSize: 12, color: '#64748b', marginBottom: 12 }}>
-                  Enter your LEMS server IP address or domain (e.g. http://192.168.100.14:8000)
-               </Text>
-               <TextInput 
-                  style={styles.input} 
-                  placeholder="e.g. http://192.168.100.14:8000" 
-                  placeholderTextColor="#999"
-                  value={tempUrl} 
-                  onChangeText={setTempUrl}
-                  autoCapitalize="none"
-               />
-               <TouchableOpacity style={styles.buttonSubmit} onPress={saveSettings}>
-                  <Text style={styles.buttonText}>Save & Apply</Text>
+      <Modal visible={showSettings} transparent animationType="slide" onRequestClose={() => setShowSettings(false)}>
+         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+            <TouchableOpacity activeOpacity={1} onPress={() => setShowSettings(false)} style={styles.modalBg}>
+               <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()} style={styles.modalContent}>
+                  <Text style={styles.modalTitle}>Server Connection Settings</Text>
+                  <Text style={{ fontSize: 12, color: '#64748b', marginBottom: 12 }}>
+                     Enter your LEMS server IP address or domain (e.g. http://192.168.100.14:8000)
+                  </Text>
+                  <TextInput 
+                     style={styles.input} 
+                     placeholder="e.g. http://192.168.100.14:8000" 
+                     placeholderTextColor="#999"
+                     value={tempUrl} 
+                     onChangeText={setTempUrl}
+                     autoCapitalize="none"
+                  />
+                  <TouchableOpacity style={styles.buttonSubmit} onPress={saveSettings}>
+                     <Text style={styles.buttonText}>Save & Apply</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.buttonCancel} onPress={() => setShowSettings(false)}>
+                     <Text style={styles.buttonTextCancel}>Cancel</Text>
+                  </TouchableOpacity>
                </TouchableOpacity>
-               <TouchableOpacity style={styles.buttonCancel} onPress={() => setShowSettings(false)}>
-                  <Text style={styles.buttonTextCancel}>Cancel</Text>
-               </TouchableOpacity>
-            </View>
-         </View>
+            </TouchableOpacity>
+         </KeyboardAvoidingView>
       </Modal>
       </View>
 
