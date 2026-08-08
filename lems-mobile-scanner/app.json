@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "LEMS Scanner",
+    "slug": "lems-mobile-scanner",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#ffffff",
+        "foregroundImage": "./assets/CorJesu_Logo.png"
+      },
+      "package": "com.lynard.lemsmobilescanner"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "1ac6d062-8a8f-437e-be4c-2c9a6238e8ba"
+      }
+    }
+  }
+}
