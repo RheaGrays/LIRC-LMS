@@ -6,14 +6,18 @@ import axios from 'axios';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 
-const API_URL = 'http://192.168.100.14:8000/api/kiosk/process';
+const DEFAULT_API_URL = 'http://192.168.100.14:8000/api/kiosk/process';
 const QUEUE_KEY = '@offline_queue';
+const SERVER_URL_KEY = '@server_url';
 
 export default function App() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [showManual, setShowManual] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [manualId, setManualId] = useState('');
+  const [serverUrl, setServerUrl] = useState(DEFAULT_API_URL);
+  const [tempUrl, setTempUrl] = useState('');
   const [queueCount, setQueueCount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState(null); // {status, message}
@@ -25,10 +29,36 @@ export default function App() {
   const fadeAnim = useRef(new Animated.Value(1)).current;
   
   useEffect(() => {
+    loadSettings();
     loadQueueCount();
     syncQueue();
     runSplashSequence();
   }, []);
+
+  const loadSettings = async () => {
+    try {
+      const savedUrl = await AsyncStorage.getItem(SERVER_URL_KEY);
+      if (savedUrl) {
+        setServerUrl(savedUrl);
+      }
+    } catch (e) {}
+  };
+
+  const saveSettings = async () => {
+    if (!tempUrl.trim()) return;
+    let url = tempUrl.trim();
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'http://' + url;
+    }
+    if (!url.endsWith('/api/kiosk/process')) {
+      url = url.replace(/\/$/, '') + '/api/kiosk/process';
+    }
+    try {
+      await AsyncStorage.setItem(SERVER_URL_KEY, url);
+      setServerUrl(url);
+      setShowSettings(false);
+    } catch (e) {}
+  };
 
   const runSplashSequence = () => {
     let p = 0;
@@ -81,7 +111,7 @@ export default function App() {
       for (let i = 0; i < queue.length; i++) {
         const id = queue[i];
         try {
-          await axios.post(API_URL, { student_id: id }, { timeout: 4000 });
+          await axios.post(serverUrl, { student_id: id }, { timeout: 4000 });
           newQueue.splice(newQueue.indexOf(id), 1); // Remove if successful
         } catch (err) {
           // Keep in queue on error (no network, timeout, or 500)
@@ -97,7 +127,7 @@ export default function App() {
     setIsProcessing(true);
     setScanned(true);
     try {
-      const res = await axios.post(API_URL, { student_id: id }, { timeout: 5000 });
+      const res = await axios.post(serverUrl, { student_id: id }, { timeout: 5000 });
       // Server responded — success or logical error (student not found, etc.)
       const status = res.data.status || 'success';
       const message = res.data.message || 'Processed.';
@@ -153,9 +183,16 @@ export default function App() {
             <Image source={require('./assets/CorJesu_Logo.png')} style={{width: 32, height: 32, marginRight: 8, resizeMode: 'contain'}} />
             <Text style={styles.title}>LEMS Scanner</Text>
         </View>
-        <View style={styles.queueBadge}>
-            <Ionicons name="cloud-offline" size={14} color="#c41e2a" style={{marginRight: 4}} />
-            <Text style={styles.queueText}>Queue: {queueCount}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View style={styles.queueBadge}>
+                <Ionicons name="cloud-offline" size={14} color="#c41e2a" style={{marginRight: 4}} />
+                <Text style={styles.queueText}>Queue: {queueCount}</Text>
+            </View>
+            <TouchableOpacity 
+                onPress={() => { setTempUrl(serverUrl); setShowSettings(true); }}
+                style={{ padding: 6, backgroundColor: '#f1f5f9', borderRadius: 8 }}>
+                <Ionicons name="settings-outline" size={18} color="#475569" />
+            </TouchableOpacity>
         </View>
       </View>
       
@@ -249,6 +286,32 @@ export default function App() {
                   <Text style={styles.buttonText}>Submit ID</Text>
                </TouchableOpacity>
                <TouchableOpacity style={styles.buttonCancel} onPress={() => setShowManual(false)}>
+                  <Text style={styles.buttonTextCancel}>Cancel</Text>
+               </TouchableOpacity>
+            </View>
+         </View>
+      </Modal>
+
+      {/* Server Settings Modal */}
+      <Modal visible={showSettings} transparent animationType="slide">
+         <View style={styles.modalBg}>
+            <View style={styles.modalContent}>
+               <Text style={styles.modalTitle}>Server Connection Settings</Text>
+               <Text style={{ fontSize: 12, color: '#64748b', marginBottom: 12 }}>
+                  Enter your LEMS server IP address or domain (e.g. http://192.168.100.14:8000)
+               </Text>
+               <TextInput 
+                  style={styles.input} 
+                  placeholder="e.g. http://192.168.100.14:8000" 
+                  placeholderTextColor="#999"
+                  value={tempUrl} 
+                  onChangeText={setTempUrl}
+                  autoCapitalize="none"
+               />
+               <TouchableOpacity style={styles.buttonSubmit} onPress={saveSettings}>
+                  <Text style={styles.buttonText}>Save & Apply</Text>
+               </TouchableOpacity>
+               <TouchableOpacity style={styles.buttonCancel} onPress={() => setShowSettings(false)}>
                   <Text style={styles.buttonTextCancel}>Cancel</Text>
                </TouchableOpacity>
             </View>
