@@ -49,68 +49,61 @@
                                class="w-full p-2 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-[var(--cjc-navy)]">
                     </div>
 
+@php
+    $catOptions = array_merge([['value' => '', 'label' => 'All Categories']], collect($patronCategories)->map(fn($c) => ['value' => $c, 'label' => $c])->toArray());
+    $deptOptions = array_merge([['value' => '', 'label' => 'All Departments']], collect($departmentsList)->map(fn($d) => ['value' => (string)$d->id, 'label' => $d->name])->toArray());
+    $progOptions = array_merge([['value' => '', 'label' => 'All Programs']], collect($programsList)->map(fn($p) => ['value' => (string)$p->id, 'label' => $p->name])->toArray());
+    $ylOptions = array_merge([['value' => '', 'label' => 'All Year Levels']], collect($yearLevelsList)->map(fn($y) => ['value' => $y, 'label' => $y])->toArray());
+    
+    $sortByOptions = [
+        ['value' => 'last_name', 'label' => 'Name (Last Name)'],
+        ['value' => 'id', 'label' => 'ID Number'],
+        ['value' => 'department_id', 'label' => 'Department'],
+        ['value' => 'year_level', 'label' => 'Year Level'],
+        ['value' => 'patron_category', 'label' => 'Patron Category'],
+    ];
+    $sortDirOptions = [
+        ['value' => 'asc', 'label' => 'Ascending (A-Z, 1-9)'],
+        ['value' => 'desc', 'label' => 'Descending (Z-A, 9-1)'],
+    ];
+@endphp
+
                     <!-- Category Filter -->
                     <div>
                         <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Patron Category</label>
-                        <select name="category" onchange="this.form.submit()" class="no-tomselect w-full text-sm">
-                            <option value="">All Categories</option>
-                            @foreach($patronCategories as $cat)
-                                <option value="{{ $cat }}" {{ request('category') === $cat ? 'selected' : '' }}>{{ $cat }}</option>
-                            @endforeach
-                        </select>
+                        <x-custom-select name="category" :value="request('category')" :options="$catOptions" placeholder="All Categories" />
                     </div>
 
                     <!-- Department Filter -->
                     <div>
                         <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Department</label>
-                        <select name="department_id" onchange="this.form.submit()" class="no-tomselect w-full text-sm">
-                            <option value="">All Departments</option>
-                            @foreach($departmentsList as $dept)
-                                <option value="{{ $dept->id }}" {{ request('department_id') == $dept->id ? 'selected' : '' }}>{{ $dept->name }}</option>
-                            @endforeach
-                        </select>
+                        <x-custom-select name="department_id" :value="request('department_id')" :options="$deptOptions" placeholder="All Departments" />
                     </div>
 
                     <!-- Program Filter -->
                     <div>
                         <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Program</label>
-                        <select name="program_id" onchange="this.form.submit()" class="no-tomselect w-full text-sm">
-                            <option value="">All Programs</option>
-                            @foreach($programsList as $prog)
-                                <option value="{{ $prog->id }}" {{ request('program_id') == $prog->id ? 'selected' : '' }}>{{ $prog->name }}</option>
-                            @endforeach
-                        </select>
+                        <x-custom-select name="program_id" :value="request('program_id')" :options="$progOptions" placeholder="All Programs" />
                     </div>
 
                     <!-- Year Level Filter -->
                     <div>
                         <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Year Level</label>
-                        <select name="year_level" onchange="this.form.submit()" class="no-tomselect w-full text-sm">
-                            <option value="">All Year Levels</option>
-                            @foreach($yearLevelsList as $yl)
-                                <option value="{{ $yl }}" {{ request('year_level') === $yl ? 'selected' : '' }}>{{ $yl }}</option>
-                            @endforeach
-                        </select>
+                        <x-custom-select name="year_level" :value="request('year_level')" :options="$ylOptions" placeholder="All Year Levels" />
                     </div>
 
                 </div>
 
                 <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-gray-200/70">
-                    <!-- Sort By Dropdown -->
+                    <!-- Sort By Dropdowns -->
                     <div class="flex flex-wrap items-center gap-2">
                         <span class="text-xs font-semibold text-gray-500">Sort By:</span>
-                        <select name="sort_by" onchange="this.form.submit()" class="text-xs font-medium">
-                            <option value="last_name" {{ request('sort_by', 'last_name') === 'last_name' ? 'selected' : '' }}>Name (Last Name)</option>
-                            <option value="id" {{ request('sort_by') === 'id' ? 'selected' : '' }}>ID Number</option>
-                            <option value="department_id" {{ request('sort_by') === 'department_id' ? 'selected' : '' }}>Department</option>
-                            <option value="year_level" {{ request('sort_by') === 'year_level' ? 'selected' : '' }}>Year Level</option>
-                            <option value="patron_category" {{ request('sort_by') === 'patron_category' ? 'selected' : '' }}>Patron Category</option>
-                        </select>
-
-                        <select name="sort_dir" onchange="this.form.submit()" class="text-xs font-medium">
-                            <option value="asc" {{ request('sort_dir', 'asc') === 'asc' ? 'selected' : '' }}>Ascending (A-Z, 1-9)</option>
-                            <option value="desc" {{ request('sort_dir') === 'desc' ? 'selected' : '' }}>Descending (Z-A, 9-1)</option>
-                        </select>
+                        <div class="w-48">
+                            <x-custom-select name="sort_by" :value="request('sort_by', 'last_name')" :options="$sortByOptions" placeholder="Sort By" />
+                        </div>
+                        <div class="w-48">
+                            <x-custom-select name="sort_dir" :value="request('sort_dir', 'asc')" :options="$sortDirOptions" placeholder="Order" />
+                        </div>
                     </div>
 
                     <!-- Reset Filters Button -->
