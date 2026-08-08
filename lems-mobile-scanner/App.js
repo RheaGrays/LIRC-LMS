@@ -97,16 +97,26 @@ export default function App() {
     setIsProcessing(true);
     setScanned(true);
     try {
-      const res = await axios.post(API_URL, { student_id: id }, { timeout: 4000 });
-      setResult({ status: res.data.status || 'success', message: res.data.message || 'Processed.' });
+      const res = await axios.post(API_URL, { student_id: id }, { timeout: 5000 });
+      // Server responded — success or logical error (student not found, etc.)
+      const status = res.data.status || 'success';
+      const message = res.data.message || 'Processed.';
+      setResult({ status, message });
       syncQueue(); // trigger sync in case we just came back online
     } catch (err) {
-      // Save offline
-      const queue = JSON.parse(await AsyncStorage.getItem(QUEUE_KEY)) || [];
-      queue.push(id);
-      await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
-      setQueueCount(queue.length);
-      setResult({ status: 'offline', message: `Saved offline (${id})` });
+      // Check if server responded with an error (e.g. 422, 500)
+      if (err.response) {
+        // Server is reachable but returned an error
+        const message = err.response.data?.message || 'Server error. Please try again.';
+        setResult({ status: 'error', message });
+      } else {
+        // No response = network issue, save offline
+        const queue = JSON.parse(await AsyncStorage.getItem(QUEUE_KEY)) || [];
+        queue.push(id);
+        await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+        setQueueCount(queue.length);
+        setResult({ status: 'offline', message: `No network. Saved offline (${id})` });
+      }
     } finally {
       setIsProcessing(false);
       setTimeout(() => {
