@@ -57,6 +57,8 @@ export default function App() {
       await AsyncStorage.setItem(SERVER_URL_KEY, url);
       setServerUrl(url);
       setShowSettings(false);
+      // Immediately test & sync queue with new URL
+      syncQueue(url);
     } catch (e) {}
   };
 
@@ -100,7 +102,8 @@ export default function App() {
     }
   };
 
-  const syncQueue = async () => {
+  const syncQueue = async (overrideUrl = null) => {
+    const targetUrl = overrideUrl || serverUrl;
     try {
       const queueStr = await AsyncStorage.getItem(QUEUE_KEY);
       if (!queueStr) return;
@@ -111,7 +114,7 @@ export default function App() {
       for (let i = 0; i < queue.length; i++) {
         const id = queue[i];
         try {
-          await axios.post(serverUrl, { student_id: id }, { timeout: 4000 });
+          await axios.post(targetUrl, { student_id: id }, { timeout: 4000 });
           newQueue.splice(newQueue.indexOf(id), 1); // Remove if successful
         } catch (err) {
           // Keep in queue on error (no network, timeout, or 500)
@@ -300,9 +303,13 @@ export default function App() {
             <TouchableOpacity activeOpacity={1} onPress={() => setShowSettings(false)} style={styles.modalBg}>
                <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()} style={styles.modalContent}>
                   <Text style={styles.modalTitle}>Server Connection Settings</Text>
-                  <Text style={{ fontSize: 12, color: '#64748b', marginBottom: 12 }}>
+                  <Text style={{ fontSize: 12, color: '#64748b', marginBottom: 8 }}>
                      Enter your LEMS server IP address or domain (e.g. http://192.168.100.14:8000)
                   </Text>
+                  <View style={{ backgroundColor: '#f1f5f9', padding: 10, borderRadius: 8, marginBottom: 14 }}>
+                     <Text style={{ fontSize: 11, color: '#475569', fontWeight: 'bold' }}>Current Active Target:</Text>
+                     <Text style={{ fontSize: 11, color: '#0f172a', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', marginTop: 2 }}>{serverUrl}</Text>
+                  </View>
                   <TextInput 
                      style={styles.input} 
                      placeholder="e.g. http://192.168.100.14:8000" 
