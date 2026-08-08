@@ -174,10 +174,49 @@ export default function App() {
             </View>
             </View>
         ) : (
-            <View style={styles.resultContainer}>
-                <View style={[styles.resultIcon, result.status === 'success' ? styles.iconSuccess : result.status === 'offline' ? styles.iconOffline : styles.iconError]} />
-                <Text style={styles.resultTitle}>{result.status === 'success' ? 'Success' : (result.status === 'offline' ? 'Saved Offline' : 'Error')}</Text>
-                <Text style={styles.resultMessage}>{result.message}</Text>
+            <View style={styles.resultCardWrapper}>
+                <View style={styles.resultCard}>
+                    {/* Status Icon Circle */}
+                    <View style={[
+                        styles.resultIconCircle,
+                        result.status === 'success' ? styles.bgSuccess : result.status === 'offline' ? styles.bgOffline : styles.bgError
+                    ]}>
+                        <Ionicons 
+                            name={
+                                result.status === 'success' ? 'checkmark-circle' :
+                                result.status === 'offline' ? 'cloud-offline' : 'alert-circle'
+                            } 
+                            size={52} 
+                            color="#ffffff" 
+                        />
+                    </View>
+
+                    {/* Status Tag Pill */}
+                    <View style={[
+                        styles.statusTag,
+                        result.status === 'success' ? styles.tagSuccess : result.status === 'offline' ? styles.tagOffline : styles.tagError
+                    ]}>
+                        <Text style={[
+                            styles.statusTagText,
+                            result.status === 'success' ? styles.textSuccess : result.status === 'offline' ? styles.textOffline : styles.textError
+                        ]}>
+                            {result.status === 'success' ? 'SUCCESS' : result.status === 'offline' ? 'SAVED OFFLINE' : 'SCAN ERROR'}
+                        </Text>
+                    </View>
+
+                    {/* Title & Description */}
+                    <Text style={styles.resultTitle}>
+                        {result.status === 'success' ? 'Check-in Recorded' : (result.status === 'offline' ? 'Queued Offline' : 'Process Error')}
+                    </Text>
+                    
+                    <Text style={styles.resultMessage}>{result.message}</Text>
+
+                    {/* Auto Reset Footer Hint */}
+                    <View style={styles.resultFooterHint}>
+                        <Ionicons name="time-outline" size={14} color="#94a3b8" />
+                        <Text style={styles.resultFooterHintText}>Scanner resets in 3s...</Text>
+                    </View>
+                </View>
             </View>
         )}
       </View>
@@ -355,38 +394,113 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
   },
-  resultContainer: {
+  resultCardWrapper: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f8fafc',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 24,
   },
-  resultIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+  resultCard: {
+    width: '100%',
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 28,
+    alignItems: 'center',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  resultIconCircle: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 6,
   },
-  iconSuccess: {
-    backgroundColor: '#4ade80',
+  bgSuccess: {
+    backgroundColor: '#16a34a',
   },
-  iconOffline: {
-    backgroundColor: '#60a5fa',
+  bgOffline: {
+    backgroundColor: '#2563eb',
   },
-  iconError: {
-    backgroundColor: '#f87171',
+  bgError: {
+    backgroundColor: '#dc2626',
+  },
+  statusTag: {
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    borderRadius: 20,
+    marginBottom: 14,
+  },
+  tagSuccess: {
+    backgroundColor: '#dcfce7',
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+  },
+  tagOffline: {
+    backgroundColor: '#dbeafe',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+  },
+  tagError: {
+    backgroundColor: '#fee2e2',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+  },
+  statusTagText: {
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  textSuccess: {
+    color: '#15803d',
+  },
+  textOffline: {
+    color: '#1d4ed8',
+  },
+  textError: {
+    color: '#b91c1c',
   },
   resultTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginBottom: 10,
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#0f172a',
+    marginBottom: 8,
+    textAlign: 'center',
   },
   resultMessage: {
-    fontSize: 16,
-    color: '#6b7280',
+    fontSize: 14,
+    color: '#64748b',
     textAlign: 'center',
+    lineHeight: 20,
+    fontWeight: '500',
+    marginBottom: 20,
+  },
+  resultFooterHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+    width: '100%',
+    justifyContent: 'center',
+  },
+  resultFooterHintText: {
+    fontSize: 12,
+    color: '#94a3b8',
+    fontWeight: '600',
   },
   footer: {
     flexDirection: 'row',
