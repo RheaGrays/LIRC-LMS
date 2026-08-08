@@ -8,29 +8,109 @@
 
     <!-- KPI Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <x-admin.stat-card title="Today's Entries" :value="$todayEntries" colorClass="bg-red-50 text-[var(--cjc-red)]">
-            <x-slot name="icon">
-                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" /></svg>
-            </x-slot>
-        </x-admin.stat-card>
+        
+        <!-- Card 1: Today's Entries -->
+        <div class="bg-white rounded-[24px] shadow-sm border border-gray-100 p-6 relative overflow-hidden flex flex-col justify-between min-h-[160px]">
+            <div class="flex items-start gap-4 relative z-10">
+                <div class="w-14 h-14 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center shrink-0">
+                    <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" /></svg>
+                </div>
+                <div class="flex-1 mt-1">
+                    <h3 class="text-xs font-bold text-slate-600 uppercase tracking-wide">Today's Entries</h3>
+                    <div class="text-[32px] leading-none font-black text-red-600 mt-2">{{ $todayEntries }}</div>
+                    <div class="text-[13px] text-gray-500 mt-2 font-medium">Total check-ins today</div>
+                </div>
+                <button type="button" class="text-red-400 hover:text-red-600 absolute top-0 right-0">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+                </button>
+            </div>
+            <!-- Red Wave SVG -->
+            <div class="absolute bottom-0 left-0 w-full pointer-events-none">
+                <svg viewBox="0 0 400 100" class="w-full h-auto text-red-50" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M0,80 Q100,100 200,60 T400,80 L400,100 L0,100 Z" opacity="0.8"/>
+                    <path d="M0,90 Q120,50 250,70 T400,90 L400,100 L0,100 Z" opacity="0.4"/>
+                </svg>
+            </div>
+        </div>
 
-        <x-admin.stat-card title="Currently Inside" :value="$inside" subtitle="Max Capacity: {{ $maxOccupancy }}" colorClass="bg-green-50 text-green-600">
-            <x-slot name="icon">
-                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-            </x-slot>
-        </x-admin.stat-card>
+        <!-- Card 2: Currently Inside -->
+        <div class="bg-white rounded-[24px] shadow-sm border border-gray-100 p-6 relative overflow-hidden flex flex-col justify-between min-h-[160px]">
+            <div class="flex items-start gap-4 relative z-10">
+                <div class="w-14 h-14 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center shrink-0">
+                    <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                </div>
+                <div class="flex-1 mt-1">
+                    <h3 class="text-xs font-bold text-slate-600 uppercase tracking-wide">Currently Inside</h3>
+                    <div class="text-[32px] leading-none font-black text-green-600 mt-2">{{ $inside }}</div>
+                </div>
+                <button type="button" class="text-red-400 hover:text-red-600 absolute top-0 right-0">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+                </button>
+            </div>
+            
+            <!-- Progress Bar -->
+            <div class="relative z-10 mt-6">
+                <div class="text-[11px] font-semibold text-gray-500 mb-2">Max Capacity: {{ $maxOccupancy }}</div>
+                <div class="flex items-center gap-3">
+                    <div class="h-1.5 flex-1 bg-gray-100 rounded-full overflow-hidden">
+                        @php
+                            $occupancyPercent = $maxOccupancy > 0 ? min(100, round(($inside / $maxOccupancy) * 100)) : 0;
+                        @endphp
+                        <div class="h-full bg-green-500 rounded-full" style="width: {{ $occupancyPercent }}%"></div>
+                    </div>
+                    <span class="text-xs font-bold text-green-600">{{ $occupancyPercent }}%</span>
+                </div>
+            </div>
+        </div>
 
-        <x-admin.stat-card title="Active Students" :value="$totalStudents" colorClass="bg-yellow-50 text-yellow-600">
-            <x-slot name="icon">
-                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-            </x-slot>
-        </x-admin.stat-card>
+        <!-- Card 3: Active Students -->
+        <div class="bg-white rounded-[24px] shadow-sm border border-gray-100 p-6 relative overflow-hidden flex flex-col justify-between min-h-[160px]">
+            <div class="flex items-start gap-4 relative z-10">
+                <div class="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                    <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                </div>
+                <div class="flex-1 mt-1">
+                    <h3 class="text-xs font-bold text-slate-600 uppercase tracking-wide">Active Students</h3>
+                    <div class="text-[32px] leading-none font-black text-amber-500 mt-2">{{ $totalStudents }}</div>
+                    <div class="text-[13px] text-gray-500 mt-2 font-medium">Currently enrolled</div>
+                </div>
+                <button type="button" class="text-red-400 hover:text-red-600 absolute top-0 right-0">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+                </button>
+            </div>
+            <!-- Amber Wave SVG -->
+            <div class="absolute bottom-0 left-0 w-full pointer-events-none">
+                <svg viewBox="0 0 400 100" class="w-full h-auto text-amber-50" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M0,80 Q100,100 200,60 T400,80 L400,100 L0,100 Z" opacity="0.8"/>
+                    <path d="M0,90 Q120,50 250,70 T400,90 L400,100 L0,100 Z" opacity="0.4"/>
+                </svg>
+            </div>
+        </div>
 
-        <x-admin.stat-card title="Pending Violations" value="—" colorClass="bg-orange-50 text-orange-600">
-            <x-slot name="icon">
-                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-            </x-slot>
-        </x-admin.stat-card>
+        <!-- Card 4: Pending Violations -->
+        <div class="bg-white rounded-[24px] shadow-sm border border-gray-100 p-6 relative overflow-hidden flex flex-col justify-between min-h-[160px]">
+            <div class="flex items-start gap-4 relative z-10">
+                <div class="w-14 h-14 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center shrink-0">
+                    <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                </div>
+                <div class="flex-1 mt-1">
+                    <h3 class="text-xs font-bold text-slate-600 uppercase tracking-wide">Pending Violations</h3>
+                    <div class="text-[32px] leading-none font-black text-slate-700 mt-2">—</div>
+                    <div class="text-[13px] text-gray-500 mt-2 font-medium">No pending violations</div>
+                </div>
+                <button type="button" class="text-red-400 hover:text-red-600 absolute top-0 right-0">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+                </button>
+            </div>
+            <!-- Orange Wave SVG -->
+            <div class="absolute bottom-0 left-0 w-full pointer-events-none">
+                <svg viewBox="0 0 400 100" class="w-full h-auto text-orange-50" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M0,80 Q100,100 200,60 T400,80 L400,100 L0,100 Z" opacity="0.8"/>
+                    <path d="M0,90 Q120,50 250,70 T400,90 L400,100 L0,100 Z" opacity="0.4"/>
+                </svg>
+            </div>
+        </div>
+        
     </div>
 
     <!-- Recent Activity -->

@@ -59,18 +59,7 @@ class StudentArchiveController extends Controller
             
             $filter = $request->query('filter', 'all');
             
-            $include = false;
-            if ($filter === 'all') {
-                $include = true;
-            } elseif ($filter === 'graduated' && $isGraduated) {
-                $include = true;
-            } elseif ($filter === 'inactive_1_year' && $daysSinceLastVisit >= 365) {
-                $include = true;
-            } elseif ($filter === 'inactive_3_years' && $daysSinceLastVisit >= 1095) {
-                $include = true;
-            } elseif ($filter === 'inactive_4_years' && $daysSinceLastVisit >= 1460) {
-                $include = true;
-            }
+            $include = true;
 
             if ($include) {
                 $student->expected_graduation_year = $expectedGraduationYear;
@@ -81,6 +70,24 @@ class StudentArchiveController extends Controller
             }
         }
 
+        $stats = [
+            'total' => count($candidates),
+            'graduated' => collect($candidates)->where('is_graduated', true)->count(),
+            'inactive_1' => collect($candidates)->where('days_since_last_visit', '>=', 365)->count(),
+            'inactive_4' => collect($candidates)->where('days_since_last_visit', '>=', 1460)->count(),
+        ];
+
+        // If a specific filter is applied, filter the candidates AFTER calculating stats
+        if ($filter !== 'all') {
+            $candidates = array_filter($candidates, function($student) use ($filter) {
+                if ($filter === 'graduated') return $student->is_graduated;
+                if ($filter === 'inactive_1_year') return $student->days_since_last_visit >= 365;
+                if ($filter === 'inactive_3_years') return $student->days_since_last_visit >= 1095;
+                if ($filter === 'inactive_4_years') return $student->days_since_last_visit >= 1460;
+                return false;
+            });
+        }
+
         // Sort by days since last visit DESC
         usort($candidates, function($a, $b) {
             return $b->days_since_last_visit <=> $a->days_since_last_visit;
@@ -88,7 +95,8 @@ class StudentArchiveController extends Controller
 
         return view('admin.students.archive', [
             'candidates' => collect($candidates),
-            'filter' => $request->query('filter', 'all')
+            'filter' => $filter,
+            'stats' => $stats
         ]);
     }
     

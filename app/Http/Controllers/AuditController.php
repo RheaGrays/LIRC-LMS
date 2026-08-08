@@ -18,19 +18,32 @@ class AuditController extends Controller
 
         if ($request->filled('date')) {
             $date = $request->date;
-            $query->whereDate('logged_at', $date);
+            $query->whereDate('logged_at', '=', $date, 'and');
         }
 
-        if ($request->filled('student_id')) {
-            $query->where('student_id', $request->student_id);
+        if ($request->filled('search')) {
+            $searchTerm = $request->search;
+            $query->where(function($q) use ($searchTerm) {
+                $q->where('student_id', 'LIKE', "%{$searchTerm}%")
+                  ->orWhereHas('student', function($sq) use ($searchTerm) {
+                      $sq->where('first_name', 'LIKE', "%{$searchTerm}%")
+                         ->orWhere('last_name', 'LIKE', "%{$searchTerm}%");
+                  });
+            });
         }
 
         if ($request->filled('action')) {
-            $query->where('action', $request->action);
+            $query->where('action', '=', $request->action, 'and');
         }
 
-        $logs = $query->paginate(50)->withQueryString();
+        $logs = $query->paginate(10)->withQueryString();
 
-        return view('admin.audit.index', compact('admin', 'logs'));
+        $stats = [
+            'total_logs' => AttendanceLog::count('*'),
+            'today_logs' => AttendanceLog::whereDate('logged_at', '=', \Carbon\Carbon::today(), 'and')->count('*'),
+            'first_log' => AttendanceLog::orderBy('logged_at', 'asc')->first(),
+        ];
+
+        return view('admin.audit.index', compact('admin', 'logs', 'stats'));
     }
 }
