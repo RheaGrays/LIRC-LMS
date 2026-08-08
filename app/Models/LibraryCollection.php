@@ -25,7 +25,7 @@ class LibraryCollection extends Model
      */
     public static function active()
     {
-        return static::where('is_active', true)
+        return static::query()->where('is_active', true)
                      ->orderBy('sort_order')
                      ->get();
     }

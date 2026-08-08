@@ -70,7 +70,7 @@ class StudentRegistrationController extends Controller
         $patronId = $validated['studentId'] ?? ('VIS-' . strtoupper(Str::random(6)));
 
         // Ensure uniqueness for generated Visitor IDs
-        while (Student::find($patronId)) {
+        while (Student::query()->find($patronId)) {
             $patronId = 'VIS-' . strtoupper(Str::random(6));
         }
 

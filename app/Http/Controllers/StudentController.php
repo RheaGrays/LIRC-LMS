@@ -66,8 +66,8 @@ class StudentController extends Controller
         $students = $query->paginate(20)->withQueryString();
         $patronCategories = SystemSetting::get('patron_categories', ['Student', 'Employee', 'Post Graduate', 'Alumni', 'Visitor']);
         
-        $departmentsList = Student::whereNotNull('department')->where('department', '!=', '')->distinct()->pluck('department')->sort()->values();
-        $yearLevelsList  = Student::whereNotNull('year_level')->where('year_level', '!=', '')->distinct()->pluck('year_level')->sort()->values();
+        $departmentsList = Student::query()->whereNotNull('department', 'and')->where('department', '!=', '')->distinct()->pluck('department')->sort()->values();
+        $yearLevelsList  = Student::query()->whereNotNull('year_level', 'and')->where('year_level', '!=', '')->distinct()->pluck('year_level')->sort()->values();
 
         return view('admin.students.index', compact('students', 'patronCategories', 'departmentsList', 'yearLevelsList'));
     }
@@ -89,7 +89,7 @@ class StudentController extends Controller
         return back()->with('success', 'Patron created successfully.');
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, string $id)
     {
         $student = Student::findOrFail($id);
         $validated = $request->validate([
@@ -106,13 +106,13 @@ class StudentController extends Controller
         return back()->with('success', 'Patron updated successfully.');
     }
 
-    public function destroy($id)
+    public function destroy(string $id)
     {
         Student::findOrFail($id)->delete();
         return back()->with('success', 'Patron deleted successfully.');
     }
 
-    public function edit($id)
+    public function edit(string $id)
     {
         $student = Student::findOrFail($id);
         $patronCategories = SystemSetting::get('patron_categories', ['Student', 'Employee', 'Post Graduate', 'Alumni', 'Visitor']);

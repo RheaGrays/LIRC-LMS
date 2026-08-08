@@ -16,7 +16,8 @@ class ApprovalController extends Controller
         $admin    = Auth::guard('admin')->user();
         if (!$admin->isSuperAdmin()) abort(403);
 
-        $pending = PendingAdminApproval::where('status', 'pending')
+        $pending = PendingAdminApproval::query()
+            ->where('status', 'pending')
             ->orderByDesc('created_at')
             ->get();
 

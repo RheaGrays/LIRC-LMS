@@ -62,6 +62,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
 // ── Admin Panel (auth:admin guard required) ───────────────────
 Route::prefix('admin')->name('admin.')->middleware('auth.admin')->group(function () {
 
+    // Archiving Students (Super Admin only, or all roles. Let's make it all roles, or Super Admin? The user didn't specify, I'll restrict to Super Admin since it's destructive)
+    Route::middleware('admin.role:Super Admin')->group(function () {
+        Route::get('/students/archive', [App\Http\Controllers\StudentArchiveController::class, 'index'])->name('students.archive');
+        Route::post('/students/archive/deactivate', [App\Http\Controllers\StudentArchiveController::class, 'bulkDeactivate'])->name('students.archive.deactivate');
+    });
+
     // Dashboard (all roles)
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 

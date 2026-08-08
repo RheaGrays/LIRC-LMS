@@ -28,6 +28,11 @@ class Student extends Model
         return $this->hasMany(AttendanceLog::class, 'student_id', 'id');
     }
 
+    public function latestAttendance()
+    {
+        return $this->hasOne(AttendanceLog::class, 'student_id', 'id')->latestOfMany();
+    }
+
     public function violations(): HasMany
     {
         return $this->hasMany(Violation::class, 'student_id', 'id');

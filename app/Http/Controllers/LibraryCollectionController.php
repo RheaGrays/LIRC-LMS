@@ -9,7 +9,7 @@ class LibraryCollectionController extends Controller
 {
     public function index()
     {
-        $collections = LibraryCollection::orderBy('sort_order')->get();
+        $collections = LibraryCollection::query()->orderBy('sort_order', 'asc')->get();
         return view('admin.library-collections.index', compact('collections'));
     }
 
@@ -50,9 +50,12 @@ class LibraryCollectionController extends Controller
         return back()->with('success', 'Collection slide updated.');
     }
 
+    /**
+     * @param \App\Models\LibraryCollection $libraryCollection
+     */
     public function destroy(LibraryCollection $libraryCollection)
     {
-        $libraryCollection->delete();
+        LibraryCollection::query()->where('id', $libraryCollection->id)->delete();
         return back()->with('success', 'Collection slide deleted.');
     }
 }

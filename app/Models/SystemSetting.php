@@ -16,13 +16,13 @@ class SystemSetting extends Model
 
     public static function get(string $key, mixed $default = null): mixed
     {
-        $row = static::find($key);
+        $row = static::query()->find($key);
         return $row ? $row->value : $default;
     }
 
     public static function set(string $key, mixed $value): void
     {
-        static::updateOrCreate(['key' => $key], ['value' => $value]);
+        static::query()->updateOrCreate(['key' => $key], ['value' => $value]);
     }
 
     public static function allSettings(): array

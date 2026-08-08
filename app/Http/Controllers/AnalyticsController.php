@@ -19,11 +19,11 @@ class AnalyticsController extends Controller
         $period = $request->input('period', 'today');
         $termId = $request->input('term_id');
         
-        $query = AttendanceLog::where('action', 'check_in');
+        $query = AttendanceLog::query()->where('action', 'check_in');
 
         // Apply Date Filters
         if ($termId) {
-            $term = \App\Models\AcademicTerm::find($termId);
+            $term = \App\Models\AcademicTerm::find($termId, ['*']);
             if ($term) {
                 $query->whereBetween('logged_at', [
                     $term->start_date->startOfDay(), 
@@ -52,20 +52,20 @@ class AnalyticsController extends Controller
 
         if ($termId || $period === 'year') {
             // Group by Month
-            $trafficData = $query->selectRaw("DATE_FORMAT(logged_at, '%b %Y') as label, COUNT(*) as aggregate")
+            $trafficData = $query->selectRaw("DATE_FORMAT(logged_at, '%b %Y') as label, COUNT(*) as aggregate", [])
                 ->groupBy('label')
                 ->orderByRaw("MIN(logged_at)") // Ensure chronological order
                 ->get();
         } elseif ($period === 'month' || $period === 'week') {
             // Group by Day
-            $trafficData = $query->selectRaw("DATE_FORMAT(logged_at, '%b %d (%a)') as label, COUNT(*) as aggregate")
+            $trafficData = $query->selectRaw("DATE_FORMAT(logged_at, '%b %d (%a)') as label, COUNT(*) as aggregate", [])
                 ->groupBy('label')
                 ->orderByRaw("MIN(logged_at)")
                 ->get();
         } else {
             // Group by Hour (Today)
             // SQL HOUR() returns 0-23
-            $trafficData = $query->selectRaw("HOUR(logged_at) as hour, COUNT(*) as aggregate")
+            $trafficData = $query->selectRaw("HOUR(logged_at) as hour, COUNT(*) as aggregate", [])
                 ->groupBy('hour')
                 ->get()->keyBy('hour');
             
@@ -87,7 +87,7 @@ class AnalyticsController extends Controller
         // Process Department Data (Doughnut chart)
         // Join students to group by department without loading all models
         $deptData = $deptQuery->join('students', 'attendance_logs.student_id', '=', 'students.id')
-            ->selectRaw("COALESCE(students.department, 'Unknown') as department, COUNT(*) as aggregate")
+            ->selectRaw("COALESCE(students.department, 'Unknown') as department, COUNT(*) as aggregate", [])
             ->groupBy('department')
             ->orderByDesc('aggregate')
             ->get();
