@@ -70,6 +70,15 @@ class Student extends Model
             return asset('storage/' . $relative);
         }
 
+        // Fallback: search for existing student photo matching student ID prefix
+        $dir = dirname($relative);
+        $safeId = \Illuminate\Support\Str::slug($this->id, '_');
+        $matches = glob(storage_path('app/public/' . $dir . '/' . $safeId . '_*'));
+        if (!empty($matches)) {
+            $matchingFile = basename(end($matches));
+            return asset('storage/' . $dir . '/' . $matchingFile);
+        }
+
         return null;
     }
     public function scopeActive($query)
