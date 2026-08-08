@@ -40,7 +40,6 @@ class SettingsController extends Controller
     public function update(Request $request)
     {
         $data = $request->validate([
-            'active_term'           => ['required', 'string'],
             'idle_timeout'          => ['required', 'integer', 'min:10', 'max:3600'],
             'max_occupancy'         => ['required', 'integer', 'min:1', 'max:10000'],
             'show_occupancy'        => ['boolean'],
@@ -88,9 +87,17 @@ class SettingsController extends Controller
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
             'holidays' => 'nullable|integer|min:0',
-            'status' => 'required|in:Active,Archived',
+            'is_active' => 'boolean',
         ]);
-        \App\Models\AcademicTerm::create($request->only('academic_year', 'semester', 'start_date', 'end_date', 'holidays', 'status'));
+        
+        $data = $request->only('academic_year', 'semester', 'start_date', 'end_date', 'holidays');
+        $data['is_active'] = $request->boolean('is_active');
+        
+        if ($data['is_active']) {
+            \App\Models\AcademicTerm::query()->update(['is_active' => false]);
+        }
+        
+        \App\Models\AcademicTerm::create($data);
         return redirect()->back()->with('success', 'Academic Term created successfully.');
     }
 
@@ -102,9 +109,17 @@ class SettingsController extends Controller
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
             'holidays' => 'nullable|integer|min:0',
-            'status' => 'required|in:Active,Archived',
+            'is_active' => 'boolean',
         ]);
-        \App\Models\AcademicTerm::findOrFail($id)->update($request->only('academic_year', 'semester', 'start_date', 'end_date', 'holidays', 'status'));
+        
+        $data = $request->only('academic_year', 'semester', 'start_date', 'end_date', 'holidays');
+        $data['is_active'] = $request->boolean('is_active');
+        
+        if ($data['is_active']) {
+            \App\Models\AcademicTerm::where('id', '!=', $id)->update(['is_active' => false]);
+        }
+        
+        \App\Models\AcademicTerm::findOrFail($id)->update($data);
         return redirect()->back()->with('success', 'Academic Term updated successfully.');
     }
 

@@ -75,36 +75,109 @@
         
         <!-- Filter Toolbar -->
         <div class="p-6 border-b border-gray-100/60 bg-white">
-            <form action="{{ route('admin.audit.index') }}" method="GET" class="flex flex-wrap items-end gap-5">
+            <form action="{{ route('admin.audit.index') }}" method="GET" class="flex flex-wrap items-end gap-4">
                 <!-- Date -->
                 <div class="flex-1 min-w-[200px]">
                     <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Date</label>
-                    <input type="date" name="date" value="{{ request('date') }}" class="w-full p-2.5 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-[var(--cjc-navy)] text-gray-700">
+                    <input type="date" name="date" value="{{ request('date') }}" class="w-full h-11 px-3.5 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-600 text-gray-700 font-medium shadow-xs">
                 </div>
                 
-                <!-- Action -->
-                <div class="flex-1 min-w-[200px]">
+                <!-- Action (Custom Modern Dropdown) -->
+                <div class="flex-1 min-w-[200px] relative" x-data="{ 
+                    open: false, 
+                    value: '{{ request('action', '') }}',
+                    label: '{{ request('action') == 'check_in' ? 'Check In' : (request('action') == 'check_out' ? 'Check Out' : 'All Actions') }}',
+                    select(val, text) {
+                        this.value = val;
+                        this.label = text;
+                        this.open = false;
+                    }
+                }">
                     <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Action</label>
-                    <select name="action" class="w-full p-2.5 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-[var(--cjc-navy)] text-gray-700 cursor-pointer">
-                        <option value="">All Actions</option>
-                        <option value="check_in" {{ request('action') == 'check_in' ? 'selected' : '' }}>Check In</option>
-                        <option value="check_out" {{ request('action') == 'check_out' ? 'selected' : '' }}>Check Out</option>
-                    </select>
+                    <input type="hidden" name="action" :value="value">
+                    
+                    <!-- Single Box Trigger Button -->
+                    <button type="button" @click="open = !open" @click.outside="open = false" 
+                            class="w-full h-11 px-3.5 bg-white border border-gray-200 rounded-xl flex items-center justify-between text-sm font-medium text-gray-700 shadow-xs hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-600 transition-all cursor-pointer">
+                        <div class="flex items-center gap-2">
+                            <template x-if="value === 'check_in'">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                            </template>
+                            <template x-if="value === 'check_out'">
+                                <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                            </template>
+                            <template x-if="!value">
+                                <span class="w-2 h-2 rounded-full bg-gray-400"></span>
+                            </template>
+                            <span x-text="label"></span>
+                        </div>
+                        <svg class="w-4 h-4 text-gray-400 transition-transform duration-200" :class="open ? 'rotate-180 text-red-600' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+
+                    <!-- Floating Custom Option Panel -->
+                    <div x-show="open" 
+                         x-transition:enter="transition ease-out duration-150"
+                         x-transition:enter-start="opacity-0 scale-95 -translate-y-1"
+                         x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                         x-transition:leave="transition ease-in duration-100"
+                         x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+                         x-transition:leave-end="opacity-0 scale-95 -translate-y-1"
+                         style="display: none;"
+                         class="absolute left-0 right-0 top-[calc(100%+6px)] bg-white border border-gray-100 rounded-2xl shadow-xl z-50 p-1.5 space-y-1">
+                        
+                        <button type="button" @click="select('', 'All Actions')" 
+                                :class="value === '' ? 'bg-red-50 text-red-700 font-bold' : 'text-gray-700 hover:bg-gray-50 font-medium'"
+                                class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm transition-colors text-left cursor-pointer">
+                            <span class="flex items-center gap-2.5">
+                                <span class="w-2 h-2 rounded-full bg-gray-400"></span>
+                                All Actions
+                            </span>
+                            <template x-if="value === ''">
+                                <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                            </template>
+                        </button>
+
+                        <button type="button" @click="select('check_in', 'Check In')" 
+                                :class="value === 'check_in' ? 'bg-red-50 text-red-700 font-bold' : 'text-gray-700 hover:bg-gray-50 font-medium'"
+                                class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm transition-colors text-left cursor-pointer">
+                            <span class="flex items-center gap-2.5">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                Check In
+                            </span>
+                            <template x-if="value === 'check_in'">
+                                <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                            </template>
+                        </button>
+
+                        <button type="button" @click="select('check_out', 'Check Out')" 
+                                :class="value === 'check_out' ? 'bg-red-50 text-red-700 font-bold' : 'text-gray-700 hover:bg-gray-50 font-medium'"
+                                class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm transition-colors text-left cursor-pointer">
+                            <span class="flex items-center gap-2.5">
+                                <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                                Check Out
+                            </span>
+                            <template x-if="value === 'check_out'">
+                                <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                            </template>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Search -->
-                <div class="flex-[2] min-w-[300px]">
+                <div class="flex-[2] min-w-[280px]">
                     <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Search</label>
-                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Search ID or Name..." class="w-full p-2.5 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-[var(--cjc-navy)] text-gray-700">
+                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Search ID or Name..." class="w-full h-11 px-3.5 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-600 text-gray-700 font-medium shadow-xs">
                 </div>
 
                 <!-- Buttons -->
                 <div class="flex items-center gap-3">
-                    <button type="submit" class="inline-flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 transition-colors shadow-sm">
+                    <button type="submit" class="h-11 inline-flex items-center gap-2 px-6 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 transition-colors shadow-sm cursor-pointer">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
                         Filter
                     </button>
-                    <a href="{{ route('admin.audit.index') }}" class="inline-flex items-center gap-2 px-6 py-3 bg-white border border-gray-200 text-gray-600 rounded-xl text-sm font-bold hover:bg-gray-50 transition-colors shadow-sm">
+                    <a href="{{ route('admin.audit.index') }}" class="h-11 inline-flex items-center gap-2 px-6 bg-white border border-gray-200 text-gray-600 rounded-xl text-sm font-bold hover:bg-gray-50 transition-colors shadow-sm">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                         Reset
                     </a>
@@ -164,7 +237,7 @@
                             <!-- PROGRAM -->
                             <td class="px-6 py-4">
                                 @if($log->student)
-                                    <div class="font-bold text-slate-800 text-sm tracking-tight whitespace-normal max-w-[200px] leading-snug">{{ $log->student->department }}</div>
+                                    <div class="font-bold text-slate-800 text-sm tracking-tight whitespace-normal max-w-[200px] leading-snug">{{ $log->student->academicDepartment?->name ?? '—' }}</div>
                                     <div class="text-[13px] font-medium text-gray-500 mt-1">{{ $log->student->year_level }}</div>
                                 @else
                                     <span class="text-gray-300">—</span>

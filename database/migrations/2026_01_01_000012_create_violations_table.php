@@ -11,13 +11,15 @@ return new class extends Migration
         Schema::create('violations', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->string('student_id');
-            $table->string('type');
+            $table->unsignedBigInteger('violation_type_id')->nullable();
             $table->text('notes')->nullable();
             $table->enum('severity', ['minor', 'moderate', 'severe'])->default('minor');
             $table->date('date');
             $table->timestamps();
+            $table->softDeletes();
 
             $table->foreign('student_id')->references('id')->on('students')->onDelete('cascade');
+            $table->foreign('violation_type_id')->references('id')->on('violation_types')->nullOnDelete();
             $table->index('student_id');
         });
     }

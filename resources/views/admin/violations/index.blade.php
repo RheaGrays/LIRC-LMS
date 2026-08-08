@@ -7,7 +7,7 @@
 <div class="space-y-6" x-data="{ 
     openAdd: false,
     openEdit: false,
-    violation: { id: '', violation_type: 'No ID', severity: 'Minor', remarks: '' }
+    violation: { id: '', violation_type_id: '', severity: 'Minor', notes: '', date: '' }
 }">
 
     <!-- Header & Student Info -->
@@ -68,9 +68,9 @@
                                 <div class="text-xs text-gray-500">{{ $v->created_at->format('h:i A') }}</div>
                             </td>
                             <td class="px-6 py-4">
-                                <div class="font-semibold text-[var(--cjc-navy)]">{{ $v->violation_type }}</div>
-                                @if($v->remarks)
-                                    <div class="text-xs text-gray-500 mt-1 max-w-xs truncate" title="{{ $v->remarks }}">{{ $v->remarks }}</div>
+                                <div class="font-semibold text-[var(--cjc-navy)]">{{ $v->violationType?->name ?? 'Unknown' }}</div>
+                                @if($v->notes)
+                                    <div class="text-xs text-gray-500 mt-1 max-w-xs truncate" title="{{ $v->notes }}">{{ $v->notes }}</div>
                                 @endif
                             </td>
                             <td class="px-6 py-4">
@@ -127,25 +127,27 @@
                 <div class="p-6 space-y-4">
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Violation Type <span class="text-red-500">*</span></label>
-                        <select name="violation_type" required class="input bg-white">
-                            <option value="No ID">No ID / Forgetting ID</option>
-                            <option value="Fake ID">Using someone else's ID</option>
-                            <option value="Improper Uniform">Improper Uniform</option>
-                            <option value="Disruptive Behavior">Disruptive Behavior</option>
-                            <option value="Other">Other</option>
+                        <select name="violation_type_id" required class="input bg-white">
+                            @foreach($violationTypes as $vt)
+                                <option value="{{ $vt->id }}">{{ $vt->name }}</option>
+                            @endforeach
                         </select>
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Severity <span class="text-red-500">*</span></label>
                         <select name="severity" required class="input bg-white">
-                            <option value="Minor">Minor (Warning)</option>
-                            <option value="Moderate">Moderate</option>
-                            <option value="Severe">Severe</option>
+                            <option value="minor">Minor (Warning)</option>
+                            <option value="moderate">Moderate</option>
+                            <option value="severe">Severe</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-1">Remarks (Optional)</label>
-                        <textarea name="remarks" rows="3" class="input resize-none" placeholder="Provide additional details..."></textarea>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Date <span class="text-red-500">*</span></label>
+                        <input type="date" name="date" required value="{{ date('Y-m-d') }}" class="input">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Notes (Optional)</label>
+                        <textarea name="notes" rows="3" class="input resize-none" placeholder="Provide additional details..."></textarea>
                     </div>
                 </div>
                 <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
@@ -170,25 +172,27 @@
                 <div class="p-6 space-y-4">
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Violation Type <span class="text-red-500">*</span></label>
-                        <select name="violation_type" x-model="violation.violation_type" required class="input bg-white">
-                            <option value="No ID">No ID / Forgetting ID</option>
-                            <option value="Fake ID">Using someone else's ID</option>
-                            <option value="Improper Uniform">Improper Uniform</option>
-                            <option value="Disruptive Behavior">Disruptive Behavior</option>
-                            <option value="Other">Other</option>
+                        <select name="violation_type_id" x-model="violation.violation_type_id" required class="input bg-white">
+                            @foreach($violationTypes as $vt)
+                                <option value="{{ $vt->id }}">{{ $vt->name }}</option>
+                            @endforeach
                         </select>
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Severity <span class="text-red-500">*</span></label>
                         <select name="severity" x-model="violation.severity" required class="input bg-white">
-                            <option value="Minor">Minor (Warning)</option>
-                            <option value="Moderate">Moderate</option>
-                            <option value="Severe">Severe</option>
+                            <option value="minor">Minor (Warning)</option>
+                            <option value="moderate">Moderate</option>
+                            <option value="severe">Severe</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-1">Remarks (Optional)</label>
-                        <textarea name="remarks" x-model="violation.remarks" rows="3" class="input resize-none" placeholder="Provide additional details..."></textarea>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Date <span class="text-red-500">*</span></label>
+                        <input type="date" name="date" x-model="violation.date ? violation.date.split('T')[0] : ''" required class="input">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Notes (Optional)</label>
+                        <textarea name="notes" x-model="violation.notes" rows="3" class="input resize-none" placeholder="Provide additional details..."></textarea>
                     </div>
                 </div>
                 <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">

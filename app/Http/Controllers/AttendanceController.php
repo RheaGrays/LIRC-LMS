@@ -59,7 +59,7 @@ class AttendanceController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Multiple students match that name. Please use your exact Student ID.']);
         }
         if (!$student) {
-            return response()->json(['status' => 'error', 'message' => 'Student ID not found in the system.']);
+            return response()->json(['status' => 'error', 'message' => 'This student is not yet registered in the system. Please register first.']);
         }
 
         if ($student->status === 'inactive') {
@@ -114,11 +114,11 @@ class AttendanceController extends Controller
 
         $searchTerm = '%' . $term . '%';
         
-        $students = Student::query()->where('status', 'active')
-            ->where(function($query) use ($searchTerm, $term) {
-                $query->where('id', 'LIKE', $searchTerm)
-                      ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", [$searchTerm])
-                      ->orWhereRaw("CONCAT(last_name, ' ', first_name) LIKE ?", [$searchTerm]);
+        $students = Student::with('academicDepartment')
+            ->where(function($q) use ($searchTerm) {
+                $q->where('id', 'LIKE', $searchTerm)
+                  ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", [$searchTerm])
+                  ->orWhereRaw("CONCAT(last_name, ' ', first_name) LIKE ?", [$searchTerm]);
             })
             ->limit(5)
             ->get();
@@ -127,7 +127,7 @@ class AttendanceController extends Controller
             return [
                 'id' => $s->id,
                 'name' => $s->first_name . ' ' . $s->last_name,
-                'department' => $s->department,
+                'department' => $s->academicDepartment?->name ?? '—',
                 'photo' => $s->photo_path ? asset('storage/' . $s->photo_path) : '/default-avatar.png'
             ];
         }));
@@ -264,10 +264,11 @@ class AttendanceController extends Controller
     
     private function formatStudent(Student $s): array
     {
+        $s->loadMissing('academicDepartment');
         return [
             'id'        => $s->id,
             'name'      => $s->full_name,
-            'dept'      => $s->department,
+            'dept'      => $s->academicDepartment?->name ?? '—',
             'year'      => $s->year_level,
             'photo_url' => $s->photo_url,
         ];

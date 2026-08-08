@@ -11,8 +11,9 @@ return new class extends Migration
         // Students table indexes
         Schema::table('students', function (Blueprint $table) {
             $table->index('status');
-            $table->index('department');
-            $table->index(['department', 'status']);
+            $table->index('department_id');
+            $table->index('patron_category');
+            $table->index(['department_id', 'status']);
         });
 
         // Violations table indexes
@@ -38,8 +39,8 @@ return new class extends Migration
     {
         Schema::table('students', function (Blueprint $table) {
             $table->dropIndex(['status']);
-            $table->dropIndex(['department']);
-            $table->dropIndex(['department', 'status']);
+            $table->dropIndex(['department_id']);
+            $table->dropIndex(['department_id', 'status']);
         });
 
         Schema::table('violations', function (Blueprint $table) {

@@ -52,7 +52,7 @@
                     <!-- Category Filter -->
                     <div>
                         <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Patron Category</label>
-                        <select name="category" onchange="this.form.submit()" class="w-full text-sm">
+                        <select name="category" onchange="this.form.submit()" class="no-tomselect w-full text-sm">
                             <option value="">All Categories</option>
                             @foreach($patronCategories as $cat)
                                 <option value="{{ $cat }}" {{ request('category') === $cat ? 'selected' : '' }}>{{ $cat }}</option>
@@ -60,13 +60,24 @@
                         </select>
                     </div>
 
-                    <!-- Department / Program Filter -->
+                    <!-- Department Filter -->
                     <div>
-                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Department / Program</label>
-                        <select name="department" onchange="this.form.submit()" class="w-full text-sm">
+                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Department</label>
+                        <select name="department_id" onchange="this.form.submit()" class="no-tomselect w-full text-sm">
                             <option value="">All Departments</option>
                             @foreach($departmentsList as $dept)
-                                <option value="{{ $dept }}" {{ request('department') === $dept ? 'selected' : '' }}>{{ $dept }}</option>
+                                <option value="{{ $dept->id }}" {{ request('department_id') == $dept->id ? 'selected' : '' }}>{{ $dept->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <!-- Program Filter -->
+                    <div>
+                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Program</label>
+                        <select name="program_id" onchange="this.form.submit()" class="no-tomselect w-full text-sm">
+                            <option value="">All Programs</option>
+                            @foreach($programsList as $prog)
+                                <option value="{{ $prog->id }}" {{ request('program_id') == $prog->id ? 'selected' : '' }}>{{ $prog->name }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -74,7 +85,7 @@
                     <!-- Year Level Filter -->
                     <div>
                         <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Year Level</label>
-                        <select name="year_level" onchange="this.form.submit()" class="w-full text-sm">
+                        <select name="year_level" onchange="this.form.submit()" class="no-tomselect w-full text-sm">
                             <option value="">All Year Levels</option>
                             @foreach($yearLevelsList as $yl)
                                 <option value="{{ $yl }}" {{ request('year_level') === $yl ? 'selected' : '' }}>{{ $yl }}</option>
@@ -91,7 +102,7 @@
                         <select name="sort_by" onchange="this.form.submit()" class="text-xs font-medium">
                             <option value="last_name" {{ request('sort_by', 'last_name') === 'last_name' ? 'selected' : '' }}>Name (Last Name)</option>
                             <option value="id" {{ request('sort_by') === 'id' ? 'selected' : '' }}>ID Number</option>
-                            <option value="department" {{ request('sort_by') === 'department' ? 'selected' : '' }}>Department / Program</option>
+                            <option value="department_id" {{ request('sort_by') === 'department_id' ? 'selected' : '' }}>Department</option>
                             <option value="year_level" {{ request('sort_by') === 'year_level' ? 'selected' : '' }}>Year Level</option>
                             <option value="patron_category" {{ request('sort_by') === 'patron_category' ? 'selected' : '' }}>Patron Category</option>
                         </select>
@@ -103,7 +114,7 @@
                     </div>
 
                     <!-- Reset Filters Button -->
-                    @if(request()->hasAny(['search', 'category', 'department', 'year_level', 'sort_by', 'sort_dir']))
+                    @if(request()->hasAny(['search', 'category', 'department_id', 'program_id', 'year_level', 'sort_by', 'sort_dir']))
                         <a href="{{ route('admin.students.index') }}" class="text-xs text-red-600 hover:text-red-800 font-semibold flex items-center gap-1">
                             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                             Clear Filters
@@ -135,7 +146,7 @@
                             <th class="p-4">{!! sortLink('name', 'Patron Name') !!}</th>
                             <th class="p-4">{!! sortLink('id', 'ID Number') !!}</th>
                             <th class="p-4">{!! sortLink('patron_category', 'Category') !!}</th>
-                            <th class="p-4">{!! sortLink('department', 'Department / Program') !!}</th>
+                            <th class="p-4">{!! sortLink('department_id', 'Department & Program') !!}</th>
                             <th class="p-4">{!! sortLink('year_level', 'Year Level') !!}</th>
                             <th class="p-4 text-center">{!! sortLink('violations_count', 'Violations') !!}</th>
                             <th class="p-4 text-right font-bold">Actions</th>
@@ -157,7 +168,8 @@
                                     </span>
                                 </td>
                                 <td class="p-4 text-sm text-gray-700 font-medium">
-                                    {{ $student->department ?: '—' }}
+                                    <div class="font-bold">{{ $student->academicDepartment?->name ?: '—' }}</div>
+                                    <div class="text-xs text-gray-500">{{ $student->academicProgram?->name ?: '—' }}</div>
                                 </td>
                                 <td class="p-4 text-sm text-gray-600">
                                     {{ $student->year_level ?: '—' }}
@@ -230,9 +242,23 @@
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Middle Name (Optional)</label>
                         <input type="text" name="middle_name" placeholder="Santos" class="w-full p-2 border border-gray-300 rounded focus:border-[var(--cjc-navy)] outline-none text-sm">
                     </div>
-                    <div class="col-span-2">
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Department / Program (Optional for non-students)</label>
-                        <input type="text" name="department" placeholder="e.g. BS Computer Science" class="w-full p-2 border border-gray-300 rounded focus:border-[var(--cjc-navy)] outline-none text-sm">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Department</label>
+                        <select name="department_id" class="w-full p-2 border border-gray-300 rounded focus:border-[var(--cjc-navy)] outline-none text-sm bg-white">
+                            <option value="">None</option>
+                            @foreach($departmentsList as $dept)
+                                <option value="{{ $dept->id }}">{{ $dept->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Program</label>
+                        <select name="program_id" class="w-full p-2 border border-gray-300 rounded focus:border-[var(--cjc-navy)] outline-none text-sm bg-white">
+                            <option value="">None</option>
+                            @foreach($programsList as $prog)
+                                <option value="{{ $prog->id }}">{{ $prog->name }}</option>
+                            @endforeach
+                        </select>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Year Level (Optional)</label>
@@ -271,7 +297,7 @@
                             <template x-for="v in selectedStudent.violations" :key="v.id">
                                 <div class="p-3 border rounded-lg bg-gray-50 border-gray-200 relative">
                                     <div class="flex justify-between items-start mb-1">
-                                        <div class="font-bold text-gray-800" x-text="v.type"></div>
+                                        <div class="font-bold text-gray-800" x-text="v.violation_type?.name || 'Unknown Type'"></div>
                                         <span class="text-xs px-2 py-0.5 rounded-full uppercase font-bold" 
                                               :class="v.severity === 'severe' ? 'bg-red-100 text-red-700' : (v.severity === 'moderate' ? 'bg-orange-100 text-orange-700' : 'bg-yellow-100 text-yellow-700')"
                                               x-text="v.severity"></span>

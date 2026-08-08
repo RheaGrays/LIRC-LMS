@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 class SectionLog extends Model
 {
     public $timestamps = false;
-    const UPDATED_AT = 'updated_at';
 
     protected $fillable = [
         'section_code', 'section_name', 'date', 'hour',

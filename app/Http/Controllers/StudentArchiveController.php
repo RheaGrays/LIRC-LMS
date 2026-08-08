@@ -11,64 +11,58 @@ class StudentArchiveController extends Controller
 {
     public function index(Request $request)
     {
-        // 1. Fetch all active students and their latest attendance log
-        $students = Student::query()->where('status', 'active')
-            ->with('latestAttendance')
-            ->get();
-            
-        // 2. Fetch all academic programs so we can map Department name -> Years
-        $programs = AcademicProgram::all()->keyBy('name');
-
+        // Fetch all academic programs so we can map Department name -> Years
+        $programs = AcademicProgram::all()->keyBy('id');
         $currentYear = (int) date('Y');
+        $filter = $request->query('filter', 'all');
         
         $candidates = [];
 
-        foreach ($students as $student) {
-            // Extract numeric year level (e.g. "1st Year" -> 1, "Grade 7" -> 7)
-            preg_match('/\d+/', $student->year_level, $matches);
-            $numericYearLevel = !empty($matches) ? (int)$matches[0] : 1;
+        // Chunk through active students to prevent memory spikes
+        Student::query()
+            ->where('status', 'active')
+            ->with(['latestAttendance'])
+            ->chunk(200, function ($students) use (&$candidates, $programs, $currentYear) {
+                foreach ($students as $student) {
+                    // Extract numeric year level (e.g. "1st Year" -> 1, "Grade 7" -> 7)
+                    preg_match('/\d+/', $student->year_level, $matches);
+                    $numericYearLevel = !empty($matches) ? (int)$matches[0] : 1;
 
-            // Default program duration
-            $programDuration = 4;
-            
-            // Check if student's department matches an academic program
-            if (isset($programs[$student->department])) {
-                $programDuration = $programs[$student->department]->years;
-            } elseif (stripos($student->year_level, 'grade') !== false) {
-                // If JHS or SHS, assume default duration relative to Grade 10 or Grade 12
-                if ($numericYearLevel <= 10) {
-                    $programDuration = 10; // JHS ends at Grade 10
-                } else {
-                    $programDuration = 12; // SHS ends at Grade 12
+                    // Default program duration
+                    $programDuration = 4;
+                    
+                    // Check if student's program matches an academic program
+                    if ($student->program_id && isset($programs[$student->program_id])) {
+                        $programDuration = $programs[$student->program_id]->years;
+                    } elseif (stripos($student->year_level, 'grade') !== false) {
+                        if ($numericYearLevel <= 10) {
+                            $programDuration = 10;
+                        } else {
+                            $programDuration = 12;
+                        }
+                    }
+                    
+                    // Get registration year from created_at
+                    $registrationYear = (int) ($student->created_at ? $student->created_at->format('Y') : date('Y'));
+                    
+                    // Calculate expected graduation year
+                    $yearsRemaining = max(0, $programDuration - $numericYearLevel + 1);
+                    $expectedGraduationYear = $registrationYear + $yearsRemaining;
+                    
+                    // Get last visit date from logged_at (fallback to registration date if never visited)
+                    $lastVisit = $student->latestAttendance ? $student->latestAttendance->logged_at : null;
+                    $daysSinceLastVisit = $lastVisit ? $lastVisit->diffInDays(now()) : ($student->created_at ? $student->created_at->diffInDays(now()) : 0);
+                    
+                    // Determine flags
+                    $isGraduated = $currentYear > $expectedGraduationYear;
+                    
+                    $student->expected_graduation_year = $expectedGraduationYear;
+                    $student->days_since_last_visit = $daysSinceLastVisit;
+                    $student->last_visit_date = $lastVisit ? $lastVisit->format('M d, Y') : 'Never';
+                    $student->is_graduated = $isGraduated;
+                    $candidates[] = $student;
                 }
-            }
-            
-            // Get registration year from created_at
-            $registrationYear = (int) $student->created_at->format('Y');
-            
-            // Calculate expected graduation year
-            $yearsRemaining = max(0, $programDuration - $numericYearLevel + 1);
-            $expectedGraduationYear = $registrationYear + $yearsRemaining;
-            
-            // Get last visit date (fallback to registration date if never visited)
-            $lastVisit = $student->latestAttendance ? $student->latestAttendance->created_at : null;
-            $daysSinceLastVisit = $lastVisit ? $lastVisit->diffInDays(now()) : $student->created_at->diffInDays(now());
-            
-            // Determine flags
-            $isGraduated = $currentYear > $expectedGraduationYear;
-            
-            $filter = $request->query('filter', 'all');
-            
-            $include = true;
-
-            if ($include) {
-                $student->expected_graduation_year = $expectedGraduationYear;
-                $student->days_since_last_visit = $daysSinceLastVisit;
-                $student->last_visit_date = $lastVisit ? $lastVisit->format('M d, Y') : 'Never';
-                $student->is_graduated = $isGraduated;
-                $candidates[] = $student;
-            }
-        }
+            });
 
         $stats = [
             'total' => count($candidates),
@@ -77,7 +71,7 @@ class StudentArchiveController extends Controller
             'inactive_4' => collect($candidates)->where('days_since_last_visit', '>=', 1460)->count(),
         ];
 
-        // If a specific filter is applied, filter the candidates AFTER calculating stats
+        // Filter candidates after calculating stats
         if ($filter !== 'all') {
             $candidates = array_filter($candidates, function($student) use ($filter) {
                 if ($filter === 'graduated') return $student->is_graduated;

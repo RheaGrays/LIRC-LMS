@@ -18,48 +18,23 @@ class SectionService
             $today = Carbon::today();
             
             // Get the most recent log per section for today
-            $logs = SectionLog::whereDate('created_at', $today)
-                ->orderBy('created_at', 'desc')
-                ->get()
-                ->unique('section_name')
-                ->values();
-                
-            return $logs;
+            $latestIds = SectionLog::whereDate('date', $today)
+                ->selectRaw('MAX(id) as id')
+                ->groupBy('section_code')
+                ->pluck('id');
+
+            return SectionLog::whereIn('id', $latestIds)
+                ->orderBy('section_code')
+                ->get();
         });
     }
 
     /**
-     * Record or update a section headcount.
+     * Record or update a section snapshot.
      */
-    public function upsertLog(string $sectionName, int $headcount, $adminId = null)
+    public function upsertLog(array $section): void
     {
-        $today = Carbon::today();
-        
-        // Find if there's already a log for this section today that we can just update
-        // Alternatively, if you want history, always create a new record.
-        // Let's create a new record if the last one was over 5 minutes ago, otherwise update.
-        
-        $lastLog = SectionLog::where('section_name', $sectionName)
-            ->whereDate('created_at', $today)
-            ->orderBy('created_at', 'desc')
-            ->first();
-            
-        if ($lastLog && $lastLog->created_at->diffInMinutes(Carbon::now()) < 5) {
-            $lastLog->update([
-                'headcount' => $headcount,
-                'admin_id' => $adminId ?? $lastLog->admin_id
-            ]);
-            $log = $lastLog;
-        } else {
-            $log = SectionLog::create([
-                'section_name' => $sectionName,
-                'headcount' => $headcount,
-                'admin_id' => $adminId
-            ]);
-        }
-        
+        SectionLog::upsertSnapshot($section);
         Cache::forget('latest_section_logs');
-        
-        return $log;
     }
 }

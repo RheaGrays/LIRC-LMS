@@ -13,7 +13,7 @@ class AuditController extends Controller
     {
         $admin = Auth::guard('admin')->user();
 
-        $query = AttendanceLog::with('student')
+        $query = AttendanceLog::with(['student.academicDepartment'])
             ->orderByDesc('logged_at');
 
         if ($request->filled('date')) {
@@ -35,8 +35,7 @@ class AuditController extends Controller
         if ($request->filled('action')) {
             $query->where('action', '=', $request->action, 'and');
         }
-
-        $logs = $query->paginate(10)->withQueryString();
+        $logs = $query->paginate(25)->withQueryString();
 
         $stats = [
             'total_logs' => AttendanceLog::count('*'),

@@ -36,7 +36,7 @@ class DashboardController extends Controller
             ->pluck('id');
 
         $recentLogs = AttendanceLog::query()
-            ->with('student')
+            ->with(['student.academicDepartment'])
             ->whereIn('id', $latestLogIds, 'and', false)
             ->orderByDesc('logged_at')
             ->limit(50)
@@ -45,7 +45,7 @@ class DashboardController extends Controller
                 'id'           => $log->id,
                 'student_id'   => $log->student_id,
                 'name'         => $log->student?->full_name ?? $log->student_id,
-                'dept'         => $log->student?->department ?? '—',
+                'dept'         => $log->student?->academicDepartment?->name ?? '—',
                 'year'         => $log->student?->year_level ?? '—',
                 'photo_url'    => $log->student?->photo_url,
                 'status'       => $log->action === 'check_in' ? 'entered' : 'exited',

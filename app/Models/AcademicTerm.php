@@ -12,7 +12,7 @@ class AcademicTerm extends Model
         'start_date',
         'end_date',
         'holidays',
-        'status',
+        'is_active',
     ];
     
     protected $casts = [

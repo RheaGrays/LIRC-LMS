@@ -16,7 +16,7 @@ class ReportService
      */
     public function exportStudentsExcel()
     {
-        $students = Student::withCount('violations')->get();
+        $students = Student::with(['academicDepartment'])->withCount('violations')->get();
         
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
@@ -37,9 +37,9 @@ class ReportService
         $row = 2;
         foreach ($students as $student) {
             $sheet->setCellValue('A' . $row, $student->id);
-            $sheet->setCellValue('B' . $row, $student->name);
-            $sheet->setCellValue('C' . $row, $student->dept);
-            $sheet->setCellValue('D' . $row, $student->year);
+            $sheet->setCellValue('B' . $row, $student->full_name);
+            $sheet->setCellValue('C' . $row, $student->academicDepartment?->name ?? '—');
+            $sheet->setCellValue('D' . $row, $student->year_level);
             $sheet->setCellValue('E' . $row, $student->violations_count);
             $row++;
         }
@@ -65,8 +65,8 @@ class ReportService
     public function exportAuditPdf($date)
     {
         $logs = AttendanceLog::with('student')
-            ->whereDate('created_at', $date)
-            ->orderBy('created_at', 'desc')
+            ->whereDate('logged_at', $date)
+            ->orderBy('logged_at', 'desc')
             ->get();
             
         // Assuming we create a basic blade view for the PDF at resources/views/reports/audit.blade.php

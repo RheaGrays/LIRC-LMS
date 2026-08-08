@@ -40,14 +40,14 @@
                             <span class="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium border border-gray-200">{{ $term->holidays }} holidays</span>
                         </td>
                         <td class="px-6 py-4">
-                            @if($term->status === 'Active')
+                            @if($term->is_active)
                                 <span class="px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium border border-green-200">Active</span>
                             @else
                                 <span class="px-3 py-1 bg-gray-50 text-gray-600 rounded-full text-xs font-medium border border-gray-200">Archived</span>
                             @endif
                         </td>
                         <td class="px-6 py-4 text-right">
-                            <button type="button" onclick="editTerm({{ $term->id }}, '{{ addslashes($term->academic_year) }}', '{{ addslashes($term->semester) }}', '{{ $term->start_date->format('Y-m-d') }}', '{{ $term->end_date->format('Y-m-d') }}', {{ $term->holidays }}, '{{ $term->status }}')" class="text-blue-500 hover:text-blue-700 font-medium text-xs mr-3">Edit</button>
+                            <button type="button" onclick="editTerm({{ $term->id }}, '{{ addslashes($term->academic_year) }}', '{{ addslashes($term->semester) }}', '{{ $term->start_date->format('Y-m-d') }}', '{{ $term->end_date->format('Y-m-d') }}', {{ $term->holidays }}, {{ $term->is_active ? 1 : 0 }})" class="text-blue-500 hover:text-blue-700 font-medium text-xs mr-3">Edit</button>
                             <form action="{{ route('admin.settings.terms.destroy', $term->id) }}" method="POST" class="inline-block" onsubmit="return confirm('Are you sure you want to delete this term?');">
                                 @csrf
                                 @method('DELETE')
@@ -229,9 +229,9 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Status</label>
-                    <select name="status" class="input" required>
-                        <option value="Active">Active</option>
-                        <option value="Archived">Archived</option>
+                    <select name="is_active" class="input" required>
+                        <option value="1">Active</option>
+                        <option value="0">Archived</option>
                     </select>
                 </div>
             </div>
@@ -288,9 +288,9 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Status</label>
-                    <select name="status" id="edit-term-status" class="input" required>
-                        <option value="Active">Active</option>
-                        <option value="Archived">Archived</option>
+                    <select name="is_active" id="edit-term-status" class="input" required>
+                        <option value="1">Active</option>
+                        <option value="0">Archived</option>
                     </select>
                 </div>
             </div>
@@ -303,14 +303,14 @@
 </div>
 
 <script>
-    function editTerm(id, ay, sem, start, end, holidays, status) {
+    function editTerm(id, ay, sem, start, end, holidays, is_active) {
         document.getElementById('edit-term-form').action = `/admin/settings/terms/${id}`;
         document.getElementById('edit-term-ay').value = ay;
         document.getElementById('edit-term-sem').value = sem;
         document.getElementById('edit-term-start').value = start;
         document.getElementById('edit-term-end').value = end;
         document.getElementById('edit-term-holidays').value = holidays;
-        document.getElementById('edit-term-status').value = status;
+        document.getElementById('edit-term-status').value = is_active;
         document.getElementById('edit-term-modal').classList.remove('hidden');
     }
 </script>

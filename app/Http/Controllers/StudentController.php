@@ -12,7 +12,7 @@ class StudentController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Student::withCount('violations')->with('violations');
+        $query = Student::withCount('violations')->with(['violations.violationType', 'academicDepartment', 'academicProgram']);
 
         // Search ID, Name, Department/Program, Patron Category
         if ($request->filled('search')) {
@@ -21,8 +21,13 @@ class StudentController extends Controller
                 $q->where('id', 'like', "%{$search}%")
                   ->orWhere('last_name', 'like', "%{$search}%")
                   ->orWhere('first_name', 'like', "%{$search}%")
-                  ->orWhere('department', 'like', "%{$search}%")
-                  ->orWhere('patron_category', 'like', "%{$search}%");
+                  ->orWhere('patron_category', 'like', "%{$search}%")
+                  ->orWhereHas('academicDepartment', function($q) use ($search) {
+                      $q->where('name', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('academicProgram', function($q) use ($search) {
+                      $q->where('name', 'like', "%{$search}%")->orWhere('code', 'like', "%{$search}%");
+                  });
             });
         }
 
@@ -31,9 +36,14 @@ class StudentController extends Controller
             $query->where('patron_category', $request->category);
         }
 
-        // Filter by Department / Program
-        if ($request->filled('department')) {
-            $query->where('department', $request->department);
+        // Filter by Department
+        if ($request->filled('department_id')) {
+            $query->where('department_id', $request->department_id);
+        }
+
+        // Filter by Program
+        if ($request->filled('program_id')) {
+            $query->where('program_id', $request->program_id);
         }
 
         // Filter by Year Level
@@ -49,7 +59,7 @@ class StudentController extends Controller
             'name'            => ['last_name', 'first_name'],
             'last_name'       => ['last_name', 'first_name'],
             'id'              => ['id'],
-            'department'      => ['department', 'last_name'],
+            'department_id'   => ['department_id', 'last_name'],
             'year_level'      => ['year_level', 'last_name'],
             'patron_category' => ['patron_category', 'last_name'],
             'violations_count'=> ['violations_count'],
@@ -66,10 +76,13 @@ class StudentController extends Controller
         $students = $query->paginate(20)->withQueryString();
         $patronCategories = SystemSetting::get('patron_categories', ['Student', 'Employee', 'Post Graduate', 'Alumni', 'Visitor']);
         
-        $departmentsList = Student::query()->whereNotNull('department', 'and')->where('department', '!=', '')->distinct()->pluck('department')->sort()->values();
-        $yearLevelsList  = Student::query()->whereNotNull('year_level', 'and')->where('year_level', '!=', '')->distinct()->pluck('year_level')->sort()->values();
+        $departmentsList = \App\Models\AcademicDepartment::all();
+        $programsList = \App\Models\AcademicProgram::all();
+        $yearLevelsList = \Illuminate\Support\Facades\Cache::remember('student_year_levels', 300, function () {
+            return Student::query()->whereNotNull('year_level')->where('year_level', '!=', '')->distinct()->pluck('year_level')->sort()->values();
+        });
 
-        return view('admin.students.index', compact('students', 'patronCategories', 'departmentsList', 'yearLevelsList'));
+        return view('admin.students.index', compact('students', 'patronCategories', 'departmentsList', 'programsList', 'yearLevelsList'));
     }
 
     public function store(Request $request)
@@ -80,7 +93,8 @@ class StudentController extends Controller
             'last_name'       => 'required|string|max:255',
             'middle_name'     => 'nullable|string|max:255',
             'patron_category' => 'required|string|max:100',
-            'department'      => 'nullable|string|max:255',
+            'department_id'   => 'nullable|exists:academic_departments,id',
+            'program_id'      => 'nullable|exists:academic_programs,id',
             'year_level'      => 'nullable|string|max:50',
             'email'           => 'nullable|email|max:255',
         ]);
@@ -97,7 +111,8 @@ class StudentController extends Controller
             'last_name'       => 'required|string|max:255',
             'middle_name'     => 'nullable|string|max:255',
             'patron_category' => 'required|string|max:100',
-            'department'      => 'nullable|string|max:255',
+            'department_id'   => 'nullable|exists:academic_departments,id',
+            'program_id'      => 'nullable|exists:academic_programs,id',
             'year_level'      => 'nullable|string|max:50',
             'email'           => 'nullable|email|max:255',
         ]);
@@ -137,6 +152,10 @@ class StudentController extends Controller
                 $id = $row[0] ?? null;
                 if (!$id) continue;
 
+                // Simple resolution by name (assumes name matches exactly)
+                $dept = \App\Models\AcademicDepartment::where('name', $row[5] ?? '')->first();
+                $prog = \App\Models\AcademicProgram::where('name', $row[6] ?? '')->first();
+
                 Student::updateOrCreate(
                     ['id' => $id],
                     [
@@ -144,9 +163,10 @@ class StudentController extends Controller
                         'first_name'      => $row[2] ?? '',
                         'middle_name'     => $row[3] ?? null,
                         'patron_category' => $row[4] ?? 'Student',
-                        'department'      => $row[5] ?? '',
-                        'year_level'      => $row[6] ?? '',
-                        'email'           => $row[7] ?? null,
+                        'department_id'   => $dept?->id,
+                        'program_id'      => $prog?->id,
+                        'year_level'      => $row[7] ?? '',
+                        'email'           => $row[8] ?? null,
                     ]
                 );
                 $count++;
@@ -161,11 +181,11 @@ class StudentController extends Controller
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
-        $headers = ['ID', 'Last Name', 'First Name', 'Middle Name', 'Patron Category', 'Department', 'Year Level', 'Email', 'Status'];
+        $headers = ['ID', 'Last Name', 'First Name', 'Middle Name', 'Patron Category', 'Department', 'Program', 'Year Level', 'Email', 'Status'];
         $sheet->fromArray($headers, null, 'A1');
 
         $row = 2;
-        Student::chunk(500, function ($students) use ($sheet, &$row) {
+        Student::with(['academicDepartment', 'academicProgram'])->chunk(500, function ($students) use ($sheet, &$row) {
             foreach ($students as $student) {
                 $sheet->fromArray([
                     $student->id,
@@ -173,7 +193,8 @@ class StudentController extends Controller
                     $student->first_name,
                     $student->middle_name,
                     $student->patron_category,
-                    $student->department,
+                    $student->academicDepartment?->name,
+                    $student->academicProgram?->name,
                     $student->year_level,
                     $student->email,
                     $student->status,

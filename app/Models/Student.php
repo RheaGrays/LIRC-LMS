@@ -5,15 +5,20 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
 class Student extends Model
 {
+    use SoftDeletes;
+
     protected $primaryKey = 'id';
     public $incrementing = false;
     protected $keyType = 'string';
 
     protected $fillable = [
         'id', 'last_name', 'first_name', 'middle_name',
-        'department', 'year_level', 'email', 'contact',
+        'department_id', 'program_id', 'year_level', 'email', 'contact',
         'patron_category', 'photo_path', 'status',
     ];
 
@@ -36,6 +41,16 @@ class Student extends Model
     public function violations(): HasMany
     {
         return $this->hasMany(Violation::class, 'student_id', 'id');
+    }
+
+    public function academicDepartment(): BelongsTo
+    {
+        return $this->belongsTo(AcademicDepartment::class, 'department_id', 'id');
+    }
+
+    public function academicProgram(): BelongsTo
+    {
+        return $this->belongsTo(AcademicProgram::class, 'program_id', 'id');
     }
 
     // ── Accessors ─────────────────────────────────────────────
@@ -69,7 +84,7 @@ class Student extends Model
 
     public function scopeDepartment($query, $dept)
     {
-        return $query->where('department', $dept);
+        return $query->where('department_id', $dept);
     }
 
     public function scopePatronCategory($query, $category)
@@ -83,7 +98,9 @@ class Student extends Model
             $q->where('id', 'LIKE', "%{$term}%")
               ->orWhere('last_name', 'LIKE', "%{$term}%")
               ->orWhere('first_name', 'LIKE', "%{$term}%")
-              ->orWhere('department', 'LIKE', "%{$term}%");
+              ->orWhereHas('academicDepartment', function ($dq) use ($term) {
+                  $dq->where('name', 'LIKE', "%{$term}%");
+              });
         });
     }
 }

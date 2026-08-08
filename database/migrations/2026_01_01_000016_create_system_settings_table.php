@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -15,8 +16,7 @@ return new class extends Migration
         });
 
         // Seed default settings
-        DB::table('system_settings')->insert([
-            ['key' => 'active_term',           'value' => json_encode('2025-2026-2'),   'created_at' => now(), 'updated_at' => now()],
+        DB::table('system_settings')->insertOrIgnore([
             ['key' => 'idle_timeout',           'value' => json_encode(60),              'created_at' => now(), 'updated_at' => now()],
             ['key' => 'max_occupancy',          'value' => json_encode(200),             'created_at' => now(), 'updated_at' => now()],
             ['key' => 'show_occupancy',         'value' => json_encode(true),            'created_at' => now(), 'updated_at' => now()],

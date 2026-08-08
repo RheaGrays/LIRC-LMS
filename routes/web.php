@@ -51,7 +51,7 @@ Route::get('/api/academics', [AcademicController::class, 'apiData'])->name('api.
 Route::get('/api/patron-categories', [SettingsController::class, 'patronCategories'])->name('api.patron-categories');
 
 // Public API for Mobile App (Standalone Expo App)
-Route::post('/api/kiosk/process', [AttendanceController::class, 'process'])->name('api.kiosk.process');
+Route::post('/api/kiosk/process', [AttendanceController::class, 'process'])->name('api.kiosk.process')->middleware('throttle:30,1');
 
 // ── Admin Auth ────────────────────────────────────────────────
 Route::prefix('admin')->name('admin.')->group(function () {
@@ -78,18 +78,15 @@ Route::prefix('admin')->name('admin.')->middleware('auth.admin')->group(function
     // Students — view, add, edit (all roles)
     Route::get('/students',           [StudentController::class, 'index'])->name('students.index');
     Route::post('/students',          [StudentController::class, 'store'])->name('students.store');
+    Route::get('/students/export',    [StudentController::class, 'export'])->name('students.export');
     Route::get('/students/{id}/edit', [StudentController::class, 'edit'])->name('students.edit');
     Route::put('/students/{id}',      [StudentController::class, 'update'])->name('students.update');
-    Route::get('/students/export',    [StudentController::class, 'export'])->name('students.export');
 
     // Students — delete, import (Super Admin only)
     Route::middleware('admin.role:Super Admin')->group(function () {
         Route::delete('/students/{id}',   [StudentController::class, 'destroy'])->name('students.destroy');
         Route::post('/students/import',   [StudentController::class, 'import'])->name('students.import');
     });
-
-    // Scanner
-    Route::get('/scanner', [App\Http\Controllers\ScannerController::class, 'mobile'])->name('scanner.mobile');
 
     // Violations (all roles, except destroy)
     Route::get('/students/{id}/violations',        [ViolationController::class, 'index'])->name('violations.index');

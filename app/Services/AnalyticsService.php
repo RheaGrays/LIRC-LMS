@@ -28,10 +28,10 @@ class AnalyticsService
         
         switch ($period) {
             case 'today':
-                $query->whereDate('created_at', Carbon::today());
+                $query->whereDate('logged_at', Carbon::today());
                 
                 // Group by hour
-                $results = $query->select(DB::raw('HOUR(created_at) as hour'), DB::raw('count(*) as total'))
+                $results = $query->select(DB::raw('HOUR(logged_at) as hour'), DB::raw('count(*) as total'))
                     ->groupBy('hour')
                     ->orderBy('hour')
                     ->get()
@@ -46,9 +46,9 @@ class AnalyticsService
                 
             case 'week':
                 $startOfWeek = Carbon::now()->startOfWeek();
-                $query->where('created_at', '>=', $startOfWeek);
+                $query->where('logged_at', '>=', $startOfWeek);
                 
-                $results = $query->select(DB::raw('DATE(created_at) as date'), DB::raw('count(*) as total'))
+                $results = $query->select(DB::raw('DATE(logged_at) as date'), DB::raw('count(*) as total'))
                     ->groupBy('date')
                     ->orderBy('date')
                     ->get()
@@ -64,9 +64,9 @@ class AnalyticsService
                 
             case 'month':
                 $startOfMonth = Carbon::now()->startOfMonth();
-                $query->where('created_at', '>=', $startOfMonth);
+                $query->where('logged_at', '>=', $startOfMonth);
                 
-                $results = $query->select(DB::raw('DATE(created_at) as date'), DB::raw('count(*) as total'))
+                $results = $query->select(DB::raw('DATE(logged_at) as date'), DB::raw('count(*) as total'))
                     ->groupBy('date')
                     ->orderBy('date')
                     ->get()
@@ -84,9 +84,9 @@ class AnalyticsService
                 
             case 'year':
                 $startOfYear = Carbon::now()->startOfYear();
-                $query->where('created_at', '>=', $startOfYear);
+                $query->where('logged_at', '>=', $startOfYear);
                 
-                $results = $query->select(DB::raw('MONTH(created_at) as month'), DB::raw('count(*) as total'))
+                $results = $query->select(DB::raw('MONTH(logged_at) as month'), DB::raw('count(*) as total'))
                     ->groupBy('month')
                     ->orderBy('month')
                     ->get()
@@ -105,17 +105,18 @@ class AnalyticsService
     private function getDepartmentData(string $period)
     {
         $query = AttendanceLog::join('students', 'attendance_logs.student_id', '=', 'students.id')
+            ->leftJoin('academic_departments', 'students.department_id', '=', 'academic_departments.id')
             ->where('attendance_logs.action', 'check_in');
             
         switch ($period) {
-            case 'today': $query->whereDate('attendance_logs.created_at', Carbon::today()); break;
-            case 'week':  $query->where('attendance_logs.created_at', '>=', Carbon::now()->startOfWeek()); break;
-            case 'month': $query->where('attendance_logs.created_at', '>=', Carbon::now()->startOfMonth()); break;
-            case 'year':  $query->where('attendance_logs.created_at', '>=', Carbon::now()->startOfYear()); break;
+            case 'today': $query->whereDate('attendance_logs.logged_at', Carbon::today()); break;
+            case 'week':  $query->where('attendance_logs.logged_at', '>=', Carbon::now()->startOfWeek()); break;
+            case 'month': $query->where('attendance_logs.logged_at', '>=', Carbon::now()->startOfMonth()); break;
+            case 'year':  $query->where('attendance_logs.logged_at', '>=', Carbon::now()->startOfYear()); break;
         }
         
-        $results = $query->select('students.dept', DB::raw('count(*) as total'))
-            ->groupBy('students.dept')
+        $results = $query->select(DB::raw("COALESCE(academic_departments.name, 'Unknown') as department"), DB::raw('count(*) as total'))
+            ->groupBy('department')
             ->orderByDesc('total')
             ->get();
             
@@ -123,7 +124,7 @@ class AnalyticsService
         $values = [];
         
         foreach ($results as $row) {
-            $labels[] = $row->dept;
+            $labels[] = $row->department;
             $values[] = $row->total;
         }
         

@@ -20,7 +20,7 @@ return new class extends Migration
         });
 
         // Seed default collections
-        DB::table('library_collections')->insert([
+        DB::table('library_collections')->insertOrIgnore([
             [
                 'badge'       => 'Book Collection',
                 'badge_color' => '#c0392b',

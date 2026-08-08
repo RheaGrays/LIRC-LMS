@@ -11,12 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('academic_terms', function (Blueprint $table) {
+        Schema::create('violation_types', function (Blueprint $table) {
             $table->id();
             $table->string('name')->unique();
-            $table->date('start_date');
-            $table->date('end_date');
+            $table->text('description')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 
@@ -25,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('academic_terms');
+        Schema::dropIfExists('violation_types');
     }
 };

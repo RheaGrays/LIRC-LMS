@@ -164,7 +164,7 @@
                                     </div>
                                 </td>
                                 <td class="px-6 py-5">
-                                    <div class="text-gray-900 font-bold text-sm tracking-tight">{{ $student->department }}</div>
+                                    <div class="text-gray-900 font-bold text-sm tracking-tight">{{ $student->academicDepartment?->name ?? '—' }}</div>
                                     <div class="text-[13px] text-gray-500 font-medium mt-0.5">Reg: {{ $student->created_at->format('Y') }} as {{ $student->year_level }}</div>
                                 </td>
                                 <td class="px-6 py-5 text-center">

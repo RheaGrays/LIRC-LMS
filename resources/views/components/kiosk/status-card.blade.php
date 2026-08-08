@@ -55,8 +55,8 @@
                 </div>
                 <div class="h-10 w-px bg-gray-200 shrink-0"></div>
                 <div>
-                    <h4 class="text-[#08152c] font-bold text-[15px] mb-0.5">Please check the Student ID</h4>
-                    <p class="text-gray-500 text-[13px] m-0">Make sure the ID is correct and try again.</p>
+                    <h4 class="text-[#08152c] font-bold text-[15px] mb-0.5">Unregistered Student?</h4>
+                    <p class="text-gray-500 text-[13px] m-0">Check if the ID is correct, or register the student in the system first.</p>
                 </div>
             </div>
 

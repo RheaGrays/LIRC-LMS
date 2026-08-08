@@ -33,7 +33,7 @@ class AnalyticsController extends Controller
         } else {
             $now = now();
             if ($period === 'today') {
-                $query->where('logged_at', '>=', $now->startOfDay());
+                $query->where('logged_at', '>=', $now->copy()->startOfDay());
             } elseif ($period === 'week') {
                 $query->where('logged_at', '>=', $now->copy()->startOfWeek());
             } elseif ($period === 'month') {
@@ -85,9 +85,10 @@ class AnalyticsController extends Controller
         }
 
         // Process Department Data (Doughnut chart)
-        // Join students to group by department without loading all models
+        // Join students and academic_departments to group by department without loading all models
         $deptData = $deptQuery->join('students', 'attendance_logs.student_id', '=', 'students.id')
-            ->selectRaw("COALESCE(students.department, 'Unknown') as department, COUNT(*) as aggregate", [])
+            ->leftJoin('academic_departments', 'students.department_id', '=', 'academic_departments.id')
+            ->selectRaw("COALESCE(academic_departments.name, 'Unknown') as department, COUNT(*) as aggregate", [])
             ->groupBy('department')
             ->orderByDesc('aggregate')
             ->get();

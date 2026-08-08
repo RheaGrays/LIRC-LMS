@@ -40,14 +40,17 @@ class ApprovalController extends Controller
             ->take(2)
             ->implode('');
 
-        Admin::create([
+        $admin = Admin::create([
             'email'           => $approval->email,
-            'password'        => $approval->password_hash, // already bcrypt-hashed
+            'password'        => 'temporary', // will be overwritten
             'full_name'       => $approval->full_name,
             'role'            => $approval->role,
             'avatar_initials' => $initials,
             'is_active'       => true,
         ]);
+
+        // Bypass the 'hashed' cast — password_hash is already bcrypt'd
+        $admin->forceFill(['password' => $approval->password_hash])->saveQuietly();
 
         $approval->update(['status' => 'approved']);
 

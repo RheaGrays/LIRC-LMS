@@ -10,7 +10,6 @@ class SystemSettingSeeder extends Seeder
     public function run(): void
     {
         $defaults = [
-            'active_term'           => '2025-2026-2',
             'idle_timeout'          => 60,
             'max_occupancy'         => 200,
             'show_occupancy'        => true,

@@ -82,14 +82,20 @@ class StudentRegistrationController extends Controller
         $student->patron_category = $validated['patronCategory'];
 
         if ($isStudent) {
-            if ($validated['level'] === 'basic_ed') {
-                $student->department = $validated['college'];
-            } else {
-                $student->department = $validated['department'];
+            // Look up the department by name
+            $dept = \App\Models\AcademicDepartment::where('name', $validated['college'])->first();
+            $student->department_id = $dept?->id;
+
+            // Look up the program by name (for college level)
+            if ($validated['level'] === 'college' && !empty($validated['department'])) {
+                $prog = \App\Models\AcademicProgram::where('name', $validated['department'])->first();
+                $student->program_id = $prog?->id;
             }
+
             $student->year_level = $validated['yearLevel'];
         } else {
-            $student->department = null;
+            $student->department_id = null;
+            $student->program_id = null;
             $student->year_level = null;
         }
 
