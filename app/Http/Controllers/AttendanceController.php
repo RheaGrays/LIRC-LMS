@@ -95,30 +95,37 @@ class AttendanceController extends Controller
             ->first();
 
         if ($recentLog) {
-            return response()->json([
-                'status'    => 'success',
-                'action'    => $recentLog->action,
-                'message'   => 'Duplicate scan ignored (within 5-minute cooldown).',
-                'student'   => $this->formatStudent($student)
-            ]);
+            $event = [
+                'id'       => time() * 1000,
+                'status'   => 'success',
+                'action'   => $recentLog->action,
+                'message'  => 'Successfully checked in.',
+                'student'  => $this->formatStudent($student)
+            ];
+            \Illuminate\Support\Facades\Cache::put('kiosk_latest_scan_event', $event, 30);
+            return response()->json($event);
         }
 
         // Always log as check_in (as requested by librarian, no check-out)
         $nextAction = 'check_in';
 
         // Log action
-        AttendanceLog::create([
+        $log = AttendanceLog::create([
             'student_id' => $student->id,
             'action'     => $nextAction,
             'logged_at'  => now(),
         ]);
 
-        return response()->json([
+        $event = [
+            'id'      => $log->id,
             'status'  => 'success',
             'action'  => $nextAction,
             'message' => 'Successfully checked in.',
             'student' => $this->formatStudent($student)
-        ]);
+        ];
+        \Illuminate\Support\Facades\Cache::put('kiosk_latest_scan_event', $event, 30);
+
+        return response()->json($event);
     }
 
     /**
