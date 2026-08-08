@@ -20,7 +20,6 @@
         "foregroundImage": "./assets/CorJesu_Logo.png"
       },
       "package": "com.lynard.lemsmobilescanner",
-      "usesCleartextTraffic": true,
       "permissions": [
         "CAMERA",
         "INTERNET",
