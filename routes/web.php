@@ -80,6 +80,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth.admin')->group(function
 
     // Dashboard (all roles)
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/stats', [DashboardController::class, 'stats'])->name('dashboard.stats');
 
     // Students — view, add, edit (all roles)
     Route::get('/students',           [StudentController::class, 'index'])->name('students.index');

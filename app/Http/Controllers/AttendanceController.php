@@ -103,9 +103,9 @@ class AttendanceController extends Controller
 
                 if ($recentLog) {
                     return [
-                        'status'   => 'success',
+                        'status'   => 'cooldown',
                         'action'   => $recentLog->action,
-                        'message'  => $recentLog->action === 'check_out' ? 'Successfully checked out.' : 'Successfully checked in.',
+                        'message'  => 'Already ' . ($recentLog->action === 'check_out' ? 'checked out' : 'checked in') . ' (5-min cooldown active).',
                         'student'  => $this->formatStudent($student)
                     ];
                 }

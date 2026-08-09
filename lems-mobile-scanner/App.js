@@ -236,19 +236,19 @@ export default function App() {
                     {/* Status Tag Pill */}
                     <View style={[
                         styles.statusTag,
-                        result.status === 'success' ? styles.tagSuccess : result.status === 'offline' ? styles.tagOffline : styles.tagError
+                        result.status === 'success' ? styles.tagSuccess : (result.status === 'cooldown' ? styles.tagWarning : (result.status === 'offline' ? styles.tagOffline : styles.tagError))
                     ]}>
                         <Text style={[
                             styles.statusTagText,
-                            result.status === 'success' ? styles.textSuccess : result.status === 'offline' ? styles.textOffline : styles.textError
+                            result.status === 'success' ? styles.textSuccess : (result.status === 'cooldown' ? styles.textWarning : (result.status === 'offline' ? styles.textOffline : styles.textError))
                         ]}>
-                            {result.status === 'success' ? 'SUCCESS' : result.status === 'offline' ? 'SAVED OFFLINE' : 'SCAN ERROR'}
+                            {result.status === 'success' ? 'SUCCESS' : (result.status === 'cooldown' ? 'ALREADY CHECKED IN' : (result.status === 'offline' ? 'SAVED OFFLINE' : 'SCAN ERROR'))}
                         </Text>
                     </View>
 
                     {/* Title & Description */}
                     <Text style={styles.resultTitle}>
-                        {result.status === 'success' ? 'Check-in Recorded' : (result.status === 'offline' ? 'Queued Offline' : 'Process Error')}
+                        {result.status === 'success' ? 'Check-in Recorded' : (result.status === 'cooldown' ? 'Cooldown Active' : (result.status === 'offline' ? 'Queued Offline' : 'Process Error'))}
                     </Text>
                     
                     <Text style={styles.resultMessage}>{result.message}</Text>
@@ -524,6 +524,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#bbf7d0',
   },
+  tagWarning: {
+    backgroundColor: '#fef3c7',
+    borderWidth: 1,
+    borderColor: '#fde68a',
+  },
   tagOffline: {
     backgroundColor: '#dbeafe',
     borderWidth: 1,
@@ -541,6 +546,9 @@ const styles = StyleSheet.create({
   },
   textSuccess: {
     color: '#15803d',
+  },
+  textWarning: {
+    color: '#b45309',
   },
   textOffline: {
     color: '#1d4ed8',

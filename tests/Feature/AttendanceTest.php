@@ -97,7 +97,7 @@ class AttendanceTest extends TestCase
         $response = $this->postJson('/kiosk/process', ['student_id' => '2026-0001']);
         $response->assertStatus(200)
             ->assertJson([
-                'status' => 'success',
+                'status' => 'cooldown',
                 'action' => 'check_in',
             ]);
 
