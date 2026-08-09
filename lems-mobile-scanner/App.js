@@ -47,9 +47,9 @@ export default function App() {
   const saveSettings = async () => {
     if (!tempUrl.trim()) return;
     let url = tempUrl.trim();
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      url = 'http://' + url;
-    }
+    // Clean up duplicate protocol prefixes if user typed or pasted http://http://
+    url = url.replace(/^(https?:\/\/)+/i, '');
+    url = 'http://' + url;
     if (!url.endsWith('/api/kiosk/process')) {
       url = url.replace(/\/$/, '') + '/api/kiosk/process';
     }
