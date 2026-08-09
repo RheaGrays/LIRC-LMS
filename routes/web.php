@@ -101,8 +101,9 @@ Route::prefix('admin')->name('admin.')->middleware('auth.admin')->group(function
     Route::put('/violations/{vid}',                [ViolationController::class, 'update'])->name('violations.update');
 
     // Analytics (all roles)
-    Route::get('/analytics',      [AnalyticsController::class, 'index'])->name('analytics.index');
-    Route::get('/analytics/data', [AnalyticsController::class, 'data'])->name('analytics.data');
+    Route::get('/analytics',                      [AnalyticsController::class, 'index'])->name('analytics.index');
+    Route::get('/analytics/data',                 [AnalyticsController::class, 'data'])->name('analytics.data');
+    Route::get('/analytics/export-monthly-report',[AnalyticsController::class, 'exportMonthlyReport'])->name('analytics.export-monthly-report');
 
     // Audit log (all roles)
     Route::get('/audit', [AuditController::class, 'index'])->name('audit.index');

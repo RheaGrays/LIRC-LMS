@@ -3,10 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\AttendanceLog;
+use App\Models\Student;
+use App\Models\AcademicDepartment;
+use App\Models\AcademicProgram;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class AnalyticsController extends Controller
 {
@@ -15,7 +21,11 @@ class AnalyticsController extends Controller
         $terms = Cache::remember('academic_terms_all', 600, function () {
             return \App\Models\AcademicTerm::orderBy('start_date', 'desc')->get();
         });
-        return view('admin.analytics.index', compact('terms'));
+
+        $departments = AcademicDepartment::orderBy('name')->get();
+        $programs = AcademicProgram::orderBy('name')->get();
+
+        return view('admin.analytics.index', compact('terms', 'departments', 'programs'));
     }
 
     public function data(Request $request): JsonResponse
@@ -34,8 +44,93 @@ class AnalyticsController extends Controller
     }
 
     /**
-     * Fix #9: Database-agnostic analytics query logic.
-     * Uses Carbon & Collections instead of MySQL-specific HOUR() and DATE_FORMAT() functions.
+     * Generate & Download Monthly Attendance Report per Program in Excel (.xlsx) format.
+     */
+    public function exportMonthlyReport(Request $request)
+    {
+        $monthInput = $request->input('month', now()->format('Y-m')); // e.g. 2026-08
+        $programId  = $request->input('program_id');
+        $deptId     = $request->input('department_id');
+
+        $startDate  = Carbon::parse($monthInput)->startOfMonth();
+        $endDate    = Carbon::parse($monthInput)->endOfMonth();
+
+        $query = AttendanceLog::with(['student.academicDepartment', 'student.academicProgram'])
+            ->whereBetween('logged_at', [$startDate, $endDate]);
+
+        if ($programId) {
+            $query->whereHas('student', function ($q) use ($programId) {
+                $q->where('program_id', $programId);
+            });
+        }
+
+        if ($deptId) {
+            $query->whereHas('student', function ($q) use ($deptId) {
+                $q->where('department_id', $deptId);
+            });
+        }
+
+        $logs = $query->orderBy('logged_at', 'asc')->get();
+
+        $programName = $programId ? (AcademicProgram::find($programId)?->name ?? 'All Programs') : 'All Programs';
+        $deptName    = $deptId ? (AcademicDepartment::find($deptId)?->name ?? 'All Departments') : 'All Departments';
+        $monthLabel  = $startDate->format('F Y');
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Monthly Attendance');
+
+        // Header Titles
+        $sheet->setCellValue('A1', 'COR JESU COLLEGE — LIBRARY & INFORMATION RESOURCE CENTER');
+        $sheet->setCellValue('A2', "MONTHLY ATTENDANCE REPORT PER PROGRAM ({$monthLabel})");
+        $sheet->setCellValue('A3', "Program Filter: {$programName} | Department Filter: {$deptName}");
+
+        $sheet->getStyle('A1:A2')->getFont()->setBold(true);
+        $sheet->getStyle('A1')->getFont()->setSize(14);
+        $sheet->getStyle('A2')->getFont()->setSize(12);
+
+        // Table Columns
+        $headers = ['#', 'Date & Time', 'Student ID', 'Student Full Name', 'Category', 'Department', 'Program / Course', 'Year Level', 'Action'];
+        $sheet->fromArray($headers, null, 'A5');
+        $sheet->getStyle('A5:I5')->getFont()->setBold(true);
+
+        $rowNum = 6;
+        $counter = 1;
+        foreach ($logs as $log) {
+            $student = $log->student;
+            $sheet->fromArray([
+                $counter++,
+                $log->logged_at->format('Y-m-d h:i:s A'),
+                $log->student_id,
+                $student ? $student->full_name : $log->student_id,
+                $student ? $student->patron_category : 'Student',
+                $student?->academicDepartment?->name ?? '—',
+                $student?->academicProgram?->name ?? '—',
+                $student?->year_level ?? '—',
+                $log->action === 'check_in' ? 'CHECK-IN (ENTERED)' : 'CHECK-OUT (EXITED)',
+            ], null, 'A' . $rowNum);
+            $rowNum++;
+        }
+
+        // Summary Statistics Row
+        $sheet->setCellValue('A' . ($rowNum + 1), "Total Attendance Log Entries for {$monthLabel}: " . count($logs));
+        $sheet->getStyle('A' . ($rowNum + 1))->getFont()->setBold(true);
+
+        // Auto-fit column widths
+        foreach (range('A', 'I') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $filename = 'Monthly_Attendance_Report_' . str_replace(' ', '_', $programName) . '_' . $startDate->format('Y_m') . '.xlsx';
+        $writer   = IOFactory::createWriter($spreadsheet, 'Xlsx');
+
+        return response()->streamDownload(function() use ($writer) {
+            $writer->save('php://output');
+        }, $filename);
+    }
+
+    /**
+     * Database-agnostic analytics query logic.
      */
     private function buildAnalyticsData(string $period, ?string $termId): array
     {
@@ -63,17 +158,14 @@ class AnalyticsController extends Controller
             }
         }
 
-        // We clone query for department aggregation
         $deptQuery = clone $query;
 
-        // Fetch timestamps for database-agnostic traffic processing
         $logs = $query->get(['id', 'student_id', 'logged_at']);
 
         $trafficLabels = [];
         $trafficValues = [];
 
         if ($termId || $period === 'year') {
-            // Group by Month (e.g. "Jan 2026")
             $grouped = $logs->groupBy(function ($log) {
                 return Carbon::parse($log->logged_at)->format('Y-m');
             })->sortKeys();
@@ -83,7 +175,6 @@ class AnalyticsController extends Controller
                 $trafficValues[] = $group->count();
             }
         } elseif ($period === 'month' || $period === 'week') {
-            // Group by Day (e.g. "Jan 15 (Thu)")
             $grouped = $logs->groupBy(function ($log) {
                 return Carbon::parse($log->logged_at)->format('Y-m-d');
             })->sortKeys();
@@ -93,7 +184,6 @@ class AnalyticsController extends Controller
                 $trafficValues[] = $group->count();
             }
         } else {
-            // Group by Hour (Today) — 6 AM to 10 PM
             $hourlyCounts = $logs->groupBy(function ($log) {
                 return (int) Carbon::parse($log->logged_at)->format('G');
             });
@@ -105,7 +195,6 @@ class AnalyticsController extends Controller
             }
         }
 
-        // Department Data (Doughnut chart)
         $deptData = $deptQuery->join('students', 'attendance_logs.student_id', '=', 'students.id')
             ->leftJoin('academic_departments', 'students.department_id', '=', 'academic_departments.id')
             ->selectRaw("COALESCE(academic_departments.name, 'Unknown') as department, COUNT(*) as aggregate", [])
