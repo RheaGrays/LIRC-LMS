@@ -391,6 +391,20 @@ class AnalyticsController extends Controller
             $deptValues[] = (int) $row->aggregate;
         }
 
+        // Fallback to active student department ratio if no attendance logs match current filter
+        if (empty($deptLabels)) {
+            $studentDepts = Student::query()
+                ->leftJoin('academic_departments', 'students.department_id', '=', 'academic_departments.id')
+                ->selectRaw("COALESCE(academic_departments.name, 'College of Computing Studies') as department, COUNT(*) as aggregate", [])
+                ->groupBy('department')
+                ->get();
+
+            foreach ($studentDepts as $row) {
+                $deptLabels[] = $row->department;
+                $deptValues[] = (int) $row->aggregate;
+            }
+        }
+
         return [
             'traffic' => [
                 'labels' => $trafficLabels,

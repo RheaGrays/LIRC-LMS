@@ -137,7 +137,12 @@
         
         <!-- Main Line Chart -->
         <div class="lg:col-span-2 card p-6 bg-white flex flex-col relative min-h-[400px]">
-            <h3 class="text-base font-bold text-gray-800 mb-4">Traffic Volume</h3>
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-base font-bold text-gray-800">Traffic Volume</h3>
+                <template x-if="!loading && totalTraffic === 0">
+                    <span class="text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">No activity recorded for this period</span>
+                </template>
+            </div>
             
             <div x-show="loading" class="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center">
                 <div class="w-10 h-10 border-4 border-gray-200 border-t-[var(--cjc-red)] rounded-full animate-spin"></div>
@@ -174,6 +179,7 @@ function analyticsApp() {
         period: 'today',
         term_id: '',
         loading: true,
+        totalTraffic: 0,
         trafficChartInstance: null,
         deptChartInstance: null,
         
@@ -239,6 +245,8 @@ function analyticsApp() {
                 }
                 const response = await fetch(url);
                 const data = await response.json();
+                
+                this.totalTraffic = (data.traffic.values || []).reduce((a, b) => a + b, 0);
                 
                 if (this.trafficChartInstance) {
                     this.trafficChartInstance.data = {
