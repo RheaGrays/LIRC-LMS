@@ -41,28 +41,28 @@
                     <input type="hidden" name="format" :value="selectedFormat">
                     <label class="block text-[11px] font-bold uppercase tracking-wider text-gray-600 mb-1">Report Format</label>
                     
-                    <button type="button" @click="openFormatDropdown = !openFormatDropdown" @click.outside="openFormatDropdown = false" class="w-full sm:w-44 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:border-[var(--cjc-navy)] font-bold h-[42px] flex items-center justify-between gap-2 shadow-sm">
+                    <button type="button" @click="openFormatDropdown = !openFormatDropdown" @click.outside="openFormatDropdown = false" class="w-full sm:w-auto min-w-[175px] px-3.5 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:border-[var(--cjc-navy)] font-bold h-[42px] flex items-center justify-between gap-2 shadow-sm whitespace-nowrap">
                         <div class="flex items-center gap-2">
                             <template x-if="selectedFormat === 'excel'">
-                                <span class="flex items-center gap-1.5 text-emerald-700 font-bold">
+                                <span class="flex items-center gap-1.5 text-emerald-700 font-bold whitespace-nowrap">
                                     <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zM15.8 17.5L14 15l-1.8 2.5h-1.7l2.6-3.5-2.5-3.5h1.7l1.7 2.4 1.7-2.4h1.7l-2.5 3.5 2.6 3.5h-1.7zM13 9V3.5L18.5 9H13z"/></svg>
                                     Excel (.xlsx)
                                 </span>
                             </template>
                             <template x-if="selectedFormat === 'word'">
-                                <span class="flex items-center gap-1.5 text-blue-700 font-bold">
+                                <span class="flex items-center gap-1.5 text-blue-700 font-bold whitespace-nowrap">
                                     <svg class="w-4 h-4 text-blue-600 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm1.8 15.5h-1.6l-1.2-4.5-1.2 4.5H10.2L8.5 10h1.5l1.1 4.5 1.2-4.5h1.4l1.2 4.5 1.1-4.5h1.5l-1.7 7.5zM13 9V3.5L18.5 9H13z"/></svg>
                                     Word (.doc)
                                 </span>
                             </template>
                             <template x-if="selectedFormat === 'pdf'">
-                                <span class="flex items-center gap-1.5 text-red-700 font-bold">
+                                <span class="flex items-center gap-1.5 text-red-700 font-bold whitespace-nowrap">
                                     <svg class="w-4 h-4 text-red-600 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9.5 8.5c0 .8-.7 1.5-1.5 1.5H7v2H5.5V9H8c.8 0 1.5.7 1.5 1.5v1zm5 2c0 .8-.7 1.5-1.5 1.5h-2.5V9h2.5c.8 0 1.5.7 1.5 1.5v3zm3.5-3.5h-3v5H18v-1.5h-1.5v-1H18V10z"/></svg>
                                     PDF / Print
                                 </span>
                             </template>
                         </div>
-                        <svg class="w-4 h-4 text-gray-400 transition-transform" :class="{'rotate-180': openFormatDropdown}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        <svg class="w-4 h-4 text-gray-400 transition-transform shrink-0 ml-1" :class="{'rotate-180': openFormatDropdown}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                     </button>
 
                     <!-- Dropdown Options Menu -->
@@ -169,8 +169,8 @@
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-document.addEventListener('alpine:init', () => {
-    Alpine.data('analyticsApp', () => ({
+function analyticsApp() {
+    return {
         period: 'today',
         term_id: '',
         loading: true,
@@ -178,50 +178,56 @@ document.addEventListener('alpine:init', () => {
         deptChartInstance: null,
         
         init() {
-            // Wait a tick for canvas to render
-            this.$nextTick(() => {
+            setTimeout(() => {
                 this.initCharts();
                 this.fetchData();
-            });
+            }, 100);
         },
         
         initCharts() {
+            if (typeof Chart === 'undefined') return;
             Chart.defaults.font.family = 'Inter, sans-serif';
             Chart.defaults.color = '#64748b';
             
-            const trafficCtx = document.getElementById('trafficChart').getContext('2d');
-            this.trafficChartInstance = new Chart(trafficCtx, {
-                type: 'line',
-                data: { labels: [], datasets: [] },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: { mode: 'index', intersect: false },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: { backgroundColor: '#0f2744', padding: 12, cornerRadius: 8 }
-                    },
-                    scales: {
-                        y: { beginAtZero: true, grid: { borderDash: [4, 4], color: '#f1f5f9' }, ticks: { precision: 0 } },
-                        x: { grid: { display: false } }
+            const trafficCanvas = document.getElementById('trafficChart');
+            if (trafficCanvas && !this.trafficChartInstance) {
+                const trafficCtx = trafficCanvas.getContext('2d');
+                this.trafficChartInstance = new Chart(trafficCtx, {
+                    type: 'line',
+                    data: { labels: [], datasets: [] },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { backgroundColor: '#0f2744', padding: 12, cornerRadius: 8 }
+                        },
+                        scales: {
+                            y: { beginAtZero: true, grid: { borderDash: [4, 4], color: '#f1f5f9' }, ticks: { precision: 0 } },
+                            x: { grid: { display: false } }
+                        }
                     }
-                }
-            });
+                });
+            }
             
-            const deptCtx = document.getElementById('deptChart').getContext('2d');
-            this.deptChartInstance = new Chart(deptCtx, {
-                type: 'doughnut',
-                data: { labels: [], datasets: [] },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true } },
-                        tooltip: { backgroundColor: '#0f2744', padding: 12, cornerRadius: 8 }
-                    },
-                    cutout: '70%'
-                }
-            });
+            const deptCanvas = document.getElementById('deptChart');
+            if (deptCanvas && !this.deptChartInstance) {
+                const deptCtx = deptCanvas.getContext('2d');
+                this.deptChartInstance = new Chart(deptCtx, {
+                    type: 'doughnut',
+                    data: { labels: [], datasets: [] },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true } },
+                            tooltip: { backgroundColor: '#0f2744', padding: 12, cornerRadius: 8 }
+                        },
+                        cutout: '70%'
+                    }
+                });
+            }
         },
         
         async fetchData() {
@@ -234,38 +240,40 @@ document.addEventListener('alpine:init', () => {
                 const response = await fetch(url);
                 const data = await response.json();
                 
-                // Update Traffic Chart
-                this.trafficChartInstance.data = {
-                    labels: data.traffic.labels,
-                    datasets: [{
-                        label: 'Entries',
-                        data: data.traffic.values,
-                        borderColor: '#c41e2a',
-                        backgroundColor: 'rgba(196, 30, 42, 0.1)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.4,
-                        pointBackgroundColor: '#ffffff',
-                        pointBorderColor: '#c41e2a',
-                        pointBorderWidth: 2,
-                        pointRadius: 4,
-                        pointHoverRadius: 6
-                    }]
-                };
-                this.trafficChartInstance.update();
+                if (this.trafficChartInstance) {
+                    this.trafficChartInstance.data = {
+                        labels: data.traffic.labels,
+                        datasets: [{
+                            label: 'Entries',
+                            data: data.traffic.values,
+                            borderColor: '#c41e2a',
+                            backgroundColor: 'rgba(196, 30, 42, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#ffffff',
+                            pointBorderColor: '#c41e2a',
+                            pointBorderWidth: 2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        }]
+                    };
+                    this.trafficChartInstance.update();
+                }
                 
-                // Update Dept Chart
-                const colors = ['#c41e2a', '#d4a418', '#0f2744', '#3b82f6', '#10b981'];
-                this.deptChartInstance.data = {
-                    labels: data.departments.labels,
-                    datasets: [{
-                        data: data.departments.values,
-                        backgroundColor: colors.slice(0, data.departments.labels.length),
-                        borderWidth: 0,
-                        hoverOffset: 4
-                    }]
-                };
-                this.deptChartInstance.update();
+                if (this.deptChartInstance) {
+                    const colors = ['#c41e2a', '#d4a418', '#0f2744', '#3b82f6', '#10b981'];
+                    this.deptChartInstance.data = {
+                        labels: data.departments.labels,
+                        datasets: [{
+                            data: data.departments.values,
+                            backgroundColor: colors.slice(0, data.departments.labels.length),
+                            borderWidth: 0,
+                            hoverOffset: 4
+                        }]
+                    };
+                    this.deptChartInstance.update();
+                }
                 
             } catch (err) {
                 console.error("Failed to load analytics data", err);
@@ -273,7 +281,7 @@ document.addEventListener('alpine:init', () => {
                 this.loading = false;
             }
         }
-    }));
-});
+    };
+}
 </script>
 @endpush
