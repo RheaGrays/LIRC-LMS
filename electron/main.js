@@ -165,9 +165,13 @@ function createWindow() {
         mainWindow.maximize();
     }
 
-    // Security: Block all external navigation
+    // Security: Block non-local external navigation while permitting any private local network IP (192.168.x.x, 10.x.x.x, 127.0.0.1, localhost)
     mainWindow.webContents.on('will-navigate', (event, url) => {
-        if (!url.startsWith('http://127.0.0.1:8000') && !url.startsWith('http://192.168.100.14:8000')) {
+        const isLocal = url.startsWith('http://127.0.0.1') || 
+                        url.startsWith('http://localhost') || 
+                        url.startsWith('http://192.168.') || 
+                        url.startsWith('http://10.');
+        if (!isLocal) {
             event.preventDefault();
         }
     });
@@ -188,6 +192,38 @@ function createWindow() {
     const localTargetUrl = `http://127.0.0.1:8000${targetRoute}`;
     const networkTargetUrl = `http://192.168.100.14:8000${targetRoute}`;
 
+    const renderErrorPage = () => {
+        if (!mainWindow) return;
+        const html = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>LEMS Server Connection Error</title>
+                <style>
+                    body { font-family: system-ui, sans-serif; background: #0f172a; color: #fff; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }
+                    .card { background: #1e293b; border: 1px solid #334155; padding: 40px; border-radius: 20px; max-width: 480px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
+                    h2 { color: #f43f5e; margin-top: 0; }
+                    p { color: #94a3b8; font-size: 14px; line-height: 1.6; }
+                    .code { font-family: monospace; background: #020617; color: #38bdf8; padding: 10px; border-radius: 8px; font-size: 13px; margin: 15px 0; display: block; text-align: left; }
+                    button { background: #c41e3a; color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 14px; margin-top: 15px; }
+                    button:hover { background: #991b1b; }
+                </style>
+            </head>
+            <body>
+                <div class="card">
+                    <h2>Server Not Running</h2>
+                    <p>LEMS could not connect to the local server or host network server at <code>http://127.0.0.1:8000</code>.</p>
+                    <p><strong>To resolve this on the Host PC:</strong></p>
+                    <span class="code">1. Start MySQL in XAMPP<br>2. Run: php artisan serve --host=0.0.0.0 --port=8000</span>
+                    <button onclick="window.location.reload()">Retry Connection</button>
+                </div>
+            </body>
+            </html>
+        `;
+        mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+    };
+
     checkServerReady('http://127.0.0.1:8000/kiosk', (isLocalReady) => {
         if (!mainWindow) return;
         if (isLocalReady) {
@@ -196,7 +232,11 @@ function createWindow() {
             // Check network host IP if local server is not running
             checkServerReady('http://192.168.100.14:8000/kiosk', (isNetworkReady) => {
                 if (!mainWindow) return;
-                mainWindow.loadURL(isNetworkReady ? networkTargetUrl : localTargetUrl);
+                if (isNetworkReady) {
+                    mainWindow.loadURL(networkTargetUrl);
+                } else {
+                    renderErrorPage();
+                }
             });
         }
     });
