@@ -44,13 +44,14 @@ class AnalyticsController extends Controller
     }
 
     /**
-     * Generate & Download Monthly Attendance Report per Program in Excel (.xlsx) format.
+     * Generate & Download Monthly Attendance Report per Program in Excel (.xlsx), Word (.doc), or PDF format.
      */
     public function exportMonthlyReport(Request $request)
     {
         $monthInput = $request->input('month', now()->format('Y-m')); // e.g. 2026-08
         $programId  = $request->input('program_id');
         $deptId     = $request->input('department_id');
+        $format     = strtolower($request->input('format', 'excel')); // excel, word, pdf
 
         $startDate  = Carbon::parse($monthInput)->startOfMonth();
         $endDate    = Carbon::parse($monthInput)->endOfMonth();
@@ -76,6 +77,20 @@ class AnalyticsController extends Controller
         $deptName    = $deptId ? (AcademicDepartment::find($deptId)?->name ?? 'All Departments') : 'All Departments';
         $monthLabel  = $startDate->format('F Y');
 
+        if ($format === 'word' || $format === 'doc') {
+            return $this->exportWordReport($logs, $monthLabel, $programName, $deptName, $startDate);
+        }
+
+        if ($format === 'pdf') {
+            return $this->exportPdfReport($logs, $monthLabel, $programName, $deptName, $startDate);
+        }
+
+        // Default: Excel Export (.xlsx)
+        return $this->exportExcelReport($logs, $monthLabel, $programName, $deptName, $startDate);
+    }
+
+    private function exportExcelReport($logs, $monthLabel, $programName, $deptName, $startDate)
+    {
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Monthly Attendance');
@@ -127,6 +142,173 @@ class AnalyticsController extends Controller
         return response()->streamDownload(function() use ($writer) {
             $writer->save('php://output');
         }, $filename);
+    }
+
+    private function exportWordReport($logs, $monthLabel, $programName, $deptName, $startDate)
+    {
+        $filename = 'Monthly_Attendance_Report_' . str_replace(' ', '_', $programName) . '_' . $startDate->format('Y_m') . '.doc';
+
+        $rowsHtml = '';
+        $counter = 1;
+        foreach ($logs as $log) {
+            $student = $log->student;
+            $name = htmlspecialchars($student ? $student->full_name : $log->student_id);
+            $dept = htmlspecialchars($student?->academicDepartment?->name ?? '—');
+            $prog = htmlspecialchars($student?->academicProgram?->name ?? '—');
+            $action = $log->action === 'check_in' ? '<span style="color:#15803d;font-weight:bold;">CHECK-IN</span>' : '<span style="color:#b91c1c;font-weight:bold;">CHECK-OUT</span>';
+
+            $rowsHtml .= "
+                <tr>
+                    <td style='padding:6px;border:1px solid #cbd5e1;text-align:center;'>{$counter}</td>
+                    <td style='padding:6px;border:1px solid #cbd5e1;'>{$log->logged_at->format('Y-m-d h:i A')}</td>
+                    <td style='padding:6px;border:1px solid #cbd5e1;'>{$log->student_id}</td>
+                    <td style='padding:6px;border:1px solid #cbd5e1;'>{$name}</td>
+                    <td style='padding:6px;border:1px solid #cbd5e1;'>{$dept}</td>
+                    <td style='padding:6px;border:1px solid #cbd5e1;'>{$prog}</td>
+                    <td style='padding:6px;border:1px solid #cbd5e1;text-align:center;'>{$action}</td>
+                </tr>
+            ";
+            $counter++;
+        }
+
+        $html = "
+            <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+            <head>
+                <meta charset='utf-8'>
+                <title>Monthly Attendance Report</title>
+                <style>
+                    body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; color: #0f172a; }
+                    h1 { font-size: 16pt; color: #0f2744; margin-bottom: 4px; }
+                    h2 { font-size: 13pt; color: #c41e3a; margin-top: 0; margin-bottom: 12px; }
+                    .meta { font-size: 10pt; color: #475569; margin-bottom: 16px; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 10pt; }
+                    th { background-color: #0f2744; color: #ffffff; padding: 8px; border: 1px solid #0f2744; text-align: left; }
+                    .summary { margin-top: 20px; font-weight: bold; font-size: 11pt; color: #0f2744; }
+                </style>
+            </head>
+            <body>
+                <h1>COR JESU COLLEGE</h1>
+                <h2>Library & Information Resource Center — Monthly Attendance Report</h2>
+                <div class='meta'>
+                    <strong>Period:</strong> {$monthLabel}<br>
+                    <strong>Program Filter:</strong> {$programName}<br>
+                    <strong>Department Filter:</strong> {$deptName}<br>
+                    <strong>Generated Date:</strong> " . now()->format('F d, Y h:i A') . "
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Date & Time</th>
+                            <th>Student ID</th>
+                            <th>Student Name</th>
+                            <th>Department</th>
+                            <th>Program</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {$rowsHtml}
+                    </tbody>
+                </table>
+                <div class='summary'>Total Log Entries: " . count($logs) . "</div>
+            </body>
+            </html>
+        ";
+
+        return response($html)
+            ->header('Content-Type', 'application/msword')
+            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+    }
+
+    private function exportPdfReport($logs, $monthLabel, $programName, $deptName, $startDate)
+    {
+        $counter = 1;
+        $rowsHtml = '';
+        foreach ($logs as $log) {
+            $student = $log->student;
+            $name = htmlspecialchars($student ? $student->full_name : $log->student_id);
+            $dept = htmlspecialchars($student?->academicDepartment?->name ?? '—');
+            $prog = htmlspecialchars($student?->academicProgram?->name ?? '—');
+            $action = $log->action === 'check_in' 
+                ? '<span style="color:#15803d;font-weight:bold;background:#dcfce7;padding:2px 8px;border-radius:12px;">Entered</span>' 
+                : '<span style="color:#b91c1c;font-weight:bold;background:#fee2e2;padding:2px 8px;border-radius:12px;">Exited</span>';
+
+            $rowsHtml .= "
+                <tr>
+                    <td style='padding:8px;border-bottom:1px solid #e2e8f0;text-align:center;'>{$counter}</td>
+                    <td style='padding:8px;border-bottom:1px solid #e2e8f0;'>{$log->logged_at->format('Y-m-d h:i A')}</td>
+                    <td style='padding:8px;border-bottom:1px solid #e2e8f0;font-weight:600;'>{$log->student_id}</td>
+                    <td style='padding:8px;border-bottom:1px solid #e2e8f0;font-weight:600;'>{$name}</td>
+                    <td style='padding:8px;border-bottom:1px solid #e2e8f0;'>{$dept}</td>
+                    <td style='padding:8px;border-bottom:1px solid #e2e8f0;'>{$prog}</td>
+                    <td style='padding:8px;border-bottom:1px solid #e2e8f0;text-align:center;'>{$action}</td>
+                </tr>
+            ";
+            $counter++;
+        }
+
+        $html = "
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset='utf-8'>
+                <title>Monthly Attendance Report - {$monthLabel}</title>
+                <style>
+                    body { font-family: system-ui, -apple-system, sans-serif; background: #f8fafc; color: #0f172a; margin: 0; padding: 24px; }
+                    .header { background: #ffffff; padding: 24px; border-radius: 16px; border: 1px solid #e2e8f0; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+                    .brand { color: #c41e3a; font-weight: 800; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; }
+                    h1 { color: #0f2744; margin: 6px 0 12px 0; font-size: 22px; font-weight: 900; }
+                    .meta-grid { display: flex; gap: 24px; font-size: 13px; color: #475569; border-top: 1px solid #f1f5f9; padding-top: 12px; }
+                    table { width: 100%; border-collapse: collapse; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; font-size: 13px; }
+                    th { background-color: #0f2744; color: #ffffff; font-weight: 700; padding: 12px 8px; text-align: left; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
+                    .summary-card { background: #0f2744; color: #ffffff; padding: 16px 24px; border-radius: 12px; margin-top: 24px; display: flex; justify-content: space-between; align-items: center; }
+                    @media print {
+                        body { background: white; padding: 0; }
+                        .no-print { display: none; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class='no-print' style='margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;'>
+                    <button onclick='window.print()' style='background: #c41e3a; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer;'>🖨️ Print / Save as PDF</button>
+                    <span style='color: #64748b; font-size: 13px;'>Press Ctrl + P to save as PDF</span>
+                </div>
+                <div class='header'>
+                    <div class='brand'>Cor Jesu College — Library & Information Resource Center</div>
+                    <h1>Monthly Patron Attendance Report</h1>
+                    <div class='meta-grid'>
+                        <div><strong>Month:</strong> {$monthLabel}</div>
+                        <div><strong>Program:</strong> {$programName}</div>
+                        <div><strong>Department:</strong> {$deptName}</div>
+                        <div><strong>Total Logs:</strong> " . count($logs) . "</div>
+                    </div>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style='text-align:center;'>#</th>
+                            <th>Date & Time</th>
+                            <th>Student ID</th>
+                            <th>Student Name</th>
+                            <th>Department</th>
+                            <th>Program</th>
+                            <th style='text-align:center;'>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {$rowsHtml}
+                    </tbody>
+                </table>
+                <div class='summary-card'>
+                    <span>Cor Jesu College Library System</span>
+                    <span>Total Attendance Entries: <strong>" . count($logs) . "</strong></span>
+                </div>
+            </body>
+            </html>
+        ";
+
+        return response($html)->header('Content-Type', 'text/html');
     }
 
     /**

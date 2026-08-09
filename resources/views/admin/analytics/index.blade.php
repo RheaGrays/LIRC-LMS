@@ -18,7 +18,7 @@
                 <p class="text-sm text-gray-500 mt-1">Generate and download consolidated attendance logs aggregated per academic program and month.</p>
             </div>
             
-            <form action="{{ route('admin.analytics.export-monthly-report') }}" method="GET" class="w-full lg:w-auto flex flex-col sm:flex-row items-stretch sm:items-end gap-3 bg-gray-50 p-4 rounded-xl border border-gray-200">
+            <form action="{{ route('admin.analytics.export-monthly-report') }}" method="GET" target="_blank" class="w-full lg:w-auto flex flex-col sm:flex-row items-stretch sm:items-end gap-3 bg-gray-50 p-4 rounded-xl border border-gray-200">
                 <!-- Month Picker -->
                 <div>
                     <label class="block text-[11px] font-bold uppercase tracking-wider text-gray-600 mb-1">Select Month</label>
@@ -28,7 +28,7 @@
                 <!-- Program Dropdown -->
                 <div>
                     <label class="block text-[11px] font-bold uppercase tracking-wider text-gray-600 mb-1">Filter Program</label>
-                    <select name="program_id" class="no-tomselect w-full sm:w-56 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:border-[var(--cjc-navy)] font-medium h-[42px]">
+                    <select name="program_id" class="no-tomselect w-full sm:w-48 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:border-[var(--cjc-navy)] font-medium h-[42px]">
                         <option value="">All Programs</option>
                         @foreach($programs as $prog)
                             <option value="{{ $prog->id }}">{{ $prog->name }}</option>
@@ -36,11 +36,21 @@
                     </select>
                 </div>
 
+                <!-- Format Dropdown -->
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-gray-600 mb-1">Report Format</label>
+                    <select name="format" class="no-tomselect w-full sm:w-40 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:border-[var(--cjc-navy)] font-bold h-[42px]">
+                        <option value="excel">📊 Excel (.xlsx)</option>
+                        <option value="word">📄 Word (.doc)</option>
+                        <option value="pdf">📕 PDF / Print</option>
+                    </select>
+                </div>
+
                 <!-- Export Button -->
                 <div>
                     <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[var(--cjc-red)] hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-sm transition-all whitespace-nowrap h-[42px]">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                        Download Excel Report
+                        Generate Report
                     </button>
                 </div>
             </form>
