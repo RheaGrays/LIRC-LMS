@@ -24,9 +24,6 @@
                     </div>
                     <div class="w-px h-8 bg-[var(--border-warm)] mx-1"></div>
                     <div class="flex items-center gap-2">
-                        <a href="{{ route('about.index') }}" @click.stop class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[var(--cjc-navy)] font-['Inter'] no-underline px-4 py-1.5 border border-[var(--border-warm)] shadow-sm rounded-full bg-white/80 hover:bg-white transition-all backdrop-blur-md">
-                            ℹ️ About Us
-                        </a>
                         <a href="{{ route('register.index') }}" @click.stop class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[var(--cjc-navy)] font-['Inter'] no-underline px-4 py-1.5 border border-[var(--border-warm)] shadow-sm rounded-full bg-white/80 hover:bg-white transition-all backdrop-blur-md">
                             Register
                         </a>
@@ -36,6 +33,14 @@
                     </div>
                 </div>
             </header>
+
+            <!-- Bottom-Left Floating About Us Button -->
+            <div class="absolute bottom-6 left-8 z-30">
+                <button type="button" @click.stop="showAboutModal = true; aboutTab = 'system'" class="inline-flex items-center gap-2 text-[13px] font-bold text-[var(--cjc-navy)] font-['Inter'] px-4 py-2 border border-[var(--border-warm)] shadow-lg rounded-full bg-white/90 hover:bg-white hover:scale-105 transition-all backdrop-blur-md cursor-pointer">
+                    <span class="w-5 h-5 rounded-full bg-red-100 text-[var(--cjc-red)] flex items-center justify-center text-xs font-bold shrink-0">ℹ️</span>
+                    <span>About Us</span>
+                </button>
+            </div>
 
             <!-- Center -->
             <main class="flex-1 flex flex-col items-center justify-center px-12 gap-6 overflow-hidden">
@@ -246,7 +251,10 @@
 
                     <!-- Modal Footer -->
                     <div class="bg-gray-50 border-t border-gray-200 px-8 py-4 flex items-center justify-between shrink-0">
-                        <span class="text-xs text-gray-500 font-medium">Need immediate assistance? Visit the LIRC Help Desk.</span>
+                        <div class="flex items-center gap-3">
+                            <span class="text-xs text-gray-500 font-medium">Need immediate assistance? Visit the LIRC Help Desk.</span>
+                            <a href="{{ route('about.index') }}" target="_blank" class="text-xs text-[var(--cjc-red)] hover:underline font-bold">Open Full Page ↗</a>
+                        </div>
                         <button type="button" @click="showAboutModal = false" class="px-5 py-2 bg-[var(--cjc-navy)] hover:bg-[var(--cjc-navy-dark)] text-white text-xs font-bold rounded-xl transition-all cursor-pointer">
                             Close
                         </button>
