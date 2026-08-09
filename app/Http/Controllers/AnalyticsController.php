@@ -25,8 +25,8 @@ class AnalyticsController extends Controller
 
         $cacheKey = "analytics_data_{$period}_" . ($termId ?? 'none');
 
-        // Fix #11: Add caching layer (cache analytics for 5 minutes)
-        $data = Cache::remember($cacheKey, 300, function () use ($period, $termId) {
+        // Cache analytics data for 5 seconds for instant real-time chart updates
+        $data = Cache::remember($cacheKey, 5, function () use ($period, $termId) {
             return $this->buildAnalyticsData($period, $termId);
         });
 

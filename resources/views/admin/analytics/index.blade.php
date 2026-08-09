@@ -122,7 +122,7 @@ document.addEventListener('alpine:init', () => {
         async fetchData() {
             this.loading = true;
             try {
-                let url = `/admin/analytics/data?period=${this.period}`;
+                let url = `/admin/analytics/data?period=${this.period}&_t=${Date.now()}`;
                 if (this.term_id) {
                     url += `&term_id=${this.term_id}`;
                 }
