@@ -515,18 +515,16 @@ const registerApp = () => {
                 this.result = item;
                 this.fetchOccupancy();
                 
-                // Display duration: 1.8s if more events are waiting, 4.0s if queue is empty
-                const displayDuration = this.remoteQueue.length > 0 ? 1800 : 4000;
-                
+                // If more events are queued behind this one, display for 2s then switch;
+                // Otherwise keep current scan result displayed persistently on screen until staff clicks Next or next scan occurs.
                 clearTimeout(this.resetTimeout);
-                this.resetTimeout = setTimeout(() => {
-                    this.result = null;
-                    if (this.state === 'active' && !this.isCameraActive && this.tab === 'webcam') {
-                         this.initScanner();
-                    }
-                    this.handleActivity();
-                    nextEvent();
-                }, displayDuration);
+                if (this.remoteQueue.length > 0) {
+                    this.resetTimeout = setTimeout(() => {
+                        nextEvent();
+                    }, 2000);
+                } else {
+                    this.isDisplayingQueue = false;
+                }
             };
 
             nextEvent();
