@@ -18,22 +18,39 @@
                 <p class="text-sm text-gray-500 mt-1">Generate and download consolidated attendance logs aggregated per academic program and month.</p>
             </div>
             
-            <form action="{{ route('admin.analytics.export-monthly-report') }}" method="GET" target="_blank" class="w-full lg:w-auto flex flex-col sm:flex-row items-stretch sm:items-end gap-3 bg-gray-50 p-4 rounded-xl border border-gray-200">
+            <form action="{{ route('admin.analytics.export-monthly-report') }}" method="GET" @submit="if(window.showToast) window.showToast('Generating and downloading report...', 'info')" class="w-full lg:w-auto flex flex-col sm:flex-row items-stretch sm:items-end gap-3 bg-gray-50 p-4 rounded-xl border border-gray-200">
                 <!-- Month Picker -->
                 <div>
                     <label class="block text-[11px] font-bold uppercase tracking-wider text-gray-600 mb-1">Select Month</label>
                     <input type="month" name="month" value="{{ date('Y-m') }}" required class="w-full sm:w-auto px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:border-[var(--cjc-navy)] font-medium h-[42px]">
                 </div>
 
-                <!-- Program Dropdown -->
-                <div>
+                <!-- Custom Program Dropdown Selector -->
+                <div class="relative" x-data="{ 
+                    openProgDropdown: false, 
+                    selectedProgId: '', 
+                    selectedProgName: 'All Programs' 
+                }">
+                    <input type="hidden" name="program_id" :value="selectedProgId">
                     <label class="block text-[11px] font-bold uppercase tracking-wider text-gray-600 mb-1">Filter Program</label>
-                    <select name="program_id" class="no-tomselect w-full sm:w-48 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:border-[var(--cjc-navy)] font-medium h-[42px]">
-                        <option value="">All Programs</option>
+                    
+                    <button type="button" @click="openProgDropdown = !openProgDropdown" @click.outside="openProgDropdown = false" class="w-full sm:w-56 px-3.5 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:border-[var(--cjc-navy)] font-semibold h-[42px] flex items-center justify-between gap-2 shadow-sm whitespace-nowrap">
+                        <span class="truncate" x-text="selectedProgName">All Programs</span>
+                        <svg class="w-4 h-4 text-gray-400 transition-transform shrink-0" :class="{'rotate-180': openProgDropdown}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+
+                    <!-- Dropdown Options Menu -->
+                    <div x-show="openProgDropdown" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="transform opacity-0 scale-95" x-transition:enter-end="transform opacity-100 scale-100" class="absolute left-0 mt-1 w-64 max-h-60 overflow-y-auto bg-white rounded-xl shadow-xl border border-gray-200 py-1.5 z-50">
+                        <button type="button" @click="selectedProgId = ''; selectedProgName = 'All Programs'; openProgDropdown = false" class="w-full px-3.5 py-2 text-left text-sm font-semibold flex items-center gap-2 hover:bg-gray-100 text-gray-800 transition-colors" :class="{'bg-red-50 text-[var(--cjc-red)] font-bold': selectedProgId === ''}">
+                            <span>🎓</span>
+                            <span>All Programs</span>
+                        </button>
                         @foreach($programs as $prog)
-                            <option value="{{ $prog->id }}">{{ $prog->name }}</option>
+                            <button type="button" @click="selectedProgId = '{{ $prog->id }}'; selectedProgName = '{{ addslashes($prog->name) }}'; openProgDropdown = false" class="w-full px-3.5 py-2 text-left text-sm font-medium hover:bg-gray-100 text-gray-700 transition-colors truncate" :class="{'bg-red-50 text-[var(--cjc-red)] font-bold': selectedProgId === '{{ $prog->id }}'}">
+                                {{ $prog->name }}
+                            </button>
                         @endforeach
-                    </select>
+                    </div>
                 </div>
 
                 <!-- Custom Format Dropdown Selector -->
