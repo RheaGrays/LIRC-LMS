@@ -6,6 +6,7 @@ use App\Models\AttendanceLog;
 use App\Models\Student;
 use App\Models\AcademicDepartment;
 use App\Models\AcademicProgram;
+use App\Models\AcademicTerm;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,11 +20,11 @@ class AnalyticsController extends Controller
     public function index()
     {
         $terms = Cache::remember('academic_terms_all', 600, function () {
-            return \App\Models\AcademicTerm::orderBy('start_date', 'desc')->get();
+            return AcademicTerm::orderBy('start_date', 'desc')->get();
         });
 
         $departments = AcademicDepartment::orderBy('name')->get();
-        $programs = AcademicProgram::orderBy('name')->get();
+        $programs    = AcademicProgram::orderBy('name')->get();
 
         return view('admin.analytics.index', compact('terms', 'departments', 'programs'));
     }
@@ -44,27 +45,62 @@ class AnalyticsController extends Controller
     }
 
     /**
-     * Generate & Download Monthly Attendance Report per Program in Excel (.xlsx), Word (.doc), or PDF format.
+     * Unified Multi-Filter Report Generator
+     * Filters: School Year (Term), Month, Program, and Type (Excel, Word, PDF)
      */
     public function exportMonthlyReport(Request $request)
     {
-        $monthInput = $request->input('month', now()->format('Y-m')); // e.g. 2026-08
+        $termId     = $request->input('term_id');
+        $schoolYear = $request->input('school_year'); // e.g. "AY 2026-2027" or "2026"
+        $monthInput = $request->input('month');       // e.g. "08", "2026-08", or ""
         $programId  = $request->input('program_id');
         $deptId     = $request->input('department_id');
         $format     = strtolower($request->input('format', 'excel')); // excel, word, pdf
 
-        $startDate  = Carbon::parse($monthInput)->startOfMonth();
-        $endDate    = Carbon::parse($monthInput)->endOfMonth();
+        $query = AttendanceLog::with(['student.academicDepartment', 'student.academicProgram']);
 
-        $query = AttendanceLog::with(['student.academicDepartment', 'student.academicProgram'])
-            ->whereBetween('logged_at', [$startDate, $endDate]);
+        $schoolYearLabel = 'All School Years';
+        $monthLabel      = 'All Months';
 
+        // 1. Filter by School Year / Academic Term
+        if ($termId) {
+            $term = AcademicTerm::find($termId);
+            if ($term) {
+                $query->whereBetween('logged_at', [$term->start_date->startOfDay(), $term->end_date->endOfDay()]);
+                $schoolYearLabel = $term->name;
+            }
+        } elseif ($schoolYear) {
+            $yearNum = (int) preg_replace('/[^0-9]/', '', substr($schoolYear, 0, 8)) ?: now()->year;
+            $query->whereYear('logged_at', $yearNum);
+            $schoolYearLabel = "AY {$yearNum}-" . ($yearNum + 1);
+        } else {
+            $schoolYearLabel = "AY " . now()->format('Y') . "-" . (now()->year + 1);
+        }
+
+        // 2. Filter by Month
+        if (!empty($monthInput)) {
+            if (strlen($monthInput) === 7) { // e.g. "2026-08"
+                $startDate = Carbon::parse($monthInput)->startOfMonth();
+                $endDate   = Carbon::parse($monthInput)->endOfMonth();
+                $query->whereBetween('logged_at', [$startDate, $endDate]);
+                $monthLabel = $startDate->format('F Y');
+            } else { // e.g. "8" or "08" (August)
+                $monthNum = (int) $monthInput;
+                if ($monthNum >= 1 && $monthNum <= 12) {
+                    $query->whereMonth('logged_at', $monthNum);
+                    $monthLabel = Carbon::create()->month($monthNum)->format('F');
+                }
+            }
+        }
+
+        // 3. Filter by Program
         if ($programId) {
             $query->whereHas('student', function ($q) use ($programId) {
                 $q->where('program_id', $programId);
             });
         }
 
+        // 4. Filter by Department
         if ($deptId) {
             $query->whereHas('student', function ($q) use ($deptId) {
                 $q->where('department_id', $deptId);
@@ -75,30 +111,29 @@ class AnalyticsController extends Controller
 
         $programName = $programId ? (AcademicProgram::find($programId)?->name ?? 'All Programs') : 'All Programs';
         $deptName    = $deptId ? (AcademicDepartment::find($deptId)?->name ?? 'All Departments') : 'All Departments';
-        $monthLabel  = $startDate->format('F Y');
 
         if ($format === 'word' || $format === 'doc') {
-            return $this->exportWordReport($logs, $monthLabel, $programName, $deptName, $startDate);
+            return $this->exportWordReport($logs, $schoolYearLabel, $monthLabel, $programName, $deptName);
         }
 
         if ($format === 'pdf') {
-            return $this->exportPdfReport($logs, $monthLabel, $programName, $deptName, $startDate);
+            return $this->exportPdfReport($logs, $schoolYearLabel, $monthLabel, $programName, $deptName);
         }
 
         // Default: Excel Export (.xlsx)
-        return $this->exportExcelReport($logs, $monthLabel, $programName, $deptName, $startDate);
+        return $this->exportExcelReport($logs, $schoolYearLabel, $monthLabel, $programName, $deptName);
     }
 
-    private function exportExcelReport($logs, $monthLabel, $programName, $deptName, $startDate)
+    private function exportExcelReport($logs, $schoolYearLabel, $monthLabel, $programName, $deptName)
     {
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('Monthly Attendance');
+        $sheet->setTitle('Attendance Report');
 
         // Header Titles
         $sheet->setCellValue('A1', 'COR JESU COLLEGE — LIBRARY & INFORMATION RESOURCE CENTER');
-        $sheet->setCellValue('A2', "MONTHLY ATTENDANCE REPORT PER PROGRAM ({$monthLabel})");
-        $sheet->setCellValue('A3', "Program Filter: {$programName} | Department Filter: {$deptName}");
+        $sheet->setCellValue('A2', "OFFICIAL ATTENDANCE REPORT PER PROGRAM");
+        $sheet->setCellValue('A3', "School Year: {$schoolYearLabel} | Month: {$monthLabel} | Program: {$programName}");
 
         $sheet->getStyle('A1:A2')->getFont()->setBold(true);
         $sheet->getStyle('A1')->getFont()->setSize(14);
@@ -128,7 +163,7 @@ class AnalyticsController extends Controller
         }
 
         // Summary Statistics Row
-        $sheet->setCellValue('A' . ($rowNum + 1), "Total Attendance Log Entries for {$monthLabel}: " . count($logs));
+        $sheet->setCellValue('A' . ($rowNum + 1), "Total Log Entries: " . count($logs));
         $sheet->getStyle('A' . ($rowNum + 1))->getFont()->setBold(true);
 
         // Auto-fit column widths
@@ -136,7 +171,7 @@ class AnalyticsController extends Controller
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 
-        $filename = 'Monthly_Attendance_Report_' . str_replace(' ', '_', $programName) . '_' . $startDate->format('Y_m') . '.xlsx';
+        $filename = 'Attendance_Report_' . str_replace(' ', '_', $schoolYearLabel) . '_' . str_replace(' ', '_', $monthLabel) . '.xlsx';
         $writer   = IOFactory::createWriter($spreadsheet, 'Xlsx');
 
         return response()->streamDownload(function() use ($writer) {
@@ -144,9 +179,9 @@ class AnalyticsController extends Controller
         }, $filename);
     }
 
-    private function exportWordReport($logs, $monthLabel, $programName, $deptName, $startDate)
+    private function exportWordReport($logs, $schoolYearLabel, $monthLabel, $programName, $deptName)
     {
-        $filename = 'Monthly_Attendance_Report_' . str_replace(' ', '_', $programName) . '_' . $startDate->format('Y_m') . '.doc';
+        $filename = 'Attendance_Report_' . str_replace(' ', '_', $schoolYearLabel) . '_' . str_replace(' ', '_', $monthLabel) . '.doc';
 
         $rowsHtml = '';
         $counter = 1;
@@ -175,7 +210,7 @@ class AnalyticsController extends Controller
             <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
             <head>
                 <meta charset='utf-8'>
-                <title>Monthly Attendance Report</title>
+                <title>Attendance Report</title>
                 <style>
                     body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; color: #0f172a; }
                     h1 { font-size: 16pt; color: #0f2744; margin-bottom: 4px; }
@@ -188,11 +223,11 @@ class AnalyticsController extends Controller
             </head>
             <body>
                 <h1>COR JESU COLLEGE</h1>
-                <h2>Library & Information Resource Center — Monthly Attendance Report</h2>
+                <h2>Library & Information Resource Center — Attendance Report</h2>
                 <div class='meta'>
-                    <strong>Period:</strong> {$monthLabel}<br>
+                    <strong>School Year:</strong> {$schoolYearLabel}<br>
+                    <strong>Month:</strong> {$monthLabel}<br>
                     <strong>Program Filter:</strong> {$programName}<br>
-                    <strong>Department Filter:</strong> {$deptName}<br>
                     <strong>Generated Date:</strong> " . now()->format('F d, Y h:i A') . "
                 </div>
                 <table>
@@ -221,7 +256,7 @@ class AnalyticsController extends Controller
             ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
     }
 
-    private function exportPdfReport($logs, $monthLabel, $programName, $deptName, $startDate)
+    private function exportPdfReport($logs, $schoolYearLabel, $monthLabel, $programName, $deptName)
     {
         $counter = 1;
         $rowsHtml = '';
@@ -253,7 +288,7 @@ class AnalyticsController extends Controller
             <html>
             <head>
                 <meta charset='utf-8'>
-                <title>Monthly Attendance Report - {$monthLabel}</title>
+                <title>Attendance Report - {$schoolYearLabel}</title>
                 <style>
                     body { font-family: system-ui, -apple-system, sans-serif; background: #f8fafc; color: #0f172a; margin: 0; padding: 24px; }
                     .header { background: #ffffff; padding: 24px; border-radius: 16px; border: 1px solid #e2e8f0; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
@@ -276,11 +311,11 @@ class AnalyticsController extends Controller
                 </div>
                 <div class='header'>
                     <div class='brand'>Cor Jesu College — Library & Information Resource Center</div>
-                    <h1>Monthly Patron Attendance Report</h1>
+                    <h1>Official Patron Attendance Report</h1>
                     <div class='meta-grid'>
+                        <div><strong>School Year:</strong> {$schoolYearLabel}</div>
                         <div><strong>Month:</strong> {$monthLabel}</div>
                         <div><strong>Program:</strong> {$programName}</div>
-                        <div><strong>Department:</strong> {$deptName}</div>
                         <div><strong>Total Logs:</strong> " . count($logs) . "</div>
                     </div>
                 </div>
@@ -320,7 +355,7 @@ class AnalyticsController extends Controller
 
         // Apply Date Filters
         if ($termId) {
-            $term = \App\Models\AcademicTerm::find($termId, ['*']);
+            $term = AcademicTerm::find($termId, ['*']);
             if ($term) {
                 $query->whereBetween('logged_at', [
                     $term->start_date->startOfDay(), 

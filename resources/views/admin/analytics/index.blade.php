@@ -155,23 +155,34 @@ function analyticsApp() {
                 <p class="text-sm text-gray-500 mt-1">Generate and download consolidated attendance logs aggregated per academic program and month.</p>
             </div>
             
-            <form action="{{ route('admin.analytics.export-monthly-report') }}" method="GET" @submit="if(window.showToast) window.showToast('Generating and downloading report...', 'info')" class="w-full lg:w-auto flex flex-col sm:flex-row items-stretch sm:items-end gap-3 bg-gray-50 p-4 rounded-xl border border-gray-200">
-                <!-- Month Picker -->
+            <form action="{{ route('admin.analytics.export-monthly-report') }}" method="GET" @submit="if(window.showToast) window.showToast('Generating and downloading report...', 'info')" class="w-full flex flex-col xl:flex-row items-stretch xl:items-end gap-3 bg-gray-50 p-4 rounded-xl border border-gray-200">
+                <!-- 1. School Year Filter -->
                 <div>
-                    <label class="block text-[11px] font-bold uppercase tracking-wider text-gray-600 mb-1">Select Month</label>
-                    <input type="month" name="month" value="{{ date('Y-m') }}" required class="w-full sm:w-auto px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:border-[var(--cjc-navy)] font-medium h-[42px]">
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-gray-600 mb-1">School Year</label>
+                    <select name="term_id" class="no-tomselect w-full xl:w-48 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:border-[var(--cjc-navy)] font-semibold h-[42px]">
+                        <option value="">AY {{ date('Y') }}-{{ date('Y') + 1 }} (Current)</option>
+                        @foreach($terms as $term)
+                            <option value="{{ $term->id }}">{{ $term->name }}</option>
+                        @endforeach
+                    </select>
                 </div>
 
-                <!-- Custom Program Dropdown Selector -->
+                <!-- 2. Month Filter -->
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-gray-600 mb-1">Month</label>
+                    <input type="month" name="month" value="{{ date('Y-m') }}" class="w-full xl:w-auto px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:border-[var(--cjc-navy)] font-semibold h-[42px]">
+                </div>
+
+                <!-- 3. Program Filter -->
                 <div class="relative" x-data="{ 
                     openProgDropdown: false, 
                     selectedProgId: '', 
                     selectedProgName: 'All Programs' 
                 }">
                     <input type="hidden" name="program_id" :value="selectedProgId">
-                    <label class="block text-[11px] font-bold uppercase tracking-wider text-gray-600 mb-1">Filter Program</label>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-gray-600 mb-1">Program</label>
                     
-                    <button type="button" @click="openProgDropdown = !openProgDropdown" @click.outside="openProgDropdown = false" class="w-full sm:w-56 px-3.5 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:border-[var(--cjc-navy)] font-semibold h-[42px] flex items-center justify-between gap-2 shadow-sm whitespace-nowrap">
+                    <button type="button" @click="openProgDropdown = !openProgDropdown" @click.outside="openProgDropdown = false" class="w-full xl:w-56 px-3.5 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:border-[var(--cjc-navy)] font-semibold h-[42px] flex items-center justify-between gap-2 shadow-sm whitespace-nowrap">
                         <span class="truncate" x-text="selectedProgName">All Programs</span>
                         <svg class="w-4 h-4 text-gray-400 transition-transform shrink-0" :class="{'rotate-180': openProgDropdown}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                     </button>
@@ -190,12 +201,12 @@ function analyticsApp() {
                     </div>
                 </div>
 
-                <!-- Custom Format Dropdown Selector -->
+                <!-- 4. Format / Type Selector -->
                 <div class="relative" x-data="{ openFormatDropdown: false, selectedFormat: 'excel' }">
                     <input type="hidden" name="format" :value="selectedFormat">
-                    <label class="block text-[11px] font-bold uppercase tracking-wider text-gray-600 mb-1">Report Format</label>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-gray-600 mb-1">Type / Format</label>
                     
-                    <button type="button" @click="openFormatDropdown = !openFormatDropdown" @click.outside="openFormatDropdown = false" class="w-full sm:w-auto min-w-[175px] px-3.5 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:border-[var(--cjc-navy)] font-bold h-[42px] flex items-center justify-between gap-2 shadow-sm whitespace-nowrap">
+                    <button type="button" @click="openFormatDropdown = !openFormatDropdown" @click.outside="openFormatDropdown = false" class="w-full xl:w-auto min-w-[175px] px-3.5 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:border-[var(--cjc-navy)] font-bold h-[42px] flex items-center justify-between gap-2 shadow-sm whitespace-nowrap">
                         <div class="flex items-center gap-2">
                             <template x-if="selectedFormat === 'excel'">
                                 <span class="flex items-center gap-1.5 text-emerald-700 font-bold whitespace-nowrap">
@@ -255,8 +266,8 @@ function analyticsApp() {
 
                 <!-- Export Button -->
                 <div>
-                    <label class="block text-[11px] font-bold uppercase tracking-wider text-transparent select-none mb-1 hidden sm:block">&nbsp;</label>
-                    <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[var(--cjc-red)] hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-sm transition-all whitespace-nowrap h-[42px]">
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-transparent select-none mb-1 hidden xl:block">&nbsp;</label>
+                    <button type="submit" class="w-full xl:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[var(--cjc-red)] hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-sm transition-all whitespace-nowrap h-[42px]">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                         Generate Report
                     </button>
