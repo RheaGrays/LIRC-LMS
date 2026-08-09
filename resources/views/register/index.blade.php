@@ -424,8 +424,86 @@
                         </p>
                     </div>
 
-                    <!-- Webcam Component -->
-                    <div x-data="webcamApp">
+                    <!-- Photo Mode Selector Tabs -->
+                    <div class="flex bg-[var(--bg-cream-2)] p-1 rounded-[var(--radius-md)] border border-[var(--border-warm)] w-full max-w-sm">
+                        <button type="button" @click="photoSyncMode = 'mobile'"
+                                class="flex-1 py-1.5 px-3 rounded-[var(--radius-sm)] text-xs font-semibold font-['Inter'] transition-all duration-150 flex items-center justify-center gap-1.5"
+                                :class="photoSyncMode === 'mobile' ? 'bg-white text-[var(--cjc-navy)] shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--cjc-navy)]'">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><path d="M12 18h.01"/></svg>
+                            Mobile Phone / QR Sync
+                        </button>
+                        <button type="button" @click="photoSyncMode = 'webcam'"
+                                class="flex-1 py-1.5 px-3 rounded-[var(--radius-sm)] text-xs font-semibold font-['Inter'] transition-all duration-150 flex items-center justify-center gap-1.5"
+                                :class="photoSyncMode === 'webcam' ? 'bg-white text-[var(--cjc-navy)] shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--cjc-navy)]'">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                            PC Webcam
+                        </button>
+                    </div>
+
+                    <!-- CAPTURED PHOTO DISPLAY (If photo already captured/synced) -->
+                    <div x-show="capturedImage" class="flex flex-col items-center gap-4">
+                        <div class="w-[220px] h-[270px] rounded-[var(--radius-lg)] border-2 border-[var(--cjc-navy)] overflow-hidden shadow-lg relative bg-black">
+                            <img :src="capturedImage" class="w-full h-full object-cover" />
+                            <div class="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-green-600 flex items-center justify-center text-white shadow-md">
+                                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 4" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-green-700 font-semibold font-['Inter'] flex items-center gap-1">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                Photo Captured Successfully
+                            </span>
+                            <button type="button" @click="capturedImage = null; photoTaken = false; if(photoSyncMode === 'mobile') startPhotoSyncSession();" class="text-xs text-[var(--cjc-red)] underline font-medium hover:text-red-800 ml-2">
+                                Change / Retake
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- MODE 1: Mobile Phone QR Code Sync -->
+                    <div x-show="photoSyncMode === 'mobile' && !capturedImage" class="w-full flex flex-col items-center gap-4">
+                        <div class="bg-[var(--bg-cream-2)] border border-[var(--border-warm)] rounded-[var(--radius-lg)] p-5 text-center flex flex-col items-center gap-3 w-full max-w-md shadow-sm">
+                            
+                            <!-- QR Code Display -->
+                            <div class="bg-white p-3 border border-[var(--border-light)] rounded-[var(--radius-md)] shadow-sm relative">
+                                <template x-if="photoSyncMobileUrl">
+                                    <img :src="`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(photoSyncMobileUrl)}`"
+                                         alt="Scan QR Code to Capture Photo" class="w-[180px] h-[180px] object-contain" />
+                                </template>
+                                <template x-if="!photoSyncMobileUrl">
+                                    <div class="w-[180px] h-[180px] bg-gray-100 flex items-center justify-center text-xs text-gray-400">
+                                        Generating QR Code…
+                                    </div>
+                                </template>
+                            </div>
+
+                            <!-- Pair Code Badge -->
+                            <div class="flex flex-col items-center gap-1">
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-[var(--text-subtle)] font-['Inter']">Pairing Session Code</span>
+                                <span class="font-['JetBrains_Mono'] text-xl font-bold tracking-widest text-[var(--cjc-navy)] bg-white px-4 py-1 border border-[var(--border-warm)] rounded-md shadow-inner" x-text="photoSyncSessionId || 'LOADING…'"></span>
+                            </div>
+
+                            <div class="text-left w-full bg-white border border-[var(--border-light)] rounded-md p-3 text-xs text-[var(--text-muted)] leading-relaxed space-y-1.5">
+                                <p class="m-0 font-semibold text-[var(--cjc-navy)] flex items-center gap-1">
+                                    <svg class="w-4 h-4 text-blue-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                                    How to take photo with Mobile Phone:
+                                </p>
+                                <ol class="m-0 pl-4 list-decimal text-[11px] space-y-1">
+                                    <li>Scan the QR code above with <strong>any smartphone camera</strong>.</li>
+                                    <li>Or open the <strong>LEMS Mobile App</strong> and enter Pair Code above.</li>
+                                    <li>Snap the photo on mobile — it will <strong>automatically sync live</strong> to this screen!</li>
+                                </ol>
+                            </div>
+
+                            <!-- Live Waiting Indicator -->
+                            <div class="flex items-center gap-2 px-3.5 py-1.5 bg-blue-50 border border-blue-200 rounded-full text-blue-800 text-[11px] font-medium animate-pulse">
+                                <span class="w-2 h-2 rounded-full bg-blue-600 block"></span>
+                                Waiting for mobile camera photo sync…
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- MODE 2: PC Webcam Component -->
+                    <div x-show="photoSyncMode === 'webcam' && !capturedImage" x-data="webcamApp">
                         <div class="flex flex-col items-center gap-4">
                             <!-- Viewfinder -->
                             <div class="w-[280px] h-[340px] rounded-[var(--radius-lg)] border border-[var(--border-light)] relative overflow-hidden bg-[#0a0a0a] flex items-center justify-center">
@@ -468,13 +546,6 @@
                                     </div>
                                 </template>
 
-                                <!-- Checkmark -->
-                                <div x-show="captured" class="absolute top-2.5 right-2.5 w-[30px] h-[30px] rounded-full bg-[#16a34a] flex items-center justify-center" style="display: none;">
-                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                                        <path d="M3 8l3.5 3.5L13 4" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    </svg>
-                                </div>
-
                                 <!-- Live indicator -->
                                 <div x-show="!captured && status === 'ready'" class="absolute top-2.5 left-2.5 flex items-center gap-1.5 bg-black/50 rounded-full px-2 py-[3px]" style="display: none;">
                                     <span class="w-1.5 h-1.5 rounded-full bg-[#ef4444] block animate-pulse"></span>
@@ -495,19 +566,7 @@
                                     </svg>
                                     Capture Photo
                                 </button>
-                                
-                                <button x-show="captured" @click="handleRetake()" style="display: none;"
-                                        class="px-7 py-2.5 bg-transparent text-[var(--text-muted)] border border-[var(--border-warm)] rounded-[var(--radius-md)] text-[13px] font-medium font-['Inter'] cursor-pointer flex items-center gap-2">
-                                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                                        <path d="M1 7A6 6 0 1013 7M1 7V3M1 7H5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                    </svg>
-                                    Retake Photo
-                                </button>
                             </div>
-                            
-                            <p class="text-[11px] text-[var(--text-subtle)] font-['Inter'] text-center m-0 max-w-[280px]"
-                               x-text="captured ? 'Photo captured successfully. Click Retake if you want a new one.' : 'Make sure your face is clearly visible and well-lit.'">
-                            </p>
                         </div>
                     </div>
                 </div>
@@ -677,6 +736,10 @@
             // Photo state
             capturedImage: null,
             photoTaken: false,
+            photoSyncMode: 'mobile',
+            photoSyncSessionId: null,
+            photoSyncMobileUrl: null,
+            photoSyncPollTimer: null,
 
             steps: [
                 { id: "info",    label: "Patron Info", num: 1 },
@@ -846,20 +909,69 @@
                 return Object.keys(e).length === 0;
             },
 
+            async startPhotoSyncSession() {
+                this.stopPhotoSyncPolling();
+                try {
+                    let csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+                    const res = await fetch('/api/register/photo-session/create', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Accept': 'application/json'
+                        }
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        this.photoSyncSessionId = data.session_id;
+                        this.photoSyncMobileUrl = data.mobile_url;
+                        this.photoSyncPollTimer = setInterval(() => this.checkPhotoSyncSession(), 1500);
+                    }
+                } catch (e) {}
+            },
+
+            async checkPhotoSyncSession() {
+                if (!this.photoSyncSessionId || this.capturedImage) return;
+                try {
+                    const res = await fetch(`/api/register/photo-session/check/${this.photoSyncSessionId}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.status === 'completed' && data.photoDataUrl) {
+                            this.capturedImage = data.photoDataUrl;
+                            this.photoTaken = true;
+                            this.stopPhotoSyncPolling();
+                        }
+                    }
+                } catch (e) {}
+            },
+
+            stopPhotoSyncPolling() {
+                if (this.photoSyncPollTimer) {
+                    clearInterval(this.photoSyncPollTimer);
+                    this.photoSyncPollTimer = null;
+                }
+            },
+
             handleBack() {
                 if (this.step === 'info') {
                     window.location.href = "{{ route('kiosk.index') }}";
                 } else if (this.step === 'photo') {
+                    this.stopPhotoSyncPolling();
                     this.step = 'info';
                 } else if (this.step === 'confirm') {
                     this.step = 'photo';
+                    if (!this.capturedImage) this.startPhotoSyncSession();
                 }
             },
 
             async handleNext() {
                 if (this.step === 'info') {
-                    if (this.validateInfo()) this.step = 'photo';
+                    if (this.validateInfo()) {
+                        this.step = 'photo';
+                        this.startPhotoSyncSession();
+                    }
                 } else if (this.step === 'photo') {
+                    this.stopPhotoSyncPolling();
                     this.step = 'confirm';
                 } else if (this.step === 'confirm') {
                     this.submitForm();

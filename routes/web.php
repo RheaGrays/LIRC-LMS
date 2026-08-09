@@ -50,6 +50,12 @@ Route::get('/api/academics', [AcademicController::class, 'apiData'])->name('api.
 // Public API for Patron Categories (needed for Registration form)
 Route::get('/api/patron-categories', [SettingsController::class, 'patronCategories'])->name('api.patron-categories');
 
+// Mobile Camera Photo Sync for Patron Registration
+Route::get('/register/mobile-camera', [\App\Http\Controllers\MobilePhotoSyncController::class, 'showMobileCamera'])->name('register.mobile-camera');
+Route::post('/api/register/photo-session/create', [\App\Http\Controllers\MobilePhotoSyncController::class, 'createSession'])->name('api.register.photo-session.create');
+Route::post('/api/register/photo-session/upload', [\App\Http\Controllers\MobilePhotoSyncController::class, 'uploadPhoto'])->name('api.register.photo-session.upload');
+Route::get('/api/register/photo-session/check/{sessionId}', [\App\Http\Controllers\MobilePhotoSyncController::class, 'checkSession'])->name('api.register.photo-session.check');
+
 // Public API for Mobile App (Standalone Expo App)
 Route::post('/api/kiosk/process', [AttendanceController::class, 'process'])->name('api.kiosk.process')->middleware('throttle:120,1');
 
