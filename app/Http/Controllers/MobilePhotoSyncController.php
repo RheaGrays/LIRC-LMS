@@ -22,7 +22,7 @@ class MobilePhotoSyncController extends Controller
             'created_at'     => now()->toIso8601String(),
         ], 900); // 15 minutes TTL
 
-        $hostIp = $request->getHttpHost();
+        $hostIp = $this->getHostLanAddress($request);
         $scheme = $request->getScheme();
         $mobileUrl = "{$scheme}://{$hostIp}/register/mobile-camera?session={$sessionId}";
 
@@ -93,5 +93,25 @@ class MobilePhotoSyncController extends Controller
     {
         $sessionId = $request->query('session', '');
         return view('register.mobile_camera', compact('sessionId'));
+    }
+
+    /**
+     * Resolve the LAN IP address of the server when accessed via localhost/127.0.0.1
+     * so that mobile devices scanning the QR code receive a valid LAN IP URL.
+     */
+    private function getHostLanAddress(Request $request): string
+    {
+        $host = $request->getHttpHost();
+
+        if (str_contains($host, 'localhost') || str_contains($host, '127.0.0.1')) {
+            $localIp = gethostbyname(gethostname());
+            if ($localIp && $localIp !== '127.0.0.1') {
+                $port = $request->getPort();
+                $portStr = $port && $port != 80 && $port != 443 ? ":{$port}" : '';
+                return $localIp . $portStr;
+            }
+        }
+
+        return $host;
     }
 }
