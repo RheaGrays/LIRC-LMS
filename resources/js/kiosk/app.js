@@ -15,6 +15,10 @@ const registerApp = () => {
         inactivityTimeout: null,
         occupancy: { inside: 0, max: 200 },
         
+        // About Us & Help Support Modal State
+        showAboutModal: false,
+        aboutTab: 'system',
+        
         // Clock
         clockHm: '',
         clockSec: '',
