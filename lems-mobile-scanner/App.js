@@ -148,7 +148,9 @@ export default function App() {
         queue.push(id);
         await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
         setQueueCount(queue.length);
-        setResult({ status: 'offline', message: `No network. Saved offline (${id})` });
+        const hostUrl = serverUrl.replace(/\/api\/kiosk\/process$/, '');
+        const detail = err.message ? ` (${err.message})` : '';
+        setResult({ status: 'offline', message: `Server Unreachable: ${hostUrl}${detail}\nSaved offline (${id})` });
       }
     } finally {
       setIsProcessing(false);
