@@ -45,15 +45,12 @@ class MobilePhotoSyncController extends Controller
         $sessionId = strtoupper(trim($validated['session_id']));
         $cacheKey = "reg_photo_{$sessionId}";
 
-        if (!Cache::has($cacheKey)) {
-            return response()->json(['message' => 'Pairing session expired or invalid. Please refresh the registration page.'], 404);
-        }
-
         $photoDataUrl = $validated['photoDataUrl'];
         if (!str_starts_with($photoDataUrl, 'data:image')) {
             return response()->json(['message' => 'Invalid image format.'], 422);
         }
 
+        // Store photo in cache for 15 minutes, marking status as completed
         Cache::put($cacheKey, [
             'status'       => 'completed',
             'photoDataUrl' => $photoDataUrl,

@@ -96,6 +96,14 @@
                         </div>
                     </template>
 
+                    <!-- Processing Overlay -->
+                    <div x-show="processingImage" class="absolute inset-0 bg-black/80 flex flex-col items-center justify-center gap-2">
+                        <svg class="w-8 h-8 animate-spin text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        <span class="text-xs text-gray-300 font-['Inter']">Optimizing photo…</span>
+                    </div>
+
                     <!-- Overlay Corner Brackets -->
                     <div class="absolute inset-4 pointer-events-none border-2 border-red-500/30 rounded-xl"></div>
                 </div>
@@ -103,7 +111,7 @@
                 <!-- Action Controls -->
                 <div class="w-full flex flex-col items-center gap-3">
                     <template x-if="!capturedImage">
-                        <button @click="openPhoneCamera()" :disabled="!sessionId"
+                        <button @click="openPhoneCamera()" :disabled="!sessionId || processingImage"
                                 class="w-full py-3.5 bg-[#c41e3a] active:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-white font-bold text-sm tracking-wider uppercase shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2">
                             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <circle cx="12" cy="12" r="3" stroke-width="2"/>
@@ -120,7 +128,7 @@
                             </button>
                             <button @click="uploadPhoto()" :disabled="uploading" class="flex-1 py-3 bg-green-600 active:bg-green-700 disabled:opacity-50 rounded-xl text-xs font-bold text-white uppercase tracking-wider flex items-center justify-center gap-2">
                                 <template x-if="uploading">
-                                    <span class="text-xs">Uploading…</span>
+                                    <span class="text-xs">Syncing…</span>
                                 </template>
                                 <template x-if="!uploading">
                                     <span>Sync to Registration</span>
@@ -146,6 +154,7 @@
             return {
                 sessionId: initialSessionId || '',
                 capturedImage: null,
+                processingImage: false,
                 uploading: false,
                 uploaded: false,
                 uploadError: '',
@@ -158,10 +167,49 @@
                     const file = event.target.files[0];
                     if (!file) return;
 
+                    this.processingImage = true;
+                    this.uploadError = '';
+
                     const reader = new FileReader();
                     reader.onload = (e) => {
-                        this.capturedImage = e.target.result;
-                        this.uploadError = '';
+                        const img = new Image();
+                        img.onload = () => {
+                            // Resize image on client to max 800x800 for optimal fast upload
+                            const maxDim = 800;
+                            let width = img.width;
+                            let height = img.height;
+
+                            if (width > height) {
+                                if (width > maxDim) {
+                                    height = Math.round((height * maxDim) / width);
+                                    width = maxDim;
+                                }
+                            } else {
+                                if (height > maxDim) {
+                                    width = Math.round((width * maxDim) / height);
+                                    height = maxDim;
+                                }
+                            }
+
+                            const canvas = document.createElement('canvas');
+                            canvas.width = width;
+                            canvas.height = height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, width, height);
+
+                            // Compress to lightweight 80% JPEG
+                            this.capturedImage = canvas.toDataURL('image/jpeg', 0.80);
+                            this.processingImage = false;
+                        };
+                        img.onerror = () => {
+                            this.uploadError = 'Failed to process image.';
+                            this.processingImage = false;
+                        };
+                        img.src = e.target.result;
+                    };
+                    reader.onerror = () => {
+                        this.uploadError = 'Failed to read file.';
+                        this.processingImage = false;
                     };
                     reader.readAsDataURL(file);
                 },
