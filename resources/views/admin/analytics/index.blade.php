@@ -17,9 +17,12 @@ function analyticsApp() {
         pollTimer: null,
         
         init() {
-            this.$nextTick(() => {
-                this.initCharts();
-                this.fetchData(false);
+            this.$nextTick(async () => {
+                Chart.defaults.font.family = 'Inter, sans-serif';
+                Chart.defaults.color = '#64748b';
+                
+                // Fetch data first, then render charts with populated data
+                await this.fetchData(false);
                 
                 // Real-time auto-polling every 2.5s
                 if (!this.pollTimer) {
@@ -28,52 +31,6 @@ function analyticsApp() {
                     }, 2500);
                 }
             });
-        },
-        
-        initCharts() {
-            if (typeof Chart === 'undefined') return;
-            Chart.defaults.font.family = 'Inter, sans-serif';
-            Chart.defaults.color = '#64748b';
-            
-            const trafficCanvas = document.getElementById('trafficChart');
-            if (trafficCanvas && !this.trafficChartInstance) {
-                const trafficCtx = trafficCanvas.getContext('2d');
-                this.trafficChartInstance = new Chart(trafficCtx, {
-                    type: 'line',
-                    data: { labels: [], datasets: [] },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        interaction: { mode: 'index', intersect: false },
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: { backgroundColor: '#0f2744', padding: 12, cornerRadius: 8 }
-                        },
-                        scales: {
-                            y: { beginAtZero: true, grid: { borderDash: [4, 4], color: '#f1f5f9' }, ticks: { precision: 0 } },
-                            x: { grid: { display: false } }
-                        }
-                    }
-                });
-            }
-            
-            const deptCanvas = document.getElementById('deptChart');
-            if (deptCanvas && !this.deptChartInstance) {
-                const deptCtx = deptCanvas.getContext('2d');
-                this.deptChartInstance = new Chart(deptCtx, {
-                    type: 'doughnut',
-                    data: { labels: [], datasets: [] },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true } },
-                            tooltip: { backgroundColor: '#0f2744', padding: 12, cornerRadius: 8 }
-                        },
-                        cutout: '70%'
-                    }
-                });
-            }
         },
         
         async fetchData(isSilent = false) {
@@ -90,39 +47,84 @@ function analyticsApp() {
                 
                 this.totalTraffic = (data.traffic.values || []).reduce((a, b) => a + b, 0);
                 
-                if (this.trafficChartInstance) {
-                    this.trafficChartInstance.data = {
-                        labels: data.traffic.labels,
-                        datasets: [{
-                            label: 'Entries',
-                            data: data.traffic.values,
-                            borderColor: '#c41e2a',
-                            backgroundColor: 'rgba(196, 30, 42, 0.1)',
-                            borderWidth: 2,
-                            fill: true,
-                            tension: 0.4,
-                            pointBackgroundColor: '#ffffff',
-                            pointBorderColor: '#c41e2a',
-                            pointBorderWidth: 2,
-                            pointRadius: 4,
-                            pointHoverRadius: 6
-                        }]
-                    };
-                    this.trafficChartInstance.update('none');
+                // Render or Update Traffic Volume (Line Chart)
+                const trafficCanvas = document.getElementById('trafficChart');
+                if (trafficCanvas) {
+                    if (!this.trafficChartInstance) {
+                        const trafficCtx = trafficCanvas.getContext('2d');
+                        this.trafficChartInstance = new Chart(trafficCtx, {
+                            type: 'line',
+                            data: {
+                                labels: data.traffic.labels,
+                                datasets: [{
+                                    label: 'Entries',
+                                    data: data.traffic.values,
+                                    borderColor: '#c41e2a',
+                                    backgroundColor: 'rgba(196, 30, 42, 0.1)',
+                                    borderWidth: 2,
+                                    fill: true,
+                                    tension: 0.4,
+                                    pointBackgroundColor: '#ffffff',
+                                    pointBorderColor: '#c41e2a',
+                                    pointBorderWidth: 2,
+                                    pointRadius: 4,
+                                    pointHoverRadius: 6
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                interaction: { mode: 'index', intersect: false },
+                                plugins: {
+                                    legend: { display: false },
+                                    tooltip: { backgroundColor: '#0f2744', padding: 12, cornerRadius: 8 }
+                                },
+                                scales: {
+                                    y: { beginAtZero: true, grid: { borderDash: [4, 4], color: '#f1f5f9' }, ticks: { precision: 0 } },
+                                    x: { grid: { display: false } }
+                                }
+                            }
+                        });
+                    } else {
+                        this.trafficChartInstance.data.labels = data.traffic.labels;
+                        this.trafficChartInstance.data.datasets[0].data = data.traffic.values;
+                        this.trafficChartInstance.update();
+                    }
                 }
                 
-                if (this.deptChartInstance) {
+                // Render or Update Department Breakdown (Doughnut Chart)
+                const deptCanvas = document.getElementById('deptChart');
+                if (deptCanvas) {
                     const colors = ['#c41e2a', '#d4a418', '#0f2744', '#3b82f6', '#10b981'];
-                    this.deptChartInstance.data = {
-                        labels: data.departments.labels,
-                        datasets: [{
-                            data: data.departments.values,
-                            backgroundColor: colors.slice(0, data.departments.labels.length),
-                            borderWidth: 0,
-                            hoverOffset: 4
-                        }]
-                    };
-                    this.deptChartInstance.update('none');
+                    if (!this.deptChartInstance) {
+                        const deptCtx = deptCanvas.getContext('2d');
+                        this.deptChartInstance = new Chart(deptCtx, {
+                            type: 'doughnut',
+                            data: {
+                                labels: data.departments.labels,
+                                datasets: [{
+                                    data: data.departments.values,
+                                    backgroundColor: colors.slice(0, data.departments.labels.length),
+                                    borderWidth: 0,
+                                    hoverOffset: 4
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true } },
+                                    tooltip: { backgroundColor: '#0f2744', padding: 12, cornerRadius: 8 }
+                                },
+                                cutout: '70%'
+                            }
+                        });
+                    } else {
+                        this.deptChartInstance.data.labels = data.departments.labels;
+                        this.deptChartInstance.data.datasets[0].data = data.departments.values;
+                        this.deptChartInstance.data.datasets[0].backgroundColor = colors.slice(0, data.departments.labels.length);
+                        this.deptChartInstance.update();
+                    }
                 }
                 
             } catch (err) {
@@ -146,7 +148,7 @@ function analyticsApp() {
         <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
             <div>
                 <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-red-50 text-[var(--cjc-red)] border border-red-200 mb-3 uppercase tracking-wider">
-                    <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 01-2-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                     Official Librarian Report Generator
                 </div>
                 <h2 class="text-xl font-bold text-[var(--cjc-navy)]">Monthly Attendance Report per Program</h2>
