@@ -450,67 +450,86 @@ const registerApp = () => {
         },
         
         // --- Real-Time Link Logic ---
+        remoteQueue: [],
+        isDisplayingQueue: false,
+
         startRealtimePolling() {
             if (this.pollingInterval) clearInterval(this.pollingInterval);
             this.pollingInterval = setInterval(() => {
                 this.pollRealtime();
-            }, 2000); // Check every 2 seconds
+            }, 1000); // Check every 1 second
         },
         
         async pollRealtime() {
             if (!navigator.onLine) return;
             try {
                 const res = await fetch(`/kiosk/latest-scan?after_id=${this.lastLogId}`);
-                if (!res.ok) {
-                    console.warn('[LEMS Kiosk] Realtime polling returned status:', res.status);
-                    return;
-                }
+                if (!res.ok) return;
                 
                 const data = await res.json();
-                if (data && data.id) {
-                    this.lastLogId = data.id; // Update high-water mark
-                    
-                    // If we're already processing something locally, don't interrupt
-                    if (this.isProcessing) return;
-                    
-                    // Trigger the animation for the remote scan!
-                    this.triggerRemoteScan(data);
+                if (!data) return;
+
+                const events = Array.isArray(data) ? data : [data];
+                let newEvents = events.filter(e => e && e.seq_id > this.lastLogId);
+
+                if (newEvents.length > 0) {
+                    const maxSeq = Math.max(...newEvents.map(e => e.seq_id || 0));
+                    if (maxSeq > this.lastLogId) {
+                        this.lastLogId = maxSeq;
+                    }
+
+                    this.remoteQueue.push(...newEvents);
+                    this.processRemoteQueue();
                 }
             } catch (e) {
                 console.warn('[LEMS Kiosk] Realtime polling network error:', e.message);
             }
         },
         
-        triggerRemoteScan(data) {
-            // Wake up kiosk if idle
-            if (this.state === 'idle') {
-                this.activate();
-            }
-            
-            // Play success sound
-            const audio = new Audio('/beep.mp3');
-            audio.play().catch(e => {});
-            
-            // Reset state
-            this.isProcessing = true;
-            this.result = null;
-            clearTimeout(this.resetTimeout);
-            
-            // Show result
-            setTimeout(() => {
-                this.isProcessing = false;
-                this.result = data;
+        processRemoteQueue() {
+            if (this.isDisplayingQueue || this.remoteQueue.length === 0) return;
+            this.isDisplayingQueue = true;
+
+            const nextEvent = () => {
+                if (this.remoteQueue.length === 0) {
+                    this.isDisplayingQueue = false;
+                    return;
+                }
+
+                if (this.isProcessing) {
+                    setTimeout(nextEvent, 500);
+                    return;
+                }
+
+                const item = this.remoteQueue.shift();
+
+                // Wake up kiosk if idle
+                if (this.state === 'idle') {
+                    this.activate();
+                }
+                
+                // Play success sound
+                const audio = new Audio('/beep.mp3');
+                audio.play().catch(e => {});
+                
+                this.result = item;
                 this.fetchOccupancy();
                 
-                // Clear result after 4 seconds
+                // Display duration: 1.8s if more events are waiting, 4.0s if queue is empty
+                const displayDuration = this.remoteQueue.length > 0 ? 1800 : 4000;
+                
+                clearTimeout(this.resetTimeout);
                 this.resetTimeout = setTimeout(() => {
                     this.result = null;
                     if (this.state === 'active' && !this.isCameraActive && this.tab === 'webcam') {
-                         this.initScanner(); // Restart camera if needed
+                         this.initScanner();
                     }
                     this.handleActivity();
-                }, 4000);
-            }, 500); // slight delay to feel natural
+                    nextEvent();
+                }, displayDuration);
+            };
+
+            nextEvent();
         }
     }));
 };

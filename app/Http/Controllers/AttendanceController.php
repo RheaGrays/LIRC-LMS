@@ -61,7 +61,6 @@ class AttendanceController extends Controller
         }
         if (!$student) {
             $event = [
-                'id'       => time() * 1000,
                 'status'   => 'error',
                 'action'   => 'unregistered',
                 'message'  => "Student ID \"{$term}\" is not registered in the system. Please register first.",
@@ -72,19 +71,18 @@ class AttendanceController extends Controller
                     'photo_url' => null,
                 ]
             ];
-            Cache::put('kiosk_latest_scan_event', $event, 30);
+            $event = $this->pushScanEvent($event);
             return response()->json($event);
         }
 
         if ($student->status === 'inactive') {
             $event = [
-                'id'       => time() * 1000,
                 'status'   => 'error',
                 'action'   => 'inactive',
                 'message'  => 'Student account is inactive.',
                 'student'  => $this->formatStudent($student),
             ];
-            Cache::put('kiosk_latest_scan_event', $event, 30);
+            $event = $this->pushScanEvent($event);
             return response()->json($event);
         }
 
@@ -105,7 +103,6 @@ class AttendanceController extends Controller
 
                 if ($recentLog) {
                     return [
-                        'id'       => time() * 1000,
                         'status'   => 'success',
                         'action'   => $recentLog->action,
                         'message'  => $recentLog->action === 'check_out' ? 'Successfully checked out.' : 'Successfully checked in.',
@@ -134,10 +131,14 @@ class AttendanceController extends Controller
                     'logged_at'  => now(),
                 ]);
 
+                // Invalidate real-time occupancy and dashboard statistics cache
+                Cache::forget('occupancy_today');
+                Cache::forget('dashboard_today_entries');
+
                 $message = $nextAction === 'check_out' ? 'Successfully checked out.' : 'Successfully checked in.';
 
                 return [
-                    'id'      => $log->id,
+                    'db_id'   => $log->id,
                     'status'  => 'success',
                     'action'  => $nextAction,
                     'message' => $message,
@@ -146,7 +147,6 @@ class AttendanceController extends Controller
             });
         } catch (\Illuminate\Contracts\Cache\LockTimeoutException $e) {
             $event = [
-                'id'       => time() * 1000,
                 'status'   => 'success',
                 'action'   => 'check_in',
                 'message'  => 'Successfully checked in.',
@@ -154,7 +154,7 @@ class AttendanceController extends Controller
             ];
         }
 
-        Cache::put('kiosk_latest_scan_event', $event, 30);
+        $event = $this->pushScanEvent($event);
 
         return response()->json($event);
     }
@@ -276,20 +276,25 @@ class AttendanceController extends Controller
 
     /**
      * Polling endpoint for real-time kiosk display updates.
+     * Returns all unread events with seq_id > after_id from the sequential event queue.
      */
     public function latestScan(Request $request): JsonResponse
     {
-        $afterId = (int) $request->query('after_id', 0);
+        $afterSeq = (int) $request->query('after_id', 0);
+        $events = Cache::get('kiosk_scan_events_queue', []);
 
-        // 1. Check for recent unregistered or error scan event
-        $cachedEvent = Cache::get('kiosk_latest_scan_event');
-        if ($cachedEvent && isset($cachedEvent['id']) && $cachedEvent['id'] > $afterId) {
-            return response()->json($cachedEvent);
+        // Filter unread events with seq_id > afterSeq
+        $unreadEvents = array_values(array_filter($events, function ($e) use ($afterSeq) {
+            return isset($e['seq_id']) && (int)$e['seq_id'] > $afterSeq;
+        }));
+
+        if (!empty($unreadEvents)) {
+            return response()->json($unreadEvents);
         }
-        
-        // 2. Check for latest valid attendance log
+
+        // Fallback for database logs if event cache was cleared
         $latestLog = AttendanceLog::query()
-            ->where('id', '>', $afterId)
+            ->where('id', '>', $afterSeq)
             ->with('student')
             ->orderBy('id', 'asc')
             ->first();
@@ -298,13 +303,38 @@ class AttendanceController extends Controller
             return response()->json(null);
         }
 
-        return response()->json([
-            'id' => $latestLog->id,
-            'status' => 'success',
-            'action' => $latestLog->action,
-            'message' => 'Successfully checked in.',
+        $fallbackEvent = [
+            'seq_id'  => $latestLog->id,
+            'id'      => $latestLog->id,
+            'status'  => 'success',
+            'action'  => $latestLog->action,
+            'message' => $latestLog->action === 'check_out' ? 'Successfully checked out.' : 'Successfully checked in.',
             'student' => $this->formatStudent($latestLog->student)
-        ]);
+        ];
+
+        return response()->json([$fallbackEvent]);
+    }
+
+    /**
+     * Push a scan event onto the global sequential event queue with a monotonic sequence ID.
+     */
+    private function pushScanEvent(array $event): array
+    {
+        $seqId = Cache::increment('kiosk_global_event_seq');
+        $event['seq_id'] = $seqId;
+        $event['id']     = $seqId;
+
+        $queue = Cache::get('kiosk_scan_events_queue', []);
+        $queue[] = $event;
+
+        // Keep last 50 events in buffer
+        if (count($queue) > 50) {
+            $queue = array_slice($queue, -50);
+        }
+
+        Cache::put('kiosk_scan_events_queue', $queue, 300);
+
+        return $event;
     }
 
     private function resolveStudent(string $term): Student|string|null
