@@ -6,6 +6,7 @@
 @section('admin_content')
 <div class="space-y-6" x-data="{
     showAddStudentModal: false,
+    showImportModal: false,
     showViolationModal: false,
     selectedStudent: null,
     
@@ -24,7 +25,17 @@
                     <h3 class="text-xl font-bold text-[var(--cjc-navy)]">Patron Directory</h3>
                     <p class="text-sm text-gray-500">Manage patrons, filter by department or year level, and record violations.</p>
                 </div>
-                <div class="flex items-center gap-3 self-start md:self-auto">
+                <div class="flex items-center gap-3 self-start md:self-auto flex-wrap">
+                    <a href="{{ route('admin.students.export') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-sm font-medium text-emerald-700 hover:bg-emerald-100 transition-colors shadow-sm whitespace-nowrap">
+                        <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        Export Excel
+                    </a>
+                    @if(Auth::guard('admin')->user()?->role === 'Super Admin')
+                    <button @click="showImportModal = true" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm whitespace-nowrap">
+                        <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                        Import Excel
+                    </button>
+                    @endif
                     <a href="{{ route('admin.students.archive') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm whitespace-nowrap">
                         <svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
                         Archive Inactive
@@ -341,5 +352,38 @@
             </div>
         </div>
     </div>
+
+    <!-- Import Excel Modal -->
+    <div x-show="showImportModal" class="fixed inset-0 z-50 overflow-y-auto" x-cloak>
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 transition-opacity" @click="showImportModal = false">
+                <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm"></div>
+            </div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen"></span>&#8203;
+            <div class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-gray-100">
+                <div class="p-6">
+                    <div class="flex items-center justify-between border-b pb-4 mb-4">
+                        <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                            Import Patrons via Excel / CSV
+                        </h3>
+                        <button @click="showImportModal = false" class="text-gray-400 hover:text-gray-600">&times;</button>
+                    </div>
+                    <form action="{{ route('admin.students.import') }}" method="POST" enctype="multipart/form-data">
+                        @csrf
+                        <p class="text-sm text-gray-600 mb-4">Upload an Excel Spreadsheet (<code>.xlsx</code>, <code>.xls</code>, or <code>.csv</code>) containing patron columns: <code>id</code>, <code>first_name</code>, <code>last_name</code>, <code>department</code>, <code>program</code>, <code>year_level</code>.</p>
+                        <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-blue-500 transition-colors bg-gray-50/50 mb-4">
+                            <input type="file" name="file" accept=".xlsx,.xls,.csv" required class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                        </div>
+                        <div class="flex justify-end gap-3">
+                            <button type="button" @click="showImportModal = false" class="btn-secondary">Cancel</button>
+                            <button type="submit" class="btn-primary">Upload & Import</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 @endsection
