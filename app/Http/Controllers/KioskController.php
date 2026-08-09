@@ -29,29 +29,56 @@ class KioskController extends Controller
             ],
         ];
 
-        // Facility images for the cinematic full-screen slider
-        $slideshowImages = collect([
-            [
-                'src' => '/discussion_room.jpg',
-                'badge' => 'Collaborative Space',
-                'title' => 'Discussion Room',
-                'description' => 'A vibrant environment for group study, brainstorming sessions, and team collaborations.'
-            ],
-            [
-                'src' => '/quiet_zone.jpg',
-                'badge' => 'Silent Area',
-                'title' => 'Quiet Zone',
-                'description' => 'A distraction-free zone dedicated to deep focus, reading, and individual study.'
-            ],
-            [
-                'src' => '/bg.jpg',
-                'badge' => 'Main Campus',
-                'title' => 'Cor Jesu College',
-                'description' => 'Excellence in education, rooted in faith and dedicated to the community.'
+        // Map specific images to their correct labels
+        $facilityMap = [
+            'Picture1' => [
+                'title' => 'Baggage Counter',
+                'badge' => 'Service Area',
+                'description' => 'Secure storage for your personal belongings before entering the library premises.'
             ]
-        ])->filter(function ($slide) {
-            return file_exists(public_path($slide['src']));
-        })->values()->toArray();
+        ];
+
+        // Dynamically load all facility images from public/Facilities
+        $slideshowImages = [];
+        $facilitiesPath = public_path('Facilities');
+        
+        if (is_dir($facilitiesPath)) {
+            $files = \Illuminate\Support\Facades\File::files($facilitiesPath);
+            foreach ($files as $file) {
+                $ext = strtolower($file->getExtension());
+                if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) {
+                    $filename = $file->getFilename();
+                    $name = $file->getFilenameWithoutExtension();
+                    
+                    if (isset($facilityMap[$name])) {
+                        $title = $facilityMap[$name]['title'];
+                        $badge = $facilityMap[$name]['badge'];
+                        $description = $facilityMap[$name]['description'];
+                    } else {
+                        $title = 'LIRC Facility';
+                        $badge = 'Learning Space';
+                        $description = 'Experience our state-of-the-art library facilities designed to foster academic excellence and collaborative learning.';
+                        
+                        if (stripos($name, 'LIRC') !== false) {
+                            $title = 'LIRC Main Area';
+                            $badge = 'General Space';
+                        } else {
+                            $num = preg_replace('/[^0-9]/', '', $name);
+                            if ($num) {
+                                $title = 'Learning Zone ' . $num;
+                            }
+                        }
+                    }
+
+                    $slideshowImages[] = [
+                        'src' => '/Facilities/' . $filename,
+                        'badge' => $badge,
+                        'title' => $title,
+                        'description' => $description
+                    ];
+                }
+            }
+        }
 
         // Fallback if no images exist to prevent broken UI
         if (empty($slideshowImages)) {
