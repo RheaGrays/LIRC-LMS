@@ -24,9 +24,9 @@
                     </div>
                     <div class="w-px h-8 bg-[var(--border-warm)] mx-1"></div>
                     <div class="flex items-center gap-2">
-                        <button type="button" @click.stop="showAboutModal = true; aboutTab = 'system'" class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[var(--cjc-navy)] font-['Inter'] px-4 py-1.5 border border-[var(--border-warm)] shadow-sm rounded-full bg-white/80 hover:bg-white transition-all backdrop-blur-md cursor-pointer">
+                        <a href="{{ route('about.index') }}" @click.stop class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[var(--cjc-navy)] font-['Inter'] no-underline px-4 py-1.5 border border-[var(--border-warm)] shadow-sm rounded-full bg-white/80 hover:bg-white transition-all backdrop-blur-md">
                             ℹ️ About Us
-                        </button>
+                        </a>
                         <a href="{{ route('register.index') }}" @click.stop class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[var(--cjc-navy)] font-['Inter'] no-underline px-4 py-1.5 border border-[var(--border-warm)] shadow-sm rounded-full bg-white/80 hover:bg-white transition-all backdrop-blur-md">
                             Register
                         </a>

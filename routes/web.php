@@ -16,8 +16,9 @@ use App\Http\Controllers\LibraryCollectionController;
 use App\Http\Controllers\AcademicController;
 use Illuminate\Support\Facades\Route;
 
-// ── Root ─────────────────────────────────────────────────────
+// ── Public Pages ──────────────────────────────────────────────
 Route::get('/', fn() => redirect()->route('kiosk.index'));
+Route::get('/about', [App\Http\Controllers\AboutController::class, 'index'])->name('about.index');
 Route::get('/csrf-token', fn() => response()->json(['token' => csrf_token()]))->name('csrf.token');
 
 // ── Kiosk (public) ────────────────────────────────────────────
