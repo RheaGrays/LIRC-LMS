@@ -127,12 +127,17 @@ class AttendanceTest extends TestCase
     }
 
     #[Test]
-    public function it_denies_remote_kiosk_requests_when_token_configured_and_invalid()
+    public function it_allows_local_lan_ip_requests_and_denies_external_remote_requests_without_valid_token()
     {
         config(['app.kiosk_api_token' => 'secret_token_123']);
 
-        // Remote IP request without token
-        $response = $this->withServerVariables(['REMOTE_ADDR' => '192.168.1.100'])
+        // Local LAN IP (192.168.1.100) — permitted automatically for mobile scanners on same Wi-Fi
+        $lanResponse = $this->withServerVariables(['REMOTE_ADDR' => '192.168.1.100'])
+            ->postJson('/kiosk/process', ['student_id' => '2026-0001']);
+        $lanResponse->assertStatus(200);
+
+        // External remote IP (203.0.113.195) without token — denied with 403
+        $response = $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.195'])
             ->postJson('/kiosk/process', ['student_id' => '2026-0001']);
 
         $response->assertStatus(403)
@@ -141,8 +146,8 @@ class AttendanceTest extends TestCase
                 'message' => 'Invalid or missing kiosk authentication token.',
             ]);
 
-        // Remote IP request with valid header token
-        $responseWithToken = $this->withServerVariables(['REMOTE_ADDR' => '192.168.1.100'])
+        // External remote IP with valid token — permitted
+        $responseWithToken = $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.195'])
             ->withHeaders(['X-Kiosk-Token' => 'secret_token_123'])
             ->postJson('/kiosk/process', ['student_id' => '2026-0001']);
 

@@ -8,32 +8,30 @@ use Illuminate\Http\Request;
 /**
  * Kiosk Token Authentication Middleware.
  *
- * Protects kiosk API endpoints from remote abuse. The kiosk device must present
- * a shared secret token (configured in .env as KIOSK_API_TOKEN) via either:
- *   - X-Kiosk-Token header, OR
- *   - ?kiosk_token= query parameter (for simple GET endpoints)
+ * Protects kiosk API endpoints from unauthorized remote internet access.
+ * Requests from localhost (127.0.0.1, ::1) and local LAN networks (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+ * are permitted to support local kiosk devices and mobile scanners on the same Wi-Fi network.
  *
- * Requests from localhost (127.0.0.1, ::1) are always allowed to support
- * the Electron kiosk app that runs a local PHP server.
+ * External remote access requires a valid KIOSK_API_TOKEN header or parameter.
  */
 class KioskTokenAuth
 {
     public function handle(Request $request, Closure $next)
     {
-        // Always allow requests from localhost (Electron kiosk app)
         $ip = $request->ip();
-        if (in_array($ip, ['127.0.0.1', '::1'], true)) {
+
+        // Always allow requests from localhost and local LAN networks (same Wi-Fi/subnet)
+        if ($this->isLocalNetwork($ip)) {
             return $next($request);
         }
 
-        // Check for kiosk token
+        // For external remote IPs outside the local network, check for kiosk API token
         $configuredToken = config('app.kiosk_api_token');
 
-        // If no token is configured, deny ALL remote requests to kiosk endpoints
         if (!$configuredToken) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Kiosk API token not configured. Remote access denied.',
+                'message' => 'Kiosk API token not configured. External remote access denied.',
             ], 403);
         }
 
@@ -48,5 +46,22 @@ class KioskTokenAuth
         }
 
         return $next($request);
+    }
+
+    /**
+     * Check if an IP address belongs to localhost or a private local network (LAN).
+     */
+    private function isLocalNetwork(string $ip): bool
+    {
+        if (in_array($ip, ['127.0.0.1', '::1'], true)) {
+            return true;
+        }
+
+        // Returns true if IP is in private range (192.168.x.x, 10.x.x.x, 172.16.x.x - 172.31.x.x)
+        return filter_var(
+            $ip,
+            FILTER_VALIDATE_IP,
+            FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
+        ) === false;
     }
 }

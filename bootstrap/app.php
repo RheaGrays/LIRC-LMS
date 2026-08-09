@@ -18,6 +18,7 @@ $app = Application::configure(basePath: dirname(__DIR__))
         
         $middleware->validateCsrfTokens(except: [
             'api/*',
+            'kiosk/*',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
