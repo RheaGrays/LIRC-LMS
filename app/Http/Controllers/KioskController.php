@@ -35,6 +35,11 @@ class KioskController extends Controller
                 'title' => 'Baggage Counter',
                 'badge' => 'Service Area',
                 'description' => 'Secure storage for your personal belongings before entering the library premises.'
+            ],
+            'LIRC1' => [
+                'title' => 'Entrance & Exit',
+                'badge' => 'Access Point',
+                'description' => 'The primary gateway to the Learning Information Resource Center.'
             ]
         ];
 
