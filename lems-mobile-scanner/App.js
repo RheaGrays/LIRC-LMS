@@ -114,7 +114,7 @@ export default function App() {
       for (let i = 0; i < queue.length; i++) {
         const id = queue[i];
         try {
-          await axios.post(targetUrl, { student_id: id }, { timeout: 4000 });
+          await axios.post(targetUrl, { student_id: id }, { timeout: 12000 });
           newQueue.splice(newQueue.indexOf(id), 1); // Remove if successful
         } catch (err) {
           // Keep in queue on error (no network, timeout, or 500)
@@ -130,7 +130,7 @@ export default function App() {
     setIsProcessing(true);
     setScanned(true);
     try {
-      const res = await axios.post(serverUrl, { student_id: id }, { timeout: 5000 });
+      const res = await axios.post(serverUrl, { student_id: id }, { timeout: 12000 });
       // Server responded — success or logical error (student not found, etc.)
       const status = res.data.status || 'success';
       const message = res.data.message || 'Processed.';

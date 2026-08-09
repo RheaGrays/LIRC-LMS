@@ -96,53 +96,63 @@ class AttendanceController extends Controller
         $requestedAction = $request->input('action');
         $kioskMode = \App\Models\SystemSetting::get('kiosk_mode', 'check_in_only');
 
-        $event = Cache::lock($lockKey, 10)->block(5, function () use ($student, $cooldownMinutes, $requestedAction, $kioskMode) {
-            $recentLog = AttendanceLog::query()->where('student_id', $student->id)
-                ->where('logged_at', '>=', now()->subMinutes($cooldownMinutes))
-                ->orderByDesc('logged_at')
-                ->first();
-
-            if ($recentLog) {
-                return [
-                    'id'       => time() * 1000,
-                    'status'   => 'success',
-                    'action'   => $recentLog->action,
-                    'message'  => $recentLog->action === 'check_out' ? 'Successfully checked out.' : 'Successfully checked in.',
-                    'student'  => $this->formatStudent($student)
-                ];
-            }
-
-            // Determine action: explicit parameter > toggle mode > default check_in
-            if (in_array($requestedAction, ['check_in', 'check_out'], true)) {
-                $nextAction = $requestedAction;
-            } elseif ($kioskMode === 'toggle') {
-                $lastLog = AttendanceLog::query()
-                    ->where('student_id', $student->id)
-                    ->where('logged_at', '>=', now()->startOfDay())
+        try {
+            $event = Cache::lock($lockKey, 10)->block(2, function () use ($student, $cooldownMinutes, $requestedAction, $kioskMode) {
+                $recentLog = AttendanceLog::query()->where('student_id', $student->id)
+                    ->where('logged_at', '>=', now()->subMinutes($cooldownMinutes))
                     ->orderByDesc('logged_at')
                     ->first();
-                $nextAction = ($lastLog && $lastLog->action === 'check_in') ? 'check_out' : 'check_in';
-            } else {
-                $nextAction = 'check_in';
-            }
 
-            // Log action
-            $log = AttendanceLog::create([
-                'student_id' => $student->id,
-                'action'     => $nextAction,
-                'logged_at'  => now(),
-            ]);
+                if ($recentLog) {
+                    return [
+                        'id'       => time() * 1000,
+                        'status'   => 'success',
+                        'action'   => $recentLog->action,
+                        'message'  => $recentLog->action === 'check_out' ? 'Successfully checked out.' : 'Successfully checked in.',
+                        'student'  => $this->formatStudent($student)
+                    ];
+                }
 
-            $message = $nextAction === 'check_out' ? 'Successfully checked out.' : 'Successfully checked in.';
+                // Determine action: explicit parameter > toggle mode > default check_in
+                if (in_array($requestedAction, ['check_in', 'check_out'], true)) {
+                    $nextAction = $requestedAction;
+                } elseif ($kioskMode === 'toggle') {
+                    $lastLog = AttendanceLog::query()
+                        ->where('student_id', $student->id)
+                        ->where('logged_at', '>=', now()->startOfDay())
+                        ->orderByDesc('logged_at')
+                        ->first();
+                    $nextAction = ($lastLog && $lastLog->action === 'check_in') ? 'check_out' : 'check_in';
+                } else {
+                    $nextAction = 'check_in';
+                }
 
-            return [
-                'id'      => $log->id,
-                'status'  => 'success',
-                'action'  => $nextAction,
-                'message' => $message,
-                'student' => $this->formatStudent($student)
+                // Log action
+                $log = AttendanceLog::create([
+                    'student_id' => $student->id,
+                    'action'     => $nextAction,
+                    'logged_at'  => now(),
+                ]);
+
+                $message = $nextAction === 'check_out' ? 'Successfully checked out.' : 'Successfully checked in.';
+
+                return [
+                    'id'      => $log->id,
+                    'status'  => 'success',
+                    'action'  => $nextAction,
+                    'message' => $message,
+                    'student' => $this->formatStudent($student)
+                ];
+            });
+        } catch (\Illuminate\Contracts\Cache\LockTimeoutException $e) {
+            $event = [
+                'id'       => time() * 1000,
+                'status'   => 'success',
+                'action'   => 'check_in',
+                'message'  => 'Successfully checked in.',
+                'student'  => $this->formatStudent($student)
             ];
-        });
+        }
 
         Cache::put('kiosk_latest_scan_event', $event, 30);
 

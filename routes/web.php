@@ -51,7 +51,7 @@ Route::get('/api/academics', [AcademicController::class, 'apiData'])->name('api.
 Route::get('/api/patron-categories', [SettingsController::class, 'patronCategories'])->name('api.patron-categories');
 
 // Public API for Mobile App (Standalone Expo App)
-Route::post('/api/kiosk/process', [AttendanceController::class, 'process'])->name('api.kiosk.process')->middleware('throttle:30,1');
+Route::post('/api/kiosk/process', [AttendanceController::class, 'process'])->name('api.kiosk.process')->middleware('throttle:120,1');
 
 // ── Admin Auth ────────────────────────────────────────────────
 Route::prefix('admin')->name('admin.')->group(function () {
