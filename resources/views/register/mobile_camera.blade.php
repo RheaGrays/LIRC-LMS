@@ -50,7 +50,7 @@
                     </svg>
                 </div>
                 <div>
-                    <h2 class="font-['Fraunces'] text-xl font-bold text-white mb-1">Photo Uploaded!</h2>
+                    <h2 class="font-['Fraunces'] text-xl font-bold text-white mb-1">Photo Uploaded & Synced!</h2>
                     <p class="text-xs text-gray-300 leading-relaxed">Your photo has been synced with the registration screen on the PC. You may now close this browser tab.</p>
                 </div>
                 <button @click="resetCamera()" class="w-full py-3 bg-gray-800 border border-gray-700 rounded-xl text-xs font-semibold text-gray-300 uppercase tracking-wider">
@@ -63,65 +63,59 @@
         <template x-if="!uploaded">
             <div class="w-full flex flex-col items-center gap-4">
 
+                <!-- Hidden Native Camera File Input -->
+                <input type="file" x-ref="fileInput" accept="image/*" capture="user" class="hidden" @change="handleFileSelected($event)" />
+
                 <!-- Session Input if missing -->
                 <div x-show="!sessionId" class="w-full bg-gray-900/90 border border-gray-800 rounded-xl p-4 mb-2">
                     <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">Pairing Session Code</label>
                     <input type="text" x-model="sessionId" placeholder="e.g. REG-X82A" class="w-full px-3 py-2 bg-black border border-gray-700 rounded-lg text-white font-['JetBrains_Mono'] uppercase tracking-widest text-center text-lg font-bold" />
                 </div>
 
-                <!-- Viewfinder / Frame -->
-                <div class="w-full aspect-[3/4] max-h-[420px] rounded-2xl border border-gray-800 relative overflow-hidden bg-black flex items-center justify-center shadow-2xl">
-
-                    <!-- Live Video Stream -->
-                    <video x-show="!captured" x-ref="video" autoplay playsinline muted
-                           class="w-full h-full object-cover"
-                           :class="facingMode === 'user' ? 'scale-x-[-1]' : ''"></video>
+                <!-- Photo Preview Card / Camera Trigger Viewport -->
+                <div class="w-full aspect-[3/4] max-h-[380px] rounded-2xl border border-gray-800 relative overflow-hidden bg-black flex flex-col items-center justify-center shadow-2xl p-4 text-center">
 
                     <!-- Captured Photo Preview -->
-                    <img x-show="captured && capturedImage" :src="capturedImage" class="w-full h-full object-cover" style="display: none;" />
+                    <template x-if="capturedImage">
+                        <img :src="capturedImage" class="w-full h-full object-cover rounded-xl" />
+                    </template>
 
-                    <!-- Loading / Error Overlay -->
-                    <div x-show="!captured && status === 'loading'" class="flex flex-col items-center gap-2">
-                        <svg class="w-8 h-8 animate-spin text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        <span class="text-xs text-gray-400">Starting camera…</span>
-                    </div>
+                    <!-- Initial Placeholder State (Before Snap) -->
+                    <template x-if="!capturedImage">
+                        <div class="flex flex-col items-center gap-3 p-4">
+                            <div class="w-20 h-20 rounded-full bg-red-950/60 border border-red-500/40 flex items-center justify-center text-red-400">
+                                <svg class="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9a2 2 0 012-2h3l2-2h4l2 2h3a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                    <circle cx="12" cy="13" r="3" stroke-width="1.5" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-['Fraunces'] font-bold text-white text-base mb-1">Take Patron Photo</h3>
+                                <p class="text-xs text-gray-400 leading-relaxed">Tap the button below to open your phone's camera and capture the photo.</p>
+                            </div>
+                        </div>
+                    </template>
 
-                    <div x-show="!captured && status === 'error'" class="p-4 text-center flex flex-col items-center gap-2" style="display: none;">
-                        <span class="text-xs text-red-400" x-text="errorMsg"></span>
-                        <button @click="startCamera()" class="px-4 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-xs font-medium">Try Again</button>
-                    </div>
-
-                    <!-- Overlay Brackets -->
-                    <div class="absolute inset-4 pointer-events-none border-2 border-red-500/50 rounded-xl"></div>
-                    
-                    <!-- Camera Switch Floating Button -->
-                    <button x-show="!captured && status === 'ready'" @click="switchCamera()" type="button" class="absolute top-3 right-3 p-2.5 bg-black/60 backdrop-blur-md rounded-full text-white border border-white/20 active:scale-95 transition-transform">
-                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                    </button>
+                    <!-- Overlay Corner Brackets -->
+                    <div class="absolute inset-4 pointer-events-none border-2 border-red-500/30 rounded-xl"></div>
                 </div>
-
-                <canvas x-ref="canvas" class="hidden"></canvas>
 
                 <!-- Action Controls -->
                 <div class="w-full flex flex-col items-center gap-3">
-                    <template x-if="!captured">
-                        <button @click="capturePhoto()" :disabled="status !== 'ready' || !sessionId"
+                    <template x-if="!capturedImage">
+                        <button @click="openPhoneCamera()" :disabled="!sessionId"
                                 class="w-full py-3.5 bg-[#c41e3a] active:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-white font-bold text-sm tracking-wider uppercase shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2">
                             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <circle cx="12" cy="12" r="3" stroke-width="2"/>
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h3l2-2h4l2 2h3a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                             </svg>
-                            Snap Photo
+                            Open Phone Camera
                         </button>
                     </template>
 
-                    <template x-if="captured">
+                    <template x-if="capturedImage">
                         <div class="w-full flex gap-3">
-                            <button @click="retakePhoto()" class="flex-1 py-3 bg-gray-800 hover:bg-gray-700 rounded-xl text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                            <button @click="openPhoneCamera()" class="flex-1 py-3 bg-gray-800 hover:bg-gray-700 rounded-xl text-xs font-semibold text-gray-300 uppercase tracking-wider">
                                 Retake
                             </button>
                             <button @click="uploadPhoto()" :disabled="uploading" class="flex-1 py-3 bg-green-600 active:bg-green-700 disabled:opacity-50 rounded-xl text-xs font-bold text-white uppercase tracking-wider flex items-center justify-center gap-2">
@@ -151,75 +145,31 @@
         function mobileCameraApp(initialSessionId) {
             return {
                 sessionId: initialSessionId || '',
-                status: 'loading',
-                errorMsg: '',
-                captured: false,
                 capturedImage: null,
-                facingMode: 'user',
-                stream: null,
                 uploading: false,
                 uploaded: false,
                 uploadError: '',
 
-                init() {
-                    this.startCamera();
+                openPhoneCamera() {
+                    this.$refs.fileInput.click();
                 },
 
-                async startCamera() {
-                    this.status = 'loading';
-                    this.errorMsg = '';
-                    if (this.stream) {
-                        this.stream.getTracks().forEach(t => t.stop());
-                    }
-                    try {
-                        const mediaStream = await navigator.mediaDevices.getUserMedia({
-                            video: { facingMode: this.facingMode, width: { ideal: 640 }, height: { ideal: 800 } },
-                            audio: false
-                        });
-                        this.stream = mediaStream;
-                        this.$refs.video.srcObject = mediaStream;
-                        await this.$refs.video.play();
-                        this.status = 'ready';
-                    } catch (err) {
-                        this.status = 'error';
-                        this.errorMsg = 'Could not access mobile camera: ' + err.message;
-                    }
-                },
+                handleFileSelected(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
 
-                switchCamera() {
-                    this.facingMode = this.facingMode === 'user' ? 'environment' : 'user';
-                    this.startCamera();
-                },
-
-                capturePhoto() {
-                    const video = this.$refs.video;
-                    const canvas = this.$refs.canvas;
-                    if (!video || !canvas) return;
-
-                    canvas.width = video.videoWidth || 640;
-                    canvas.height = video.videoHeight || 800;
-                    const ctx = canvas.getContext('2d');
-
-                    if (this.facingMode === 'user') {
-                        ctx.translate(canvas.width, 0);
-                        ctx.scale(-1, 1);
-                    }
-                    ctx.drawImage(video, 0, 0);
-
-                    this.capturedImage = canvas.toDataURL('image/jpeg', 0.85);
-                    this.captured = true;
-                },
-
-                retakePhoto() {
-                    this.capturedImage = null;
-                    this.captured = false;
-                    this.uploadError = '';
-                    this.startCamera();
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        this.capturedImage = e.target.result;
+                        this.uploadError = '';
+                    };
+                    reader.readAsDataURL(file);
                 },
 
                 resetCamera() {
                     this.uploaded = false;
-                    this.retakePhoto();
+                    this.capturedImage = null;
+                    this.uploadError = '';
                 },
 
                 async uploadPhoto() {
@@ -234,8 +184,7 @@
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
-                                'Accept': 'application/json',
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                                'Accept': 'application/json'
                             },
                             body: JSON.stringify({
                                 session_id: this.sessionId,
@@ -246,9 +195,6 @@
                         const data = await res.json();
                         if (res.ok && data.success) {
                             this.uploaded = true;
-                            if (this.stream) {
-                                this.stream.getTracks().forEach(t => t.stop());
-                            }
                         } else {
                             this.uploadError = data.message || 'Upload failed. Please try again.';
                         }
