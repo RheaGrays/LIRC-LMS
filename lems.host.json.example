@@ -1,0 +1,6 @@
+{
+  "_comment": "BUG-04 FIX: Copy this file to 'lems.host.json' and set 'host' to your server's LAN IP address.",
+  "_comment2": "This file is read by Electron on startup. If it is missing, the network fallback is skipped.",
+  "host": "192.168.X.X",
+  "port": 8000
+}

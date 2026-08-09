@@ -20,12 +20,15 @@ export const QueueManager = {
         }
     },
 
-    async enqueue(studentId) {
+    // BUG-06 FIX: enqueue now accepts the action so check_out scans are replayed correctly.
+    // Defaults to 'check_in' for backward compatibility with any existing callers.
+    async enqueue(studentId, action = 'check_in') {
         try {
             const queue = this.getQueue();
             queue.push({
                 id: crypto.randomUUID(),
                 student_id: studentId,
+                action: action,
                 timestamp: new Date().toISOString()
             });
             this.saveQueue(queue);
@@ -61,7 +64,9 @@ export const QueueManager = {
         // Process sequentially to maintain order and logic
         for (const item of queue) {
             try {
-                const nextAction = 'check_in';
+                // BUG-06 FIX: Use the stored action instead of always forcing 'check_in'.
+                // Previously, any check_out queued offline would be replayed as check_in.
+                const nextAction = item.action || 'check_in';
                 
                 const logRes = await fetch('/kiosk/log', {
                     method: 'POST',

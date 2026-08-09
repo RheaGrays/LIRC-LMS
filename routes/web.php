@@ -55,10 +55,17 @@ Route::get('/api/patron-categories', [SettingsController::class, 'patronCategori
 Route::get('/register/mobile-camera', [\App\Http\Controllers\MobilePhotoSyncController::class, 'showMobileCamera'])->name('register.mobile-camera');
 Route::post('/api/register/photo-session/create', [\App\Http\Controllers\MobilePhotoSyncController::class, 'createSession'])->name('api.register.photo-session.create');
 Route::post('/api/register/photo-session/upload', [\App\Http\Controllers\MobilePhotoSyncController::class, 'uploadPhoto'])->name('api.register.photo-session.upload');
-Route::get('/api/register/photo-session/check/{sessionId}', [\App\Http\Controllers\MobilePhotoSyncController::class, 'checkSession'])->name('api.register.photo-session.check');
+// SEC-02 FIX: checkSession now returns status only (no photo). Rate-limited to block brute-force.
+Route::get('/api/register/photo-session/check/{sessionId}', [\App\Http\Controllers\MobilePhotoSyncController::class, 'checkSession'])->name('api.register.photo-session.check')->middleware('throttle:30,1');
+// SEC-02 FIX: consumeSession is the only way to retrieve the photo — requires owner_token.
+Route::post('/api/register/photo-session/consume', [\App\Http\Controllers\MobilePhotoSyncController::class, 'consumeSession'])->name('api.register.photo-session.consume')->middleware('throttle:10,1');
 
 // Public API for Mobile App (Standalone Expo App)
-Route::post('/api/kiosk/process', [AttendanceController::class, 'process'])->name('api.kiosk.process')->middleware('throttle:120,1');
+// SEC-01 FIX: Apply KioskTokenAuth so only LAN devices or token-bearing requests can log attendance.
+// Throttle reduced from 120 to 30/min — matching the other process endpoints.
+Route::post('/api/kiosk/process', [AttendanceController::class, 'process'])
+    ->name('api.kiosk.process')
+    ->middleware([\App\Http\Middleware\KioskTokenAuth::class, 'throttle:30,1']);
 
 // ── Admin Auth ────────────────────────────────────────────────
 Route::prefix('admin')->name('admin.')->group(function () {

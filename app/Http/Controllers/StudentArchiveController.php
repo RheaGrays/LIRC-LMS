@@ -17,13 +17,23 @@ class StudentArchiveController extends Controller
         $filter = $request->query('filter', 'all');
         
         $candidates = [];
+        // BUG-05 FIX: Hard cap prevents unbounded memory growth on large student tables.
+        // chunk(200) prevents large queries but still accumulates into $candidates[].
+        // We break the chunk loop early once the cap is reached.
+        $maxCandidates = 3000;
+        $capped = false;
 
         // Chunk through active students to prevent memory spikes
         Student::query()
             ->where('status', 'active')
             ->with(['latestAttendance'])
-            ->chunk(200, function ($students) use (&$candidates, $programs, $currentYear) {
+            ->chunk(200, function ($students) use (&$candidates, &$capped, $programs, $currentYear, $maxCandidates) {
                 foreach ($students as $student) {
+                    if (count($candidates) >= $maxCandidates) {
+                        $capped = true;
+                        return false; // break out of chunk loop entirely
+                    }
+
                     // Extract numeric year level (e.g. "1st Year" -> 1, "Grade 7" -> 7)
                     preg_match('/\d+/', $student->year_level, $matches);
                     $numericYearLevel = !empty($matches) ? (int)$matches[0] : 1;
@@ -89,8 +99,10 @@ class StudentArchiveController extends Controller
 
         return view('admin.students.archive', [
             'candidates' => collect($candidates),
-            'filter' => $filter,
-            'stats' => $stats
+            'filter'     => $filter,
+            'stats'      => $stats,
+            'capped'     => $capped,       // BUG-05 FIX: tells the view to show a notice if truncated
+            'maxCandidates' => $maxCandidates,
         ]);
     }
     

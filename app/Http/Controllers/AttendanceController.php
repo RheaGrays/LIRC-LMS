@@ -146,12 +146,12 @@ class AttendanceController extends Controller
                 ];
             });
         } catch (\Illuminate\Contracts\Cache\LockTimeoutException $e) {
-            $event = [
-                'status'   => 'success',
-                'action'   => 'check_in',
-                'message'  => 'Successfully checked in.',
-                'student'  => $this->formatStudent($student)
-            ];
+            // BUG-01 FIX: Do NOT fake a success. Return a retriable server-busy error
+            // so the kiosk falls back to the offline queue rather than silently losing the scan.
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Server is busy processing another scan. Please try again.',
+            ], 503);
         }
 
         $event = $this->pushScanEvent($event);
@@ -175,9 +175,10 @@ class AttendanceController extends Controller
 
         $students = Student::with('academicDepartment')
             ->where(function($q) use ($searchTerm, $concatSql, $concatSqlRev) {
+                // BUG-02 FIX: whereRaw/orWhereRaw only accept 2 args; removed invalid 3rd arg
                 $q->where('id', 'LIKE', $searchTerm)
-                  ->orWhereRaw("{$concatSql} LIKE ?", [$searchTerm], 'or')
-                  ->orWhereRaw("{$concatSqlRev} LIKE ?", [$searchTerm], 'or');
+                  ->orWhereRaw("{$concatSql} LIKE ?", [$searchTerm])
+                  ->orWhereRaw("{$concatSqlRev} LIKE ?", [$searchTerm]);
             })
             ->limit(5)
             ->get();
@@ -353,11 +354,14 @@ class AttendanceController extends Controller
         $concatSql = $driver === 'sqlite' ? "first_name || ' ' || last_name" : "CONCAT(first_name, ' ', last_name)";
         $concatSqlRev = $driver === 'sqlite' ? "last_name || ' ' || first_name" : "CONCAT(last_name, ' ', first_name)";
         
-        /** @var \Illuminate\Database\Eloquent\Collection $students */
-        $students = Student::query()->whereRaw("{$concatSql} LIKE ?", [$searchTerm], 'and')
-            ->orWhereRaw("{$concatSqlRev} LIKE ?", [$searchTerm], 'or')
-            ->orWhere('first_name', 'LIKE', $searchTerm)
-            ->orWhere('last_name', 'LIKE', $searchTerm)
+        // BUG-02 FIX: whereRaw/orWhereRaw only accept 2 args; removed invalid 3rd arg
+        $students = Student::query()
+            ->where(function ($q) use ($concatSql, $concatSqlRev, $searchTerm) {
+                $q->whereRaw("{$concatSql} LIKE ?", [$searchTerm])
+                  ->orWhereRaw("{$concatSqlRev} LIKE ?", [$searchTerm])
+                  ->orWhere('first_name', 'LIKE', $searchTerm)
+                  ->orWhere('last_name', 'LIKE', $searchTerm);
+            })
             ->get();
             
         if ($students->count() === 1) {

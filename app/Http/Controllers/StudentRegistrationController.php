@@ -48,23 +48,50 @@ class StudentRegistrationController extends Controller
         if (!empty($validated['photoDataUrl']) && str_starts_with($validated['photoDataUrl'], 'data:image')) {
             $imageParts = explode(';base64,', $validated['photoDataUrl']);
             if (count($imageParts) == 2) {
+                // Preliminary MIME allowlist check (user-controlled, but gives early rejection)
                 $imageTypeAux = explode('image/', $imageParts[0]);
-                $imageType = $imageTypeAux[1] ?? 'jpeg';
-
-                if (!in_array(strtolower($imageType), ['jpeg', 'jpg', 'png', 'webp'])) {
+                $declaredType = strtolower($imageTypeAux[1] ?? '');
+                if (!in_array($declaredType, ['jpeg', 'jpg', 'png', 'webp'])) {
                     return response()->json(['message' => 'Invalid image format. Allowed formats: jpeg, jpg, png, webp'], 422);
                 }
+
                 if (strlen($imageParts[1]) > 7 * 1024 * 1024) {
-                    return response()->json(['message' => 'Image size must not exceed 5MB'], 422);
+                    return response()->json(['message' => 'Image size must not exceed 7MB'], 422);
                 }
 
-                $imageBase64 = base64_decode($imageParts[1]);
-                $safeId = Str::slug($validated['studentId'] ?? 'visitor_' . time(), '_');
-                $fileName = "patron-photos/{$safeId}_" . time() . ".{$imageType}";
-                Storage::disk('public')->put($fileName, $imageBase64);
+                $imageBytes = base64_decode($imageParts[1], strict: true);
+                if ($imageBytes === false) {
+                    return response()->json(['message' => 'Invalid base64 image data.'], 422);
+                }
+
+                // SEC-03 FIX: Verify the decoded bytes are actually a valid image using PHP's
+                // image detection — this cannot be spoofed via the data URL MIME string.
+                // Use the real detected type for the file extension, not the declared one.
+                $imageInfo = @getimagesizefromstring($imageBytes);
+                if (!$imageInfo) {
+                    return response()->json(['message' => 'Uploaded file is not a valid image.'], 422);
+                }
+
+                // Map PHP image type constant to a safe file extension
+                $mimeToExt = [
+                    IMAGETYPE_JPEG => 'jpg',
+                    IMAGETYPE_PNG  => 'png',
+                    IMAGETYPE_WEBP => 'webp',
+                ];
+                $detectedType = $imageInfo[2]; // IMAGETYPE_* constant
+                if (!isset($mimeToExt[$detectedType])) {
+                    return response()->json(['message' => 'Unsupported image type. Allowed: jpeg, png, webp'], 422);
+                }
+
+                // Use the real detected extension — not whatever the attacker declared in the MIME
+                $safeExt  = $mimeToExt[$detectedType];
+                $safeId   = Str::slug($validated['studentId'] ?? 'visitor_' . time(), '_');
+                $fileName = "patron-photos/{$safeId}_" . time() . ".{$safeExt}";
+                Storage::disk('public')->put($fileName, $imageBytes);
                 $photoPath = $fileName;
             }
         }
+
 
         // Generate a unique ID for Visitors if none provided
         $patronId = $validated['studentId'] ?? ('VIS-' . strtoupper(Str::random(6)));
@@ -83,12 +110,12 @@ class StudentRegistrationController extends Controller
 
         if ($isStudent) {
             // Look up the department by name
-            $dept = \App\Models\AcademicDepartment::where('name', $validated['college'])->first();
+            $dept = \App\Models\AcademicDepartment::query()->where('name', '=', $validated['college'])->first();
             $student->department_id = $dept?->id;
 
             // Look up the program by name (for college level)
             if ($validated['level'] === 'college' && !empty($validated['department'])) {
-                $prog = \App\Models\AcademicProgram::where('name', $validated['department'])->first();
+                $prog = \App\Models\AcademicProgram::query()->where('name', '=', $validated['department'])->first();
                 $student->program_id = $prog?->id;
             }
 

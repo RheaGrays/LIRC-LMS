@@ -27,3 +27,4 @@ composer
 composer-setup.php
 /dist
 /php_bundle
+lems.host.json

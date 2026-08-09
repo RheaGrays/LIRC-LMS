@@ -12,22 +12,27 @@ class StudentController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Student::withCount('violations')->with(['violations.violationType', 'academicDepartment', 'academicProgram']);
+        // PERF-01 FIX: Use LEFT JOINs instead of orWhereHas() for department/program search.
+        // orWhereHas() generates a correlated EXISTS subquery per matched row, which is O(n) slow.
+        // A single JOIN lets the DB engine use indexes and scan once.
+        $query = Student::withCount('violations')
+            ->with(['violations.violationType', 'academicDepartment', 'academicProgram'])
+            ->leftJoin('academic_departments', 'students.department_id', '=', 'academic_departments.id')
+            ->leftJoin('academic_programs',    'students.program_id',    '=', 'academic_programs.id')
+            ->select('students.*'); // prevent JOIN columns from shadowing student columns
 
         // Search ID, Name, Department/Program, Patron Category
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
-                $q->where('id', 'like', "%{$search}%")
-                  ->orWhere('last_name', 'like', "%{$search}%")
-                  ->orWhere('first_name', 'like', "%{$search}%")
-                  ->orWhere('patron_category', 'like', "%{$search}%")
-                  ->orWhereHas('academicDepartment', function($q) use ($search) {
-                      $q->where('name', 'like', "%{$search}%");
-                  })
-                  ->orWhereHas('academicProgram', function($q) use ($search) {
-                      $q->where('name', 'like', "%{$search}%")->orWhere('code', 'like', "%{$search}%");
-                  });
+                $q->where('students.id',        'like', "%{$search}%")
+                  ->orWhere('students.last_name',  'like', "%{$search}%")
+                  ->orWhere('students.first_name',  'like', "%{$search}%")
+                  ->orWhere('students.patron_category', 'like', "%{$search}%")
+                  // PERF-01 FIX: Direct column references on already-joined tables
+                  ->orWhere('academic_departments.name', 'like', "%{$search}%")
+                  ->orWhere('academic_programs.name',    'like', "%{$search}%")
+                  ->orWhere('academic_programs.code',    'like', "%{$search}%");
             });
         }
 

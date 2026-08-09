@@ -69,6 +69,39 @@ function findPhpExecutable() {
     return 'php'; // default system PATH fallback
 }
 
+/**
+ * BUG-04 FIX: Read the network host IP from lems.host.json instead of hardcoding it.
+ *
+ * Create a file named `lems.host.json` in the project root with:
+ *   { "host": "192.168.X.X", "port": 8000 }
+ *
+ * If the file is missing or has no host, the network fallback is skipped entirely
+ * and the error page is shown when the local server is not running.
+ */
+function readHostConfig() {
+    const configPaths = [
+        app.isPackaged
+            ? path.join(process.resourcesPath, 'lems.host.json')
+            : path.join(__dirname, '../lems.host.json'),
+        path.join(app.getPath('userData'), 'lems.host.json'), // also check AppData
+    ];
+
+    for (const configPath of configPaths) {
+        if (fs.existsSync(configPath)) {
+            try {
+                const raw = fs.readFileSync(configPath, 'utf8');
+                const cfg = JSON.parse(raw);
+                if (cfg.host && typeof cfg.host === 'string') {
+                    return { host: cfg.host, port: cfg.port || 8000 };
+                }
+            } catch (e) {
+                console.warn('lems.host.json parse error:', e.message);
+            }
+        }
+    }
+    return null; // no config — skip network fallback
+}
+
 function startPhpServer() {
     const projectPath = app.isPackaged 
         ? path.join(process.resourcesPath, 'app')
@@ -165,14 +198,23 @@ function createWindow() {
         mainWindow.maximize();
     }
 
-    // Security: Block non-local external navigation while permitting any private local network IP (192.168.x.x, 10.x.x.x, 127.0.0.1, localhost)
+    // SEC-04 FIX: Navigation allowlist is now explicit and deny-by-default.
+    // Each allowed prefix is documented. Both http:// and https:// are permitted for
+    // localhost/127.0.0.1 (e.g. if behind a local TLS proxy). LAN ranges (192.168.*, 10.*)
+    // are http-only because they run plain artisan serve. All other URLs are blocked.
+    const allowedNavPrefixes = [
+        'http://127.0.0.1',
+        'https://127.0.0.1',
+        'http://localhost',
+        'https://localhost',
+        'http://192.168.',   // campus LAN — http only (artisan serve)
+        'http://10.',        // alternate private range — http only
+    ];
     mainWindow.webContents.on('will-navigate', (event, url) => {
-        const isLocal = url.startsWith('http://127.0.0.1') || 
-                        url.startsWith('http://localhost') || 
-                        url.startsWith('http://192.168.') || 
-                        url.startsWith('http://10.');
-        if (!isLocal) {
+        const isAllowed = allowedNavPrefixes.some(prefix => url.startsWith(prefix));
+        if (!isAllowed) {
             event.preventDefault();
+            console.warn('[LEMS] Blocked navigation to non-local URL:', url);
         }
     });
 
@@ -188,9 +230,12 @@ function createWindow() {
         }
     });
 
-    // Try local server first, then host network IP
+    // BUG-04 FIX: Host IP is now read from lems.host.json — not hardcoded.
     const localTargetUrl = `http://127.0.0.1:8000${targetRoute}`;
-    const networkTargetUrl = `http://192.168.100.14:8000${targetRoute}`;
+    const hostConfig = readHostConfig();
+    const networkTargetUrl = hostConfig
+        ? `http://${hostConfig.host}:${hostConfig.port}${targetRoute}`
+        : null;
 
     const renderErrorPage = () => {
         if (!mainWindow) return;
@@ -228,9 +273,10 @@ function createWindow() {
         if (!mainWindow) return;
         if (isLocalReady) {
             mainWindow.loadURL(localTargetUrl);
-        } else {
-            // Check network host IP if local server is not running
-            checkServerReady('http://192.168.100.14:8000/kiosk', (isNetworkReady) => {
+        } else if (networkTargetUrl && hostConfig) {
+            // Only attempt network fallback if lems.host.json is configured
+            const networkCheckUrl = `http://${hostConfig.host}:${hostConfig.port}/kiosk`;
+            checkServerReady(networkCheckUrl, (isNetworkReady) => {
                 if (!mainWindow) return;
                 if (isNetworkReady) {
                     mainWindow.loadURL(networkTargetUrl);
@@ -238,6 +284,8 @@ function createWindow() {
                     renderErrorPage();
                 }
             });
+        } else {
+            renderErrorPage();
         }
     });
 

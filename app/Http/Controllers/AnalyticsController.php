@@ -23,8 +23,8 @@ class AnalyticsController extends Controller
             return AcademicTerm::orderBy('start_date', 'desc')->get();
         });
 
-        $departments = AcademicDepartment::orderBy('name')->get();
-        $programs    = AcademicProgram::orderBy('name')->get();
+        $departments = AcademicDepartment::query()->orderBy('name', 'asc')->get();
+        $programs    = AcademicProgram::query()->orderBy('name', 'asc')->get();
 
         return view('admin.analytics.index', compact('terms', 'departments', 'programs'));
     }
@@ -51,12 +51,14 @@ class AnalyticsController extends Controller
     public function exportMonthlyReport(Request $request)
     {
         $termId     = $request->input('term_id');
-        $schoolYear = $request->input('school_year'); // e.g. "AY 2026-2027" or "2026"
-        $monthInput = $request->input('month');       // e.g. "08", "2026-08", or ""
+        $schoolYear = $request->input('school_year');
+        $monthInput = $request->input('month');
         $programId  = $request->input('program_id');
         $deptId     = $request->input('department_id');
-        $format     = strtolower($request->input('format', 'excel')); // excel, word, pdf
+        $format     = strtolower($request->input('format', 'excel'));
 
+        // PERF-03 FIX: Build the query once and reuse it for both COUNT and lazy iteration.
+        // This avoids loading the entire result set into a PHP Collection in memory.
         $query = AttendanceLog::with(['student.academicDepartment', 'student.academicProgram']);
 
         $schoolYearLabel = 'All School Years';
@@ -64,7 +66,7 @@ class AnalyticsController extends Controller
 
         // 1. Filter by School Year / Academic Term
         if ($termId) {
-            $term = AcademicTerm::find($termId);
+            $term = AcademicTerm::query()->find($termId);
             if ($term) {
                 $query->whereBetween('logged_at', [$term->start_date->startOfDay(), $term->end_date->endOfDay()]);
                 $schoolYearLabel = $term->name;
@@ -79,12 +81,12 @@ class AnalyticsController extends Controller
 
         // 2. Filter by Month
         if (!empty($monthInput)) {
-            if (strlen($monthInput) === 7) { // e.g. "2026-08"
+            if (strlen($monthInput) === 7) {
                 $startDate = Carbon::parse($monthInput)->startOfMonth();
                 $endDate   = Carbon::parse($monthInput)->endOfMonth();
                 $query->whereBetween('logged_at', [$startDate, $endDate]);
                 $monthLabel = $startDate->format('F Y');
-            } else { // e.g. "8" or "08" (August)
+            } else {
                 $monthNum = (int) $monthInput;
                 if ($monthNum >= 1 && $monthNum <= 12) {
                     $query->whereMonth('logged_at', $monthNum);
@@ -107,30 +109,35 @@ class AnalyticsController extends Controller
             });
         }
 
-        $logs = $query->orderBy('logged_at', 'asc')->get();
+        $programName = $programId ? (AcademicProgram::query()->find($programId)?->name ?? 'All Programs') : 'All Programs';
+        $deptName    = $deptId ? (AcademicDepartment::query()->find($deptId)?->name ?? 'All Departments') : 'All Departments';
 
-        $programName = $programId ? (AcademicProgram::find($programId)?->name ?? 'All Programs') : 'All Programs';
-        $deptName    = $deptId ? (AcademicDepartment::find($deptId)?->name ?? 'All Departments') : 'All Departments';
+        // PERF-03 FIX: Use a fast COUNT query for the total — avoid loading all rows just for count().
+        $totalCount = (clone $query)->count();
+
+        // PERF-03 FIX: lazy() fetches rows in chunks of 500 using a cursor,
+        // never holding the full result set in PHP memory at once.
+        $logs = $query->orderBy('logged_at', 'asc')->lazy(500);
 
         if ($format === 'word' || $format === 'doc') {
-            return $this->exportWordReport($logs, $schoolYearLabel, $monthLabel, $programName, $deptName);
+            return $this->exportWordReport($logs, $totalCount, $schoolYearLabel, $monthLabel, $programName, $deptName);
         }
 
         if ($format === 'pdf') {
-            return $this->exportPdfReport($logs, $schoolYearLabel, $monthLabel, $programName, $deptName);
+            return $this->exportPdfReport($logs, $totalCount, $schoolYearLabel, $monthLabel, $programName, $deptName);
         }
 
-        // Default: Excel Export (.xlsx)
-        return $this->exportExcelReport($logs, $schoolYearLabel, $monthLabel, $programName, $deptName);
+        return $this->exportExcelReport($logs, $totalCount, $schoolYearLabel, $monthLabel, $programName, $deptName);
     }
 
-    private function exportExcelReport($logs, $schoolYearLabel, $monthLabel, $programName, $deptName)
+    // PERF-03 FIX: $logs is now a LazyCollection (cursor-based, ~500 rows in memory at a time).
+    // $totalCount is pre-computed via COUNT() so we don't need to materialise the collection.
+    private function exportExcelReport(iterable $logs, int $totalCount, string $schoolYearLabel, string $monthLabel, string $programName, string $deptName)
     {
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Attendance Report');
 
-        // Header Titles
         $sheet->setCellValue('A1', 'COR JESU COLLEGE — LIBRARY & INFORMATION RESOURCE CENTER');
         $sheet->setCellValue('A2', "OFFICIAL ATTENDANCE REPORT PER PROGRAM");
         $sheet->setCellValue('A3', "School Year: {$schoolYearLabel} | Month: {$monthLabel} | Program: {$programName}");
@@ -139,13 +146,13 @@ class AnalyticsController extends Controller
         $sheet->getStyle('A1')->getFont()->setSize(14);
         $sheet->getStyle('A2')->getFont()->setSize(12);
 
-        // Table Columns
         $headers = ['#', 'Date & Time', 'Student ID', 'Student Full Name', 'Category', 'Department', 'Program / Course', 'Year Level', 'Action'];
         $sheet->fromArray($headers, null, 'A5');
         $sheet->getStyle('A5:I5')->getFont()->setBold(true);
 
-        $rowNum = 6;
+        $rowNum  = 6;
         $counter = 1;
+        // Iterates the lazy cursor — each chunk of 500 is loaded, written, then discarded
         foreach ($logs as $log) {
             $student = $log->student;
             $sheet->fromArray([
@@ -162,11 +169,9 @@ class AnalyticsController extends Controller
             $rowNum++;
         }
 
-        // Summary Statistics Row
-        $sheet->setCellValue('A' . ($rowNum + 1), "Total Log Entries: " . count($logs));
+        $sheet->setCellValue('A' . ($rowNum + 1), "Total Log Entries: {$totalCount}");
         $sheet->getStyle('A' . ($rowNum + 1))->getFont()->setBold(true);
 
-        // Auto-fit column widths
         foreach (range('A', 'I') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
@@ -179,18 +184,20 @@ class AnalyticsController extends Controller
         }, $filename);
     }
 
-    private function exportWordReport($logs, $schoolYearLabel, $monthLabel, $programName, $deptName)
+    private function exportWordReport(iterable $logs, int $totalCount, string $schoolYearLabel, string $monthLabel, string $programName, string $deptName)
     {
         $filename = 'Attendance_Report_' . str_replace(' ', '_', $schoolYearLabel) . '_' . str_replace(' ', '_', $monthLabel) . '.doc';
 
         $rowsHtml = '';
-        $counter = 1;
+        $counter  = 1;
         foreach ($logs as $log) {
             $student = $log->student;
-            $name = htmlspecialchars($student ? $student->full_name : $log->student_id);
-            $dept = htmlspecialchars($student?->academicDepartment?->name ?? '—');
-            $prog = htmlspecialchars($student?->academicProgram?->name ?? '—');
-            $action = $log->action === 'check_in' ? '<span style="color:#15803d;font-weight:bold;">CHECK-IN</span>' : '<span style="color:#b91c1c;font-weight:bold;">CHECK-OUT</span>';
+            $name   = htmlspecialchars($student ? $student->full_name : $log->student_id);
+            $dept   = htmlspecialchars($student?->academicDepartment?->name ?? '—');
+            $prog   = htmlspecialchars($student?->academicProgram?->name ?? '—');
+            $action = $log->action === 'check_in'
+                ? '<span style="color:#15803d;font-weight:bold;">CHECK-IN</span>'
+                : '<span style="color:#b91c1c;font-weight:bold;">CHECK-OUT</span>';
 
             $rowsHtml .= "
                 <tr>
@@ -246,7 +253,7 @@ class AnalyticsController extends Controller
                         {$rowsHtml}
                     </tbody>
                 </table>
-                <div class='summary'>Total Log Entries: " . count($logs) . "</div>
+                <div class='summary'>Total Log Entries: {$totalCount}</div>
             </body>
             </html>
         ";
@@ -256,17 +263,17 @@ class AnalyticsController extends Controller
             ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
     }
 
-    private function exportPdfReport($logs, $schoolYearLabel, $monthLabel, $programName, $deptName)
+    private function exportPdfReport(iterable $logs, int $totalCount, string $schoolYearLabel, string $monthLabel, string $programName, string $deptName)
     {
-        $counter = 1;
+        $counter  = 1;
         $rowsHtml = '';
         foreach ($logs as $log) {
             $student = $log->student;
-            $name = htmlspecialchars($student ? $student->full_name : $log->student_id);
-            $dept = htmlspecialchars($student?->academicDepartment?->name ?? '—');
-            $prog = htmlspecialchars($student?->academicProgram?->name ?? '—');
-            $action = $log->action === 'check_in' 
-                ? '<span style="color:#15803d;font-weight:bold;background:#dcfce7;padding:2px 8px;border-radius:12px;">Entered</span>' 
+            $name   = htmlspecialchars($student ? $student->full_name : $log->student_id);
+            $dept   = htmlspecialchars($student?->academicDepartment?->name ?? '—');
+            $prog   = htmlspecialchars($student?->academicProgram?->name ?? '—');
+            $action = $log->action === 'check_in'
+                ? '<span style="color:#15803d;font-weight:bold;background:#dcfce7;padding:2px 8px;border-radius:12px;">Entered</span>'
                 : '<span style="color:#b91c1c;font-weight:bold;background:#fee2e2;padding:2px 8px;border-radius:12px;">Exited</span>';
 
             $rowsHtml .= "
@@ -316,7 +323,7 @@ class AnalyticsController extends Controller
                         <div><strong>School Year:</strong> {$schoolYearLabel}</div>
                         <div><strong>Month:</strong> {$monthLabel}</div>
                         <div><strong>Program:</strong> {$programName}</div>
-                        <div><strong>Total Logs:</strong> " . count($logs) . "</div>
+                        <div><strong>Total Logs:</strong> {$totalCount}</div>
                     </div>
                 </div>
                 <table>
@@ -337,7 +344,7 @@ class AnalyticsController extends Controller
                 </table>
                 <div class='summary-card'>
                     <span>Cor Jesu College Library System</span>
-                    <span>Total Attendance Entries: <strong>" . count($logs) . "</strong></span>
+                    <span>Total Attendance Entries: <strong>{$totalCount}</strong></span>
                 </div>
             </body>
             </html>

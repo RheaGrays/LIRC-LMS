@@ -436,21 +436,34 @@ const registerApp = () => {
 
             try {
                 if (!navigator.onLine) {
-                    await QueueManager.enqueue(id);
+                    // BUG-06 FIX: Determine what action should be queued before going offline.
+                    // We ask the server for the student's last action to know whether
+                    // next should be check_in or check_out.
+                    const pendingAction = await this.resolveNextAction(id);
+                    await QueueManager.enqueue(id, pendingAction);
                     this.result = { status: 'offline', message: 'Saved offline (No Internet).', student_id: id };
                 } else {
                     try {
                         const res = await this.performOnlineCheckin(id);
-                        this.result = res;
-                        if(res?.status === 'success') this.fetchOccupancy();
+
+                        // BUG-01 FIX: handle 503 server-busy — fall back to offline queue
+                        if (res?.status === 'error' && res?.code === 503) {
+                            const pendingAction = await this.resolveNextAction(id);
+                            await QueueManager.enqueue(id, pendingAction);
+                            this.result = { status: 'offline', message: 'Server busy — saved offline.', student_id: id };
+                        } else {
+                            this.result = res;
+                            if (res?.status === 'success') this.fetchOccupancy();
+                        }
                     } catch (networkErr) {
                         // Automatic fallback to offline queue if network or server drops during scan
-                        await QueueManager.enqueue(id);
+                        const pendingAction = await this.resolveNextAction(id);
+                        await QueueManager.enqueue(id, pendingAction);
                         this.result = { status: 'offline', message: 'Saved offline (Connection Dropped).', student_id: id };
                     }
                 }
             } catch (err) {
-                await QueueManager.enqueue(id);
+                await QueueManager.enqueue(id, 'check_in'); // safe default for unexpected errors
                 this.result = { status: 'offline', message: 'Saved offline.', student_id: id };
             } finally {
                 clearTimeout(safetyTimeout);
@@ -461,6 +474,30 @@ const registerApp = () => {
                     this.handleActivity();
                 });
             }
+        },
+
+        /**
+         * BUG-06 FIX: Resolve what action should be queued when the server is unreachable.
+         * Queries /kiosk/last (if possible) to determine toggle state; defaults to check_in.
+         */
+        async resolveNextAction(id) {
+            try {
+                const res = await fetch('/kiosk/last', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                    },
+                    body: JSON.stringify({ student_id: id }),
+                    signal: AbortSignal.timeout(3000)
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    return (data.action === 'check_in') ? 'check_out' : 'check_in';
+                }
+            } catch (_) { /* unreachable — default below */ }
+            return 'check_in'; // safe default
         },
         
         async performOnlineCheckin(id) {
