@@ -36,14 +36,67 @@
                     </select>
                 </div>
 
-                <!-- Format Dropdown -->
-                <div>
+                <!-- Custom Format Dropdown Selector -->
+                <div class="relative" x-data="{ openFormatDropdown: false, selectedFormat: 'excel' }">
+                    <input type="hidden" name="format" :value="selectedFormat">
                     <label class="block text-[11px] font-bold uppercase tracking-wider text-gray-600 mb-1">Report Format</label>
-                    <select name="format" class="no-tomselect w-full sm:w-40 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:border-[var(--cjc-navy)] font-bold h-[42px]">
-                        <option value="excel">📊 Excel (.xlsx)</option>
-                        <option value="word">📄 Word (.doc)</option>
-                        <option value="pdf">📕 PDF / Print</option>
-                    </select>
+                    
+                    <button type="button" @click="openFormatDropdown = !openFormatDropdown" @click.outside="openFormatDropdown = false" class="w-full sm:w-44 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:border-[var(--cjc-navy)] font-bold h-[42px] flex items-center justify-between gap-2 shadow-sm">
+                        <div class="flex items-center gap-2">
+                            <template x-if="selectedFormat === 'excel'">
+                                <span class="flex items-center gap-1.5 text-emerald-700 font-bold">
+                                    <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zM15.8 17.5L14 15l-1.8 2.5h-1.7l2.6-3.5-2.5-3.5h1.7l1.7 2.4 1.7-2.4h1.7l-2.5 3.5 2.6 3.5h-1.7zM13 9V3.5L18.5 9H13z"/></svg>
+                                    Excel (.xlsx)
+                                </span>
+                            </template>
+                            <template x-if="selectedFormat === 'word'">
+                                <span class="flex items-center gap-1.5 text-blue-700 font-bold">
+                                    <svg class="w-4 h-4 text-blue-600 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm1.8 15.5h-1.6l-1.2-4.5-1.2 4.5H10.2L8.5 10h1.5l1.1 4.5 1.2-4.5h1.4l1.2 4.5 1.1-4.5h1.5l-1.7 7.5zM13 9V3.5L18.5 9H13z"/></svg>
+                                    Word (.doc)
+                                </span>
+                            </template>
+                            <template x-if="selectedFormat === 'pdf'">
+                                <span class="flex items-center gap-1.5 text-red-700 font-bold">
+                                    <svg class="w-4 h-4 text-red-600 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9.5 8.5c0 .8-.7 1.5-1.5 1.5H7v2H5.5V9H8c.8 0 1.5.7 1.5 1.5v1zm5 2c0 .8-.7 1.5-1.5 1.5h-2.5V9h2.5c.8 0 1.5.7 1.5 1.5v3zm3.5-3.5h-3v5H18v-1.5h-1.5v-1H18V10z"/></svg>
+                                    PDF / Print
+                                </span>
+                            </template>
+                        </div>
+                        <svg class="w-4 h-4 text-gray-400 transition-transform" :class="{'rotate-180': openFormatDropdown}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+
+                    <!-- Dropdown Options Menu -->
+                    <div x-show="openFormatDropdown" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="transform opacity-0 scale-95" x-transition:enter-end="transform opacity-100 scale-100" class="absolute left-0 mt-1 w-52 bg-white rounded-xl shadow-xl border border-gray-200 py-1.5 z-50">
+                        <button type="button" @click="selectedFormat = 'excel'; openFormatDropdown = false" class="w-full px-3.5 py-2 text-left text-sm font-semibold flex items-center gap-2.5 hover:bg-emerald-50 hover:text-emerald-700 transition-colors" :class="{'bg-emerald-50 text-emerald-700': selectedFormat === 'excel'}">
+                            <div class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zM15.8 17.5L14 15l-1.8 2.5h-1.7l2.6-3.5-2.5-3.5h1.7l1.7 2.4 1.7-2.4h1.7l-2.5 3.5 2.6 3.5h-1.7zM13 9V3.5L18.5 9H13z"/></svg>
+                            </div>
+                            <div>
+                                <div class="font-bold">Excel Spreadsheet</div>
+                                <div class="text-[11px] text-gray-500 font-normal">Microsoft Excel (.xlsx)</div>
+                            </div>
+                        </button>
+
+                        <button type="button" @click="selectedFormat = 'word'; openFormatDropdown = false" class="w-full px-3.5 py-2 text-left text-sm font-semibold flex items-center gap-2.5 hover:bg-blue-50 hover:text-blue-700 transition-colors" :class="{'bg-blue-50 text-blue-700': selectedFormat === 'word'}">
+                            <div class="w-7 h-7 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm1.8 15.5h-1.6l-1.2-4.5-1.2 4.5H10.2L8.5 10h1.5l1.1 4.5 1.2-4.5h1.4l1.2 4.5 1.1-4.5h1.5l-1.7 7.5zM13 9V3.5L18.5 9H13z"/></svg>
+                            </div>
+                            <div>
+                                <div class="font-bold">Word Document</div>
+                                <div class="text-[11px] text-gray-500 font-normal">Microsoft Word (.doc)</div>
+                            </div>
+                        </button>
+
+                        <button type="button" @click="selectedFormat = 'pdf'; openFormatDropdown = false" class="w-full px-3.5 py-2 text-left text-sm font-semibold flex items-center gap-2.5 hover:bg-red-50 hover:text-red-700 transition-colors" :class="{'bg-red-50 text-red-700': selectedFormat === 'pdf'}">
+                            <div class="w-7 h-7 rounded-lg bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9.5 8.5c0 .8-.7 1.5-1.5 1.5H7v2H5.5V9H8c.8 0 1.5.7 1.5 1.5v1zm5 2c0 .8-.7 1.5-1.5 1.5h-2.5V9h2.5c.8 0 1.5.7 1.5 1.5v3zm3.5-3.5h-3v5H18v-1.5h-1.5v-1H18V10z"/></svg>
+                            </div>
+                            <div>
+                                <div class="font-bold">PDF Document</div>
+                                <div class="text-[11px] text-gray-500 font-normal">Printable PDF (.pdf)</div>
+                            </div>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Export Button -->
