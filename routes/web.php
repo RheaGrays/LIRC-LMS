@@ -23,8 +23,8 @@ Route::get('/csrf-token', fn() => response()->json(['token' => csrf_token()]))->
 // ── Kiosk (public) ────────────────────────────────────────────
 Route::get('/kiosk', [KioskController::class, 'index'])->name('kiosk.index');
 
-// Kiosk AJAX endpoints (public — kiosk runs without login)
-Route::prefix('kiosk')->name('kiosk.')->group(function () {
+// Kiosk AJAX endpoints (protected via KioskTokenAuth middleware — permits local kiosk app, secures remote requests)
+Route::prefix('kiosk')->name('kiosk.')->middleware(\App\Http\Middleware\KioskTokenAuth::class)->group(function () {
     Route::post('/lookup',   [AttendanceController::class, 'lookup'])->name('lookup')->middleware('throttle:10,1');
     Route::post('/process',  [AttendanceController::class, 'process'])->name('process')->middleware('throttle:30,1');
     Route::get('/search',    [AttendanceController::class, 'search'])->name('search')->middleware('throttle:60,1');

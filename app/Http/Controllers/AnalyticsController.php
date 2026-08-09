@@ -3,14 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Models\AttendanceLog;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class AnalyticsController extends Controller
 {
     public function index()
     {
-        $terms = \App\Models\AcademicTerm::orderBy('start_date', 'desc')->get();
+        $terms = Cache::remember('academic_terms_all', 600, function () {
+            return \App\Models\AcademicTerm::orderBy('start_date', 'desc')->get();
+        });
         return view('admin.analytics.index', compact('terms'));
     }
 
@@ -18,7 +22,23 @@ class AnalyticsController extends Controller
     {
         $period = $request->input('period', 'today');
         $termId = $request->input('term_id');
-        
+
+        $cacheKey = "analytics_data_{$period}_" . ($termId ?? 'none');
+
+        // Fix #11: Add caching layer (cache analytics for 5 minutes)
+        $data = Cache::remember($cacheKey, 300, function () use ($period, $termId) {
+            return $this->buildAnalyticsData($period, $termId);
+        });
+
+        return response()->json($data);
+    }
+
+    /**
+     * Fix #9: Database-agnostic analytics query logic.
+     * Uses Carbon & Collections instead of MySQL-specific HOUR() and DATE_FORMAT() functions.
+     */
+    private function buildAnalyticsData(string $period, ?string $termId): array
+    {
         $query = AttendanceLog::query()->where('action', 'check_in');
 
         // Apply Date Filters
@@ -43,49 +63,49 @@ class AnalyticsController extends Controller
             }
         }
 
-        // We need to clone the query for department grouping, because traffic grouping alters the select.
+        // We clone query for department aggregation
         $deptQuery = clone $query;
 
-        // Process Traffic Data (Line chart)
+        // Fetch timestamps for database-agnostic traffic processing
+        $logs = $query->get(['id', 'student_id', 'logged_at']);
+
         $trafficLabels = [];
         $trafficValues = [];
 
         if ($termId || $period === 'year') {
-            // Group by Month
-            $trafficData = $query->selectRaw("DATE_FORMAT(logged_at, '%b %Y') as label, COUNT(*) as aggregate", [])
-                ->groupBy('label')
-                ->orderByRaw("MIN(logged_at)") // Ensure chronological order
-                ->get();
+            // Group by Month (e.g. "Jan 2026")
+            $grouped = $logs->groupBy(function ($log) {
+                return Carbon::parse($log->logged_at)->format('Y-m');
+            })->sortKeys();
+
+            foreach ($grouped as $yearMonth => $group) {
+                $trafficLabels[] = Carbon::createFromFormat('Y-m', $yearMonth)->format('M Y');
+                $trafficValues[] = $group->count();
+            }
         } elseif ($period === 'month' || $period === 'week') {
-            // Group by Day
-            $trafficData = $query->selectRaw("DATE_FORMAT(logged_at, '%b %d (%a)') as label, COUNT(*) as aggregate", [])
-                ->groupBy('label')
-                ->orderByRaw("MIN(logged_at)")
-                ->get();
+            // Group by Day (e.g. "Jan 15 (Thu)")
+            $grouped = $logs->groupBy(function ($log) {
+                return Carbon::parse($log->logged_at)->format('Y-m-d');
+            })->sortKeys();
+
+            foreach ($grouped as $dateStr => $group) {
+                $trafficLabels[] = Carbon::parse($dateStr)->format('M d (D)');
+                $trafficValues[] = $group->count();
+            }
         } else {
-            // Group by Hour (Today)
-            // SQL HOUR() returns 0-23
-            $trafficData = $query->selectRaw("HOUR(logged_at) as hour, COUNT(*) as aggregate", [])
-                ->groupBy('hour')
-                ->get()->keyBy('hour');
-            
+            // Group by Hour (Today) — 6 AM to 10 PM
+            $hourlyCounts = $logs->groupBy(function ($log) {
+                return (int) Carbon::parse($log->logged_at)->format('G');
+            });
+
             for ($h = 6; $h <= 22; $h++) {
                 $label = $h < 12 ? "{$h}AM" : ($h === 12 ? "12PM" : ($h - 12) . "PM");
                 $trafficLabels[] = $label;
-                $trafficValues[] = isset($trafficData[$h]) ? $trafficData[$h]->aggregate : 0;
-            }
-            $trafficData = null; // skip the foreach below
-        }
-
-        if (isset($trafficData)) {
-            foreach ($trafficData as $row) {
-                $trafficLabels[] = $row->label;
-                $trafficValues[] = $row->aggregate;
+                $trafficValues[] = isset($hourlyCounts[$h]) ? $hourlyCounts[$h]->count() : 0;
             }
         }
 
-        // Process Department Data (Doughnut chart)
-        // Join students and academic_departments to group by department without loading all models
+        // Department Data (Doughnut chart)
         $deptData = $deptQuery->join('students', 'attendance_logs.student_id', '=', 'students.id')
             ->leftJoin('academic_departments', 'students.department_id', '=', 'academic_departments.id')
             ->selectRaw("COALESCE(academic_departments.name, 'Unknown') as department, COUNT(*) as aggregate", [])
@@ -97,10 +117,10 @@ class AnalyticsController extends Controller
         $deptValues = [];
         foreach ($deptData as $row) {
             $deptLabels[] = $row->department;
-            $deptValues[] = $row->aggregate;
+            $deptValues[] = (int) $row->aggregate;
         }
 
-        return response()->json([
+        return [
             'traffic' => [
                 'labels' => $trafficLabels,
                 'values' => $trafficValues
@@ -109,6 +129,6 @@ class AnalyticsController extends Controller
                 'labels' => $deptLabels,
                 'values' => $deptValues
             ]
-        ]);
+        ];
     }
 }

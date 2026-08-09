@@ -12,6 +12,26 @@ use Illuminate\Support\Facades\Response;
 class ReportService
 {
     /**
+     * Sanitize a string value to prevent CSV/Excel formula injection.
+     * Prefixes cells starting with formula-triggering characters with a single quote.
+     */
+    private function sanitizeForExcel(?string $value): string
+    {
+        if ($value === null || $value === '') {
+            return '';
+        }
+
+        // Characters that can trigger formula execution in Excel/LibreOffice
+        $dangerousChars = ['=', '+', '-', '@', "\t", "\r"];
+
+        if (in_array($value[0], $dangerousChars, true)) {
+            return "'" . $value;
+        }
+
+        return $value;
+    }
+
+    /**
      * Export Students List to Excel
      */
     public function exportStudentsExcel()
@@ -36,10 +56,12 @@ class ReportService
         
         $row = 2;
         foreach ($students as $student) {
-            $sheet->setCellValue('A' . $row, $student->id);
-            $sheet->setCellValue('B' . $row, $student->full_name);
-            $sheet->setCellValue('C' . $row, $student->academicDepartment?->name ?? '—');
-            $sheet->setCellValue('D' . $row, $student->year_level);
+            // Use setCellValueExplicit with STRING type for user-provided data
+            // to prevent formula injection (e.g. names starting with =, +, -, @)
+            $sheet->setCellValueExplicit('A' . $row, $this->sanitizeForExcel($student->id), \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit('B' . $row, $this->sanitizeForExcel($student->full_name), \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit('C' . $row, $this->sanitizeForExcel($student->academicDepartment?->name ?? '—'), \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit('D' . $row, $this->sanitizeForExcel($student->year_level), \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
             $sheet->setCellValue('E' . $row, $student->violations_count);
             $row++;
         }

@@ -66,17 +66,12 @@ class Student extends Model
         if (str_starts_with($this->photo_path, 'http')) return $this->photo_path;
         
         $relative = ltrim($this->photo_path, '/');
+
+        // Single file_exists() check — no glob() wildcard search.
+        // Previously, a glob() fallback searched the directory for files matching
+        // the student ID prefix, causing O(n) blocking disk I/O when loading lists.
         if (file_exists(public_path('storage/' . $relative)) || file_exists(storage_path('app/public/' . $relative))) {
             return asset('storage/' . $relative);
-        }
-
-        // Fallback: search for existing student photo matching student ID prefix
-        $dir = dirname($relative);
-        $safeId = \Illuminate\Support\Str::slug($this->id, '_');
-        $matches = glob(storage_path('app/public/' . $dir . '/' . $safeId . '_*'));
-        if (!empty($matches)) {
-            $matchingFile = basename(end($matches));
-            return asset('storage/' . $dir . '/' . $matchingFile);
         }
 
         return null;

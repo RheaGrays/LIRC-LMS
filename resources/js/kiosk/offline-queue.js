@@ -6,35 +6,46 @@ export const QueueManager = {
         try {
             return JSON.parse(localStorage.getItem(this.key) || '[]');
         } catch (e) {
+            console.error('[LEMS QueueManager] Failed to read queue from localStorage:', e);
             return [];
         }
     },
 
     saveQueue(queue) {
-        localStorage.setItem(this.key, JSON.stringify(queue));
-        window.dispatchEvent(new CustomEvent('queue-updated', { detail: { count: queue.length } }));
+        try {
+            localStorage.setItem(this.key, JSON.stringify(queue));
+            window.dispatchEvent(new CustomEvent('queue-updated', { detail: { count: queue.length } }));
+        } catch (e) {
+            console.error('[LEMS QueueManager] Failed to save queue to localStorage:', e);
+        }
     },
 
     async enqueue(studentId) {
-        const queue = this.getQueue();
-        queue.push({
-            id: crypto.randomUUID(),
-            student_id: studentId,
-            timestamp: new Date().toISOString()
-        });
-        this.saveQueue(queue);
+        try {
+            const queue = this.getQueue();
+            queue.push({
+                id: crypto.randomUUID(),
+                student_id: studentId,
+                timestamp: new Date().toISOString()
+            });
+            this.saveQueue(queue);
+        } catch (e) {
+            console.error('[LEMS QueueManager] Failed to enqueue student ID:', studentId, e);
+        }
     },
 
     startSyncTimer() {
         // Attempt sync every 10 seconds if online
         setInterval(() => {
             if (navigator.onLine) {
-                this.sync();
+                this.sync().catch(err => console.warn('[LEMS QueueManager] Sync interval error:', err));
             }
         }, 10000);
         
         // Also try immediately when coming back online
-        window.addEventListener('online', () => this.sync());
+        window.addEventListener('online', () => {
+            this.sync().catch(err => console.warn('[LEMS QueueManager] Online event sync error:', err));
+        });
     },
 
     async sync() {
@@ -47,30 +58,36 @@ export const QueueManager = {
         let successfulIds = [];
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
 
-        // Process sequentially to maintain order and logic (checkin vs checkout)
+        // Process sequentially to maintain order and logic
         for (const item of queue) {
             try {
                 const nextAction = 'check_in';
                 
-                // 2. Log it
                 const logRes = await fetch('/kiosk/log', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                    headers: { 
+                        'Content-Type': 'application/json', 
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken || '' 
+                    },
                     body: JSON.stringify({ 
                         student_id: item.student_id, 
                         action: nextAction,
-                        // Note: we're using current time on server, but ideally we'd pass item.timestamp
-                        // to the backend to log the exact offline time. For simplicity in porting, 
-                        // we'll just let the backend use now(), or we can pass it if we update the backend.
                     })
                 });
 
                 if (logRes.ok) {
                     successfulIds.push(item.id);
+                } else {
+                    const errorText = await logRes.text();
+                    console.warn(`[LEMS QueueManager] Kiosk sync HTTP ${logRes.status} for item ${item.id}:`, errorText);
+                    // Non-ok response (e.g. 422 or 500) -> halt sync loop to avoid discarding failed items
+                    break;
                 }
             } catch (err) {
-                console.error("Sync error for item:", item, err);
-                break; // Stop syncing on network error, try again later
+                console.error("[LEMS QueueManager] Network error during sync for item:", item, err);
+                window.dispatchEvent(new CustomEvent('queue-sync-error', { detail: { error: err.message } }));
+                break; // Stop syncing on network error, retry on next timer
             }
         }
 

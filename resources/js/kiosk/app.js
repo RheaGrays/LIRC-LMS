@@ -58,9 +58,16 @@ const registerApp = () => {
                     const tokenRes = await fetch('/csrf-token');
                     if (tokenRes.ok) {
                         const tokenData = await tokenRes.json();
-                        if (tokenData.token) document.querySelector('meta[name="csrf-token"]').content = tokenData.token;
+                        if (tokenData.token) {
+                            const metaEl = document.querySelector('meta[name="csrf-token"]');
+                            if (metaEl) metaEl.content = tokenData.token;
+                        }
+                    } else {
+                        console.warn('[LEMS Kiosk] CSRF token keepalive returned status:', tokenRes.status);
                     }
-                } catch (e) {}
+                } catch (e) {
+                    console.warn('[LEMS Kiosk] CSRF token keepalive failed:', e.message);
+                }
             }, 240000);
         },
 
@@ -227,8 +234,16 @@ const registerApp = () => {
                     if (res.ok) {
                         this.suggestions = await res.json();
                         this.showSuggestions = this.suggestions.length > 0;
+                    } else {
+                        console.warn('[LEMS Kiosk] Autocomplete search returned status:', res.status);
+                        this.suggestions = [];
+                        this.showSuggestions = false;
                     }
-                } catch (e) {}
+                } catch (e) {
+                    console.warn('[LEMS Kiosk] Autocomplete search failed:', e.message);
+                    this.suggestions = [];
+                    this.showSuggestions = false;
+                }
             }, 250);
         },
 
@@ -424,8 +439,14 @@ const registerApp = () => {
             if(!navigator.onLine) return;
             try {
                 const res = await fetch('/kiosk/occupancy');
-                if (res.ok) this.occupancy = await res.json();
-            } catch (e) {}
+                if (res.ok) {
+                    this.occupancy = await res.json();
+                } else {
+                    console.warn('[LEMS Kiosk] Occupancy fetch returned status:', res.status);
+                }
+            } catch (e) {
+                console.warn('[LEMS Kiosk] Occupancy fetch network error:', e.message);
+            }
         },
         
         // --- Real-Time Link Logic ---
@@ -440,7 +461,10 @@ const registerApp = () => {
             if (!navigator.onLine) return;
             try {
                 const res = await fetch(`/kiosk/latest-scan?after_id=${this.lastLogId}`);
-                if (!res.ok) return;
+                if (!res.ok) {
+                    console.warn('[LEMS Kiosk] Realtime polling returned status:', res.status);
+                    return;
+                }
                 
                 const data = await res.json();
                 if (data && data.id) {
@@ -452,7 +476,9 @@ const registerApp = () => {
                     // Trigger the animation for the remote scan!
                     this.triggerRemoteScan(data);
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.warn('[LEMS Kiosk] Realtime polling network error:', e.message);
+            }
         },
         
         triggerRemoteScan(data) {

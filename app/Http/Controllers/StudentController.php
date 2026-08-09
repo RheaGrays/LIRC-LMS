@@ -79,7 +79,7 @@ class StudentController extends Controller
         $departmentsList = \App\Models\AcademicDepartment::all();
         $programsList = \App\Models\AcademicProgram::all();
         $yearLevelsList = \Illuminate\Support\Facades\Cache::remember('student_year_levels', 300, function () {
-            return Student::query()->whereNotNull('year_level')->where('year_level', '!=', '')->distinct()->pluck('year_level')->sort()->values();
+            return Student::query()->select('year_level')->whereNotNull('year_level')->where('year_level', '!=', '', 'and')->distinct()->pluck('year_level')->sort()->values();
         });
 
         return view('admin.students.index', compact('students', 'patronCategories', 'departmentsList', 'programsList', 'yearLevelsList'));
@@ -145,16 +145,19 @@ class StudentController extends Controller
         $worksheet = $spreadsheet->getActiveSheet();
         $rows = $worksheet->toArray();
         
+        $totalDataRows = count($rows) - 1; // Exclude header row
         $count = 0;
         
         \Illuminate\Support\Facades\DB::transaction(function () use ($rows, &$count) {
-            foreach (array_slice($rows, 1, 5000) as $row) {
+            // Process ALL data rows (skip header row at index 0).
+            // Previously array_slice($rows, 1, 5000) silently truncated beyond 5K rows.
+            foreach (array_slice($rows, 1) as $row) {
                 $id = $row[0] ?? null;
                 if (!$id) continue;
 
                 // Simple resolution by name (assumes name matches exactly)
-                $dept = \App\Models\AcademicDepartment::where('name', $row[5] ?? '')->first();
-                $prog = \App\Models\AcademicProgram::where('name', $row[6] ?? '')->first();
+                $dept = \App\Models\AcademicDepartment::where('name', '=', $row[5] ?? '', 'and')->first();
+                $prog = \App\Models\AcademicProgram::where('name', '=', $row[6] ?? '', 'and')->first();
 
                 Student::updateOrCreate(
                     ['id' => $id],
@@ -173,7 +176,13 @@ class StudentController extends Controller
             }
         });
 
-        return back()->with('success', "Successfully imported {$count} patrons.");
+        $skipped = $totalDataRows - $count;
+        $message = "Successfully imported {$count} patrons.";
+        if ($skipped > 0) {
+            $message .= " ({$skipped} rows skipped due to missing ID.)";
+        }
+
+        return back()->with('success', $message);
     }
 
     public function export()

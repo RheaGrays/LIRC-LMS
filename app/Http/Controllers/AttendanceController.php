@@ -6,6 +6,7 @@ use App\Models\Student;
 use App\Models\AttendanceLog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class AttendanceController extends Controller
@@ -71,7 +72,7 @@ class AttendanceController extends Controller
                     'photo_url' => null,
                 ]
             ];
-            \Illuminate\Support\Facades\Cache::put('kiosk_latest_scan_event', $event, 30);
+            Cache::put('kiosk_latest_scan_event', $event, 30);
             return response()->json($event);
         }
 
@@ -83,47 +84,67 @@ class AttendanceController extends Controller
                 'message'  => 'Student account is inactive.',
                 'student'  => $this->formatStudent($student),
             ];
-            \Illuminate\Support\Facades\Cache::put('kiosk_latest_scan_event', $event, 30);
+            Cache::put('kiosk_latest_scan_event', $event, 30);
             return response()->json($event);
         }
 
         // ── Cooldown Buffer (Prevents duplicate scans within 5 minutes) ──
+        // Use an atomic lock to prevent race conditions from concurrent requests
         $cooldownMinutes = (int) \App\Models\SystemSetting::get('checkin_cooldown_minutes', 5);
-        $recentLog = AttendanceLog::query()->where('student_id', $student->id)
-            ->where('logged_at', '>=', now()->subMinutes($cooldownMinutes))
-            ->orderByDesc('logged_at')
-            ->first();
+        $lockKey = 'checkin_lock:' . $student->id;
 
-        if ($recentLog) {
-            $event = [
-                'id'       => time() * 1000,
-                'status'   => 'success',
-                'action'   => $recentLog->action,
-                'message'  => 'Successfully checked in.',
-                'student'  => $this->formatStudent($student)
+        $requestedAction = $request->input('action');
+        $kioskMode = \App\Models\SystemSetting::get('kiosk_mode', 'check_in_only');
+
+        $event = Cache::lock($lockKey, 10)->block(5, function () use ($student, $cooldownMinutes, $requestedAction, $kioskMode) {
+            $recentLog = AttendanceLog::query()->where('student_id', $student->id)
+                ->where('logged_at', '>=', now()->subMinutes($cooldownMinutes))
+                ->orderByDesc('logged_at')
+                ->first();
+
+            if ($recentLog) {
+                return [
+                    'id'       => time() * 1000,
+                    'status'   => 'success',
+                    'action'   => $recentLog->action,
+                    'message'  => $recentLog->action === 'check_out' ? 'Successfully checked out.' : 'Successfully checked in.',
+                    'student'  => $this->formatStudent($student)
+                ];
+            }
+
+            // Determine action: explicit parameter > toggle mode > default check_in
+            if (in_array($requestedAction, ['check_in', 'check_out'], true)) {
+                $nextAction = $requestedAction;
+            } elseif ($kioskMode === 'toggle') {
+                $lastLog = AttendanceLog::query()
+                    ->where('student_id', $student->id)
+                    ->where('logged_at', '>=', now()->startOfDay())
+                    ->orderByDesc('logged_at')
+                    ->first();
+                $nextAction = ($lastLog && $lastLog->action === 'check_in') ? 'check_out' : 'check_in';
+            } else {
+                $nextAction = 'check_in';
+            }
+
+            // Log action
+            $log = AttendanceLog::create([
+                'student_id' => $student->id,
+                'action'     => $nextAction,
+                'logged_at'  => now(),
+            ]);
+
+            $message = $nextAction === 'check_out' ? 'Successfully checked out.' : 'Successfully checked in.';
+
+            return [
+                'id'      => $log->id,
+                'status'  => 'success',
+                'action'  => $nextAction,
+                'message' => $message,
+                'student' => $this->formatStudent($student)
             ];
-            \Illuminate\Support\Facades\Cache::put('kiosk_latest_scan_event', $event, 30);
-            return response()->json($event);
-        }
+        });
 
-        // Always log as check_in (as requested by librarian, no check-out)
-        $nextAction = 'check_in';
-
-        // Log action
-        $log = AttendanceLog::create([
-            'student_id' => $student->id,
-            'action'     => $nextAction,
-            'logged_at'  => now(),
-        ]);
-
-        $event = [
-            'id'      => $log->id,
-            'status'  => 'success',
-            'action'  => $nextAction,
-            'message' => 'Successfully checked in.',
-            'student' => $this->formatStudent($student)
-        ];
-        \Illuminate\Support\Facades\Cache::put('kiosk_latest_scan_event', $event, 30);
+        Cache::put('kiosk_latest_scan_event', $event, 30);
 
         return response()->json($event);
     }
@@ -138,11 +159,15 @@ class AttendanceController extends Controller
 
         $searchTerm = '%' . $term . '%';
         
+        $driver = DB::connection()->getDriverName();
+        $concatSql = $driver === 'sqlite' ? "first_name || ' ' || last_name" : "CONCAT(first_name, ' ', last_name)";
+        $concatSqlRev = $driver === 'sqlite' ? "last_name || ' ' || first_name" : "CONCAT(last_name, ' ', first_name)";
+
         $students = Student::with('academicDepartment')
-            ->where(function($q) use ($searchTerm) {
+            ->where(function($q) use ($searchTerm, $concatSql, $concatSqlRev) {
                 $q->where('id', 'LIKE', $searchTerm)
-                  ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", [$searchTerm])
-                  ->orWhereRaw("CONCAT(last_name, ' ', first_name) LIKE ?", [$searchTerm]);
+                  ->orWhereRaw("{$concatSql} LIKE ?", [$searchTerm], 'or')
+                  ->orWhereRaw("{$concatSqlRev} LIKE ?", [$searchTerm], 'or');
             })
             ->limit(5)
             ->get();
@@ -176,27 +201,34 @@ class AttendanceController extends Controller
         }
 
         // ── Cooldown Buffer (Prevents duplicate scans within 5 minutes) ──
+        // Use an atomic lock to prevent race conditions from concurrent requests
         $cooldownMinutes = (int) \App\Models\SystemSetting::get('checkin_cooldown_minutes', 5);
-        $recentLog = AttendanceLog::query()->where('student_id', $student->id)
-            ->where('logged_at', '>=', now()->subMinutes($cooldownMinutes))
-            ->first();
+        $lockKey = 'checkin_lock:' . $student->id;
 
-        if ($recentLog) {
-            // Return success so Kiosk still greets the student, but DO NOT save duplicate to DB
-            return response()->json([
-                'success'   => true,
-                'duplicate' => true,
-                'message'   => 'Duplicate scan ignored (within 5-minute cooldown).'
+        $result = Cache::lock($lockKey, 10)->block(5, function () use ($student, $request, $cooldownMinutes) {
+            $recentLog = AttendanceLog::query()->where('student_id', $student->id)
+                ->where('logged_at', '>=', now()->subMinutes($cooldownMinutes))
+                ->first();
+
+            if ($recentLog) {
+                // Return success so Kiosk still greets the student, but DO NOT save duplicate to DB
+                return response()->json([
+                    'success'   => true,
+                    'duplicate' => true,
+                    'message'   => 'Duplicate scan ignored (within 5-minute cooldown).'
+                ]);
+            }
+
+            AttendanceLog::create([
+                'student_id' => $student->id,
+                'action'     => $request->action,
+                'logged_at'  => now(),
             ]);
-        }
 
-        AttendanceLog::create([
-            'student_id' => $student->id,
-            'action'     => $request->action,
-            'logged_at'  => now(),
-        ]);
+            return response()->json(['success' => true]);
+        });
 
-        return response()->json(['success' => true]);
+        return $result;
     }
 
     /**
@@ -240,7 +272,7 @@ class AttendanceController extends Controller
         $afterId = (int) $request->query('after_id', 0);
 
         // 1. Check for recent unregistered or error scan event
-        $cachedEvent = \Illuminate\Support\Facades\Cache::get('kiosk_latest_scan_event');
+        $cachedEvent = Cache::get('kiosk_latest_scan_event');
         if ($cachedEvent && isset($cachedEvent['id']) && $cachedEvent['id'] > $afterId) {
             return response()->json($cachedEvent);
         }
@@ -277,9 +309,13 @@ class AttendanceController extends Controller
         // Try name search with proper parameter binding
         $searchTerm = '%' . trim($term) . '%';
         
+        $driver = DB::connection()->getDriverName();
+        $concatSql = $driver === 'sqlite' ? "first_name || ' ' || last_name" : "CONCAT(first_name, ' ', last_name)";
+        $concatSqlRev = $driver === 'sqlite' ? "last_name || ' ' || first_name" : "CONCAT(last_name, ' ', first_name)";
+        
         /** @var \Illuminate\Database\Eloquent\Collection $students */
-        $students = Student::query()->whereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", [$searchTerm], 'and')
-            ->orWhereRaw("CONCAT(last_name, ' ', first_name) LIKE ?", [$searchTerm], 'or')
+        $students = Student::query()->whereRaw("{$concatSql} LIKE ?", [$searchTerm], 'and')
+            ->orWhereRaw("{$concatSqlRev} LIKE ?", [$searchTerm], 'or')
             ->orWhere('first_name', 'LIKE', $searchTerm)
             ->orWhere('last_name', 'LIKE', $searchTerm)
             ->get();

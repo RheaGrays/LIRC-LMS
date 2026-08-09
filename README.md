@@ -90,7 +90,7 @@ The LIRC-LMS ecosystem operates across two primary interconnected modules:
 
 * **Platform**: Web Application & Desktop Electron Wrapper
 * **Backend Framework**: Laravel 11 (PHP 8.2+)
-* **Database**: TiDB Cloud Serverless / MySQL (SSL Secured)
+* **Database**: Local MySQL / MariaDB / SQLite
 * **Frontend Technologies**: TailwindCSS, Alpine.js, Blade Templates
 * **Target Audience**: Cor Jesu College Students, Faculty, Staff, and LIRC Librarians
 

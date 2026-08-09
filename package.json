@@ -16,7 +16,7 @@
     "build": {
         "appId": "com.cjc.lirc.lems",
         "productName": "Library Entrance Monitoring System (LEMS)",
-        "asar": false,
+        "asar": true,
         "directories": {
             "output": "dist"
         },
@@ -42,7 +42,6 @@
             "vendor/**/*",
             "artisan",
             "server.php",
-            "cacert.pem",
             ".env",
             "composer.json",
             "composer.lock"
@@ -60,7 +59,6 @@
     },
     "devDependencies": {
         "@tailwindcss/forms": "^0.5.2",
-        "@tailwindcss/vite": "^4.0.0",
         "alpinejs": "^3.15.12",
         "autoprefixer": "^10.4.2",
         "axios": "^1.7.4",

@@ -99,6 +99,8 @@ return [
 
     'key' => env('APP_KEY'),
 
+    'kiosk_api_token' => env('KIOSK_API_TOKEN'),
+
     'previous_keys' => [
         ...array_filter(
             explode(',', env('APP_PREVIOUS_KEYS', ''))
