@@ -200,10 +200,19 @@ function analyticsApp() {
         trafficChartInstance: null,
         deptChartInstance: null,
         
+        pollTimer: null,
+        
         init() {
             setTimeout(() => {
                 this.initCharts();
-                this.fetchData();
+                this.fetchData(false);
+                
+                // Real-time auto-polling every 2.5s
+                if (!this.pollTimer) {
+                    this.pollTimer = setInterval(() => {
+                        this.fetchData(true);
+                    }, 2500);
+                }
             }, 100);
         },
         
@@ -253,8 +262,10 @@ function analyticsApp() {
             }
         },
         
-        async fetchData() {
-            this.loading = true;
+        async fetchData(isSilent = false) {
+            if (!isSilent) {
+                this.loading = true;
+            }
             try {
                 let url = `/admin/analytics/data?period=${this.period}&_t=${Date.now()}`;
                 if (this.term_id) {
@@ -283,7 +294,7 @@ function analyticsApp() {
                             pointHoverRadius: 6
                         }]
                     };
-                    this.trafficChartInstance.update();
+                    this.trafficChartInstance.update('none'); // silent update without layout shifts
                 }
                 
                 if (this.deptChartInstance) {
@@ -297,13 +308,15 @@ function analyticsApp() {
                             hoverOffset: 4
                         }]
                     };
-                    this.deptChartInstance.update();
+                    this.deptChartInstance.update('none');
                 }
                 
             } catch (err) {
                 console.error("Failed to load analytics data", err);
             } finally {
-                this.loading = false;
+                if (!isSilent) {
+                    this.loading = false;
+                }
             }
         }
     };
