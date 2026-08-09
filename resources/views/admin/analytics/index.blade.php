@@ -3,6 +3,141 @@
 @section('title', ' | Analytics')
 @section('header_title', 'Analytics & Reports')
 
+@push('styles')
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+function analyticsApp() {
+    return {
+        period: 'today',
+        term_id: '',
+        loading: true,
+        totalTraffic: 0,
+        trafficChartInstance: null,
+        deptChartInstance: null,
+        pollTimer: null,
+        
+        init() {
+            this.$nextTick(() => {
+                this.initCharts();
+                this.fetchData(false);
+                
+                // Real-time auto-polling every 2.5s
+                if (!this.pollTimer) {
+                    this.pollTimer = setInterval(() => {
+                        this.fetchData(true);
+                    }, 2500);
+                }
+            });
+        },
+        
+        initCharts() {
+            if (typeof Chart === 'undefined') return;
+            Chart.defaults.font.family = 'Inter, sans-serif';
+            Chart.defaults.color = '#64748b';
+            
+            const trafficCanvas = document.getElementById('trafficChart');
+            if (trafficCanvas && !this.trafficChartInstance) {
+                const trafficCtx = trafficCanvas.getContext('2d');
+                this.trafficChartInstance = new Chart(trafficCtx, {
+                    type: 'line',
+                    data: { labels: [], datasets: [] },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { backgroundColor: '#0f2744', padding: 12, cornerRadius: 8 }
+                        },
+                        scales: {
+                            y: { beginAtZero: true, grid: { borderDash: [4, 4], color: '#f1f5f9' }, ticks: { precision: 0 } },
+                            x: { grid: { display: false } }
+                        }
+                    }
+                });
+            }
+            
+            const deptCanvas = document.getElementById('deptChart');
+            if (deptCanvas && !this.deptChartInstance) {
+                const deptCtx = deptCanvas.getContext('2d');
+                this.deptChartInstance = new Chart(deptCtx, {
+                    type: 'doughnut',
+                    data: { labels: [], datasets: [] },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true } },
+                            tooltip: { backgroundColor: '#0f2744', padding: 12, cornerRadius: 8 }
+                        },
+                        cutout: '70%'
+                    }
+                });
+            }
+        },
+        
+        async fetchData(isSilent = false) {
+            if (!isSilent) {
+                this.loading = true;
+            }
+            try {
+                let url = `/admin/analytics/data?period=${this.period}&_t=${Date.now()}`;
+                if (this.term_id) {
+                    url += `&term_id=${this.term_id}`;
+                }
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                this.totalTraffic = (data.traffic.values || []).reduce((a, b) => a + b, 0);
+                
+                if (this.trafficChartInstance) {
+                    this.trafficChartInstance.data = {
+                        labels: data.traffic.labels,
+                        datasets: [{
+                            label: 'Entries',
+                            data: data.traffic.values,
+                            borderColor: '#c41e2a',
+                            backgroundColor: 'rgba(196, 30, 42, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#ffffff',
+                            pointBorderColor: '#c41e2a',
+                            pointBorderWidth: 2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        }]
+                    };
+                    this.trafficChartInstance.update('none');
+                }
+                
+                if (this.deptChartInstance) {
+                    const colors = ['#c41e2a', '#d4a418', '#0f2744', '#3b82f6', '#10b981'];
+                    this.deptChartInstance.data = {
+                        labels: data.departments.labels,
+                        datasets: [{
+                            data: data.departments.values,
+                            backgroundColor: colors.slice(0, data.departments.labels.length),
+                            borderWidth: 0,
+                            hoverOffset: 4
+                        }]
+                    };
+                    this.deptChartInstance.update('none');
+                }
+                
+            } catch (err) {
+                console.error("Failed to load analytics data", err);
+            } finally {
+                if (!isSilent) {
+                    this.loading = false;
+                }
+            }
+        }
+    };
+}
+</script>
+@endpush
+
 @section('admin_content')
 <div class="space-y-6" x-data="analyticsApp()">
 
@@ -165,7 +300,7 @@
                 <div class="w-10 h-10 border-4 border-gray-200 border-t-[var(--cjc-red)] rounded-full animate-spin"></div>
             </div>
             
-            <div class="flex-1 relative w-full h-full">
+            <div class="flex-1 relative w-full h-full min-h-[300px]">
                 <canvas id="trafficChart"></canvas>
             </div>
         </div>
@@ -178,7 +313,7 @@
                 <div class="w-10 h-10 border-4 border-gray-200 border-t-[var(--cjc-red)] rounded-full animate-spin"></div>
             </div>
             
-            <div class="flex-1 relative w-full h-full flex items-center justify-center">
+            <div class="flex-1 relative w-full h-full flex items-center justify-center min-h-[300px]">
                 <canvas id="deptChart"></canvas>
             </div>
         </div>
@@ -187,139 +322,3 @@
 
 </div>
 @endsection
-
-@push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-function analyticsApp() {
-    return {
-        period: 'today',
-        term_id: '',
-        loading: true,
-        totalTraffic: 0,
-        trafficChartInstance: null,
-        deptChartInstance: null,
-        
-        pollTimer: null,
-        
-        init() {
-            setTimeout(() => {
-                this.initCharts();
-                this.fetchData(false);
-                
-                // Real-time auto-polling every 2.5s
-                if (!this.pollTimer) {
-                    this.pollTimer = setInterval(() => {
-                        this.fetchData(true);
-                    }, 2500);
-                }
-            }, 100);
-        },
-        
-        initCharts() {
-            if (typeof Chart === 'undefined') return;
-            Chart.defaults.font.family = 'Inter, sans-serif';
-            Chart.defaults.color = '#64748b';
-            
-            const trafficCanvas = document.getElementById('trafficChart');
-            if (trafficCanvas && !this.trafficChartInstance) {
-                const trafficCtx = trafficCanvas.getContext('2d');
-                this.trafficChartInstance = new Chart(trafficCtx, {
-                    type: 'line',
-                    data: { labels: [], datasets: [] },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        interaction: { mode: 'index', intersect: false },
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: { backgroundColor: '#0f2744', padding: 12, cornerRadius: 8 }
-                        },
-                        scales: {
-                            y: { beginAtZero: true, grid: { borderDash: [4, 4], color: '#f1f5f9' }, ticks: { precision: 0 } },
-                            x: { grid: { display: false } }
-                        }
-                    }
-                });
-            }
-            
-            const deptCanvas = document.getElementById('deptChart');
-            if (deptCanvas && !this.deptChartInstance) {
-                const deptCtx = deptCanvas.getContext('2d');
-                this.deptChartInstance = new Chart(deptCtx, {
-                    type: 'doughnut',
-                    data: { labels: [], datasets: [] },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true } },
-                            tooltip: { backgroundColor: '#0f2744', padding: 12, cornerRadius: 8 }
-                        },
-                        cutout: '70%'
-                    }
-                });
-            }
-        },
-        
-        async fetchData(isSilent = false) {
-            if (!isSilent) {
-                this.loading = true;
-            }
-            try {
-                let url = `/admin/analytics/data?period=${this.period}&_t=${Date.now()}`;
-                if (this.term_id) {
-                    url += `&term_id=${this.term_id}`;
-                }
-                const response = await fetch(url);
-                const data = await response.json();
-                
-                this.totalTraffic = (data.traffic.values || []).reduce((a, b) => a + b, 0);
-                
-                if (this.trafficChartInstance) {
-                    this.trafficChartInstance.data = {
-                        labels: data.traffic.labels,
-                        datasets: [{
-                            label: 'Entries',
-                            data: data.traffic.values,
-                            borderColor: '#c41e2a',
-                            backgroundColor: 'rgba(196, 30, 42, 0.1)',
-                            borderWidth: 2,
-                            fill: true,
-                            tension: 0.4,
-                            pointBackgroundColor: '#ffffff',
-                            pointBorderColor: '#c41e2a',
-                            pointBorderWidth: 2,
-                            pointRadius: 4,
-                            pointHoverRadius: 6
-                        }]
-                    };
-                    this.trafficChartInstance.update('none'); // silent update without layout shifts
-                }
-                
-                if (this.deptChartInstance) {
-                    const colors = ['#c41e2a', '#d4a418', '#0f2744', '#3b82f6', '#10b981'];
-                    this.deptChartInstance.data = {
-                        labels: data.departments.labels,
-                        datasets: [{
-                            data: data.departments.values,
-                            backgroundColor: colors.slice(0, data.departments.labels.length),
-                            borderWidth: 0,
-                            hoverOffset: 4
-                        }]
-                    };
-                    this.deptChartInstance.update('none');
-                }
-                
-            } catch (err) {
-                console.error("Failed to load analytics data", err);
-            } finally {
-                if (!isSilent) {
-                    this.loading = false;
-                }
-            }
-        }
-    };
-}
-</script>
-@endpush
