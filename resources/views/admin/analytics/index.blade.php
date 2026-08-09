@@ -7,7 +7,7 @@
 <div class="space-y-6" x-data="analyticsApp()">
 
     <!-- Dedicated Monthly Attendance Report Generator (Per Program / Per Month) -->
-    <div class="rounded-2xl p-6 bg-white border border-gray-200 shadow-sm border-t-4 border-t-[var(--cjc-red)]">
+    <div class="rounded-2xl p-6 bg-white border border-gray-200 shadow-sm">
         <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
             <div>
                 <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-red-50 text-[var(--cjc-red)] border border-red-200 mb-3 uppercase tracking-wider">
