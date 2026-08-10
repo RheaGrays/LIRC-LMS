@@ -119,12 +119,36 @@ class AnalyticsController extends Controller
             $programName .= " | Patron: {$patronId}";
         }
 
-        // PERF-03 FIX: Use a fast COUNT query for the total — avoid loading all rows just for count().
+        // PERF-03 FIX: Use a fast COUNT query for the total log entries
         $totalCount = (clone $query)->count();
 
-        // PERF-03 FIX: lazy() fetches rows in chunks of 500 using a cursor,
-        // never holding the full result set in PHP memory at once.
-        $logs = $query->orderBy('logged_at', 'asc')->lazy(500);
+        // Convert query to an aggregate summary by student
+        $summaryQuery = clone $query;
+        $summaryQuery->setEagerLoads([]); // Remove eager loads since we'll use joins
+        $summaryQuery->leftJoin('students', 'attendance_logs.student_id', '=', 'students.id')
+            ->leftJoin('academic_departments', 'students.department_id', '=', 'academic_departments.id')
+            ->leftJoin('academic_programs', 'students.program_id', '=', 'academic_programs.id')
+            ->selectRaw('
+                attendance_logs.student_id, 
+                COALESCE(students.full_name, attendance_logs.student_id) as student_name, 
+                COALESCE(students.patron_category, "Student") as category, 
+                COALESCE(academic_departments.name, "—") as department, 
+                COALESCE(academic_programs.name, "—") as program, 
+                COALESCE(students.year_level, "—") as year_level, 
+                COUNT(attendance_logs.id) as total_visits
+            ')
+            ->groupBy(
+                'attendance_logs.student_id', 
+                'students.full_name', 
+                'students.patron_category', 
+                'academic_departments.name', 
+                'academic_programs.name', 
+                'students.year_level'
+            )
+            ->orderByDesc('total_visits')
+            ->orderBy('student_name');
+
+        $logs = $summaryQuery->lazy(500);
 
         if ($format === 'word' || $format === 'doc') {
             return $this->exportWordReport($logs, $totalCount, $schoolYearLabel, $monthLabel, $programName, $deptName);
@@ -153,25 +177,23 @@ class AnalyticsController extends Controller
         $sheet->getStyle('A1')->getFont()->setSize(14);
         $sheet->getStyle('A2')->getFont()->setSize(12);
 
-        $headers = ['#', 'Date & Time', 'Student ID', 'Student Full Name', 'Category', 'Department', 'Program / Course', 'Year Level', 'Action'];
+        $headers = ['#', 'Student ID', 'Student Full Name', 'Category', 'Department', 'Program / Course', 'Year Level', 'Total Entries'];
         $sheet->fromArray($headers, null, 'A5');
-        $sheet->getStyle('A5:I5')->getFont()->setBold(true);
+        $sheet->getStyle('A5:H5')->getFont()->setBold(true);
 
         $rowNum  = 6;
         $counter = 1;
-        // Iterates the lazy cursor — each chunk of 500 is loaded, written, then discarded
+        
         foreach ($logs as $log) {
-            $student = $log->student;
             $sheet->fromArray([
                 $counter++,
-                $log->logged_at->format('Y-m-d h:i:s A'),
                 $log->student_id,
-                $student ? $student->full_name : $log->student_id,
-                $student ? $student->patron_category : 'Student',
-                $student?->academicDepartment?->name ?? '—',
-                $student?->academicProgram?->name ?? '—',
-                $student?->year_level ?? '—',
-                $log->action === 'check_in' ? 'CHECK-IN (ENTERED)' : 'CHECK-OUT (EXITED)',
+                $log->student_name,
+                $log->category,
+                $log->department,
+                $log->program,
+                $log->year_level,
+                $log->total_visits,
             ], null, 'A' . $rowNum);
             $rowNum++;
         }
@@ -179,7 +201,7 @@ class AnalyticsController extends Controller
         $sheet->setCellValue('A' . ($rowNum + 1), "Total Log Entries: {$totalCount}");
         $sheet->getStyle('A' . ($rowNum + 1))->getFont()->setBold(true);
 
-        foreach (range('A', 'I') as $col) {
+        foreach (range('A', 'H') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 
@@ -198,23 +220,18 @@ class AnalyticsController extends Controller
         $rowsHtml = '';
         $counter  = 1;
         foreach ($logs as $log) {
-            $student = $log->student;
-            $name   = htmlspecialchars($student ? $student->full_name : $log->student_id);
-            $dept   = htmlspecialchars($student?->academicDepartment?->name ?? '—');
-            $prog   = htmlspecialchars($student?->academicProgram?->name ?? '—');
-            $action = $log->action === 'check_in'
-                ? '<span style="color:#15803d;font-weight:bold;">CHECK-IN</span>'
-                : '<span style="color:#b91c1c;font-weight:bold;">CHECK-OUT</span>';
+            $name = htmlspecialchars($log->student_name);
+            $dept = htmlspecialchars($log->department);
+            $prog = htmlspecialchars($log->program);
 
             $rowsHtml .= "
                 <tr>
                     <td style='padding:6px;border:1px solid #cbd5e1;text-align:center;'>{$counter}</td>
-                    <td style='padding:6px;border:1px solid #cbd5e1;'>{$log->logged_at->format('Y-m-d h:i A')}</td>
                     <td style='padding:6px;border:1px solid #cbd5e1;'>{$log->student_id}</td>
                     <td style='padding:6px;border:1px solid #cbd5e1;'>{$name}</td>
                     <td style='padding:6px;border:1px solid #cbd5e1;'>{$dept}</td>
                     <td style='padding:6px;border:1px solid #cbd5e1;'>{$prog}</td>
-                    <td style='padding:6px;border:1px solid #cbd5e1;text-align:center;'>{$action}</td>
+                    <td style='padding:6px;border:1px solid #cbd5e1;text-align:center;'><strong>{$log->total_visits}</strong></td>
                 </tr>
             ";
             $counter++;
@@ -248,12 +265,11 @@ class AnalyticsController extends Controller
                     <thead>
                         <tr>
                             <th>#</th>
-                            <th>Date & Time</th>
                             <th>Student ID</th>
                             <th>Student Name</th>
                             <th>Department</th>
                             <th>Program</th>
-                            <th>Status</th>
+                            <th>Total Entries</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -275,23 +291,18 @@ class AnalyticsController extends Controller
         $counter  = 1;
         $rowsHtml = '';
         foreach ($logs as $log) {
-            $student = $log->student;
-            $name   = htmlspecialchars($student ? $student->full_name : $log->student_id);
-            $dept   = htmlspecialchars($student?->academicDepartment?->name ?? '—');
-            $prog   = htmlspecialchars($student?->academicProgram?->name ?? '—');
-            $action = $log->action === 'check_in'
-                ? '<span style="color:#15803d;font-weight:bold;background:#dcfce7;padding:2px 8px;border-radius:12px;">Entered</span>'
-                : '<span style="color:#b91c1c;font-weight:bold;background:#fee2e2;padding:2px 8px;border-radius:12px;">Exited</span>';
+            $name = htmlspecialchars($log->student_name);
+            $dept = htmlspecialchars($log->department);
+            $prog = htmlspecialchars($log->program);
 
             $rowsHtml .= "
                 <tr>
                     <td style='padding:8px;border-bottom:1px solid #e2e8f0;text-align:center;'>{$counter}</td>
-                    <td style='padding:8px;border-bottom:1px solid #e2e8f0;'>{$log->logged_at->format('Y-m-d h:i A')}</td>
                     <td style='padding:8px;border-bottom:1px solid #e2e8f0;font-weight:600;'>{$log->student_id}</td>
                     <td style='padding:8px;border-bottom:1px solid #e2e8f0;font-weight:600;'>{$name}</td>
                     <td style='padding:8px;border-bottom:1px solid #e2e8f0;'>{$dept}</td>
                     <td style='padding:8px;border-bottom:1px solid #e2e8f0;'>{$prog}</td>
-                    <td style='padding:8px;border-bottom:1px solid #e2e8f0;text-align:center;'>{$action}</td>
+                    <td style='padding:8px;border-bottom:1px solid #e2e8f0;text-align:center;font-weight:bold;color:#0f2744;'>{$log->total_visits}</td>
                 </tr>
             ";
             $counter++;
@@ -345,12 +356,11 @@ class AnalyticsController extends Controller
                     <thead>
                         <tr>
                             <th style='text-align:center;'>#</th>
-                            <th>Date & Time</th>
                             <th>Student ID</th>
                             <th>Student Name</th>
                             <th>Department</th>
                             <th>Program</th>
-                            <th style='text-align:center;'>Status</th>
+                            <th style='text-align:center;'>Total Entries</th>
                         </tr>
                     </thead>
                     <tbody>
