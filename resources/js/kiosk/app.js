@@ -435,36 +435,22 @@ const registerApp = () => {
             audio.play().catch(e => {});
 
             try {
-                if (!navigator.onLine) {
-                    // BUG-06 FIX: Determine what action should be queued before going offline.
-                    // We ask the server for the student's last action to know whether
-                    // next should be check_in or check_out.
+                const res = await this.performOnlineCheckin(id);
+
+                // BUG-01 FIX: handle 503 server-busy — fall back to offline queue
+                if (res?.status === 'error' && res?.code === 503) {
                     const pendingAction = await this.resolveNextAction(id);
                     await QueueManager.enqueue(id, pendingAction);
-                    this.result = { status: 'offline', message: 'Saved offline (No Internet).', student_id: id };
+                    this.result = { status: 'offline', message: 'Server busy — saved offline.', student_id: id };
                 } else {
-                    try {
-                        const res = await this.performOnlineCheckin(id);
-
-                        // BUG-01 FIX: handle 503 server-busy — fall back to offline queue
-                        if (res?.status === 'error' && res?.code === 503) {
-                            const pendingAction = await this.resolveNextAction(id);
-                            await QueueManager.enqueue(id, pendingAction);
-                            this.result = { status: 'offline', message: 'Server busy — saved offline.', student_id: id };
-                        } else {
-                            this.result = res;
-                            if (res?.status === 'success') this.fetchOccupancy();
-                        }
-                    } catch (networkErr) {
-                        // Automatic fallback to offline queue if network or server drops during scan
-                        const pendingAction = await this.resolveNextAction(id);
-                        await QueueManager.enqueue(id, pendingAction);
-                        this.result = { status: 'offline', message: 'Saved offline (Connection Dropped).', student_id: id };
-                    }
+                    this.result = res;
+                    if (res?.status === 'success') this.fetchOccupancy();
                 }
-            } catch (err) {
-                await QueueManager.enqueue(id, 'check_in'); // safe default for unexpected errors
-                this.result = { status: 'offline', message: 'Saved offline.', student_id: id };
+            } catch (networkErr) {
+                // Automatic fallback to offline queue if network or server drops during scan
+                const pendingAction = await this.resolveNextAction(id);
+                await QueueManager.enqueue(id, pendingAction);
+                this.result = { status: 'offline', message: 'Saved offline (Connection Dropped).', student_id: id };
             } finally {
                 clearTimeout(safetyTimeout);
                 this.isProcessing = false;
@@ -532,7 +518,7 @@ const registerApp = () => {
         },
         
         async fetchOccupancy() {
-            if(!navigator.onLine) return;
+            // Removed navigator.onLine check to allow localhost fallback
             try {
                 const res = await fetch('/kiosk/occupancy');
                 if (res.ok) {
@@ -557,7 +543,7 @@ const registerApp = () => {
         },
         
         async pollRealtime() {
-            if (!navigator.onLine) return;
+            // Removed navigator.onLine check to allow localhost fallback
             try {
                 const res = await fetch(`/kiosk/latest-scan?after_id=${this.lastLogId}`);
                 if (!res.ok) return;

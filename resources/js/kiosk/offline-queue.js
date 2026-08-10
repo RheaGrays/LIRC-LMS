@@ -40,9 +40,7 @@ export const QueueManager = {
     startSyncTimer() {
         // Attempt sync every 10 seconds if online
         setInterval(() => {
-            if (navigator.onLine) {
-                this.sync().catch(err => console.warn('[LEMS QueueManager] Sync interval error:', err));
-            }
+            this.sync().catch(err => console.warn('[LEMS QueueManager] Sync interval error:', err));
         }, 10000);
         
         // Also try immediately when coming back online
@@ -52,7 +50,7 @@ export const QueueManager = {
     },
 
     async sync() {
-        if (this.syncing || !navigator.onLine) return;
+        if (this.syncing) return;
         
         const queue = this.getQueue();
         if (queue.length === 0) return;
