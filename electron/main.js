@@ -18,6 +18,7 @@ function checkServerReady(url, callback) {
     const doCheck = () => {
         attempts++;
         http.get(url, (res) => {
+            res.resume(); // Consume data to free the socket immediately
             if (res.statusCode === 200 || res.statusCode === 302 || res.statusCode === 404 || res.statusCode === 500) {
                 callback(true);
             } else if (attempts < maxAttempts) {
