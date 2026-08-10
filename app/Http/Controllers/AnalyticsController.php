@@ -130,7 +130,7 @@ class AnalyticsController extends Controller
             ->leftJoin('academic_programs', 'students.program_id', '=', 'academic_programs.id')
             ->selectRaw('
                 attendance_logs.student_id, 
-                COALESCE(students.full_name, attendance_logs.student_id) as student_name, 
+                COALESCE(CONCAT(students.first_name, " ", students.last_name), attendance_logs.student_id) as student_name, 
                 COALESCE(students.patron_category, "Student") as category, 
                 COALESCE(academic_departments.name, "—") as department, 
                 COALESCE(academic_programs.name, "—") as program, 
@@ -139,7 +139,8 @@ class AnalyticsController extends Controller
             ')
             ->groupBy(
                 'attendance_logs.student_id', 
-                'students.full_name', 
+                'students.first_name', 
+                'students.last_name', 
                 'students.patron_category', 
                 'academic_departments.name', 
                 'academic_programs.name', 
@@ -480,7 +481,7 @@ class AnalyticsController extends Controller
         // Top Patron calculation
         $topPatronData = clone $query;
         $topPatron = $topPatronData->join('students', 'attendance_logs.student_id', '=', 'students.id')
-            ->selectRaw('students.full_name as name, COUNT(*) as aggregate')
+            ->selectRaw('CONCAT(students.first_name, " ", students.last_name) as name, COUNT(*) as aggregate')
             ->groupBy('name')
             ->orderByDesc('aggregate')
             ->first();
