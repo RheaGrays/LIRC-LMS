@@ -139,6 +139,7 @@ class AnalyticsController extends Controller
             ')
             ->groupBy(
                 'attendance_logs.student_id', 
+                'students.id',
                 'students.first_name', 
                 'students.last_name', 
                 'students.patron_category', 
@@ -147,7 +148,8 @@ class AnalyticsController extends Controller
                 'students.year_level'
             )
             ->orderByDesc('total_visits')
-            ->orderBy('student_name');
+            ->orderBy('students.last_name')
+            ->orderBy('students.first_name');
 
         $logs = $summaryQuery->lazy(500);
 
@@ -482,7 +484,7 @@ class AnalyticsController extends Controller
         $topPatronData = clone $query;
         $topPatron = $topPatronData->join('students', 'attendance_logs.student_id', '=', 'students.id')
             ->selectRaw('CONCAT(students.first_name, " ", students.last_name) as name, COUNT(*) as aggregate')
-            ->groupBy('name')
+            ->groupBy('students.id', 'students.first_name', 'students.last_name')
             ->orderByDesc('aggregate')
             ->first();
         $topPatronName = $topPatron ? $topPatron->name : 'N/A';
