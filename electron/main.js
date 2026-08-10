@@ -190,17 +190,11 @@ function createWindow() {
 
     // Grant camera/media permissions explicitly
     mainWindow.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
-        if (permission === 'media') {
-            return callback(true);
-        }
-        callback(false);
+        callback(true);
     });
 
     mainWindow.webContents.session.setPermissionCheckHandler((webContents, permission) => {
-        if (permission === 'media') {
-            return true;
-        }
-        return false;
+        return true;
     });
 
     mainWindow.webContents.once('did-finish-load', () => {
