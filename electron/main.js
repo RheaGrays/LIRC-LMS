@@ -197,6 +197,10 @@ function createWindow() {
         return true;
     });
 
+    mainWindow.webContents.session.setDevicePermissionHandler((details) => {
+        return true;
+    });
+
     mainWindow.webContents.once('did-finish-load', () => {
         if (mainWindow && !mainWindow.isVisible()) {
             mainWindow.show();

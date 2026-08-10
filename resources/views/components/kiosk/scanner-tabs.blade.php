@@ -111,14 +111,29 @@
                                         <div style="background: #dc2626; box-shadow: 0 0 10px #dc2626;" class="absolute left-0 right-0 h-[2px] z-30 animate-[scanline_2s_linear_infinite]"></div>
                                     </template>
 
-                                    <!-- Placeholder -->
+                                    <!-- Placeholder / Error State -->
                                     <template x-if="!isCameraActive">
-                                        <div class="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black">
-                                            <svg class="w-12 h-12 text-white/20 mb-3" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-                                                <path d="M3 9a2 2 0 012-2h3l2-2h4l2 2h3a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
-                                                <circle cx="12" cy="13" r="3"/>
-                                            </svg>
-                                            <div class="w-7 h-7 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                                        <div class="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black px-4 text-center">
+                                            <template x-if="cameraError">
+                                                <div class="flex flex-col items-center">
+                                                    <svg class="w-12 h-12 text-red-500 mb-3" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                                    </svg>
+                                                    <p class="text-white font-medium text-sm m-0" x-text="cameraError"></p>
+                                                    <button @click="initScanner()" class="mt-4 px-4 py-1.5 bg-white/10 hover:bg-white/20 text-white text-sm rounded-full transition-colors border border-white/20">
+                                                        Retry
+                                                    </button>
+                                                </div>
+                                            </template>
+                                            <template x-if="!cameraError">
+                                                <div class="flex flex-col items-center">
+                                                    <svg class="w-12 h-12 text-white/20 mb-3" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                                        <path d="M3 9a2 2 0 012-2h3l2-2h4l2 2h3a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                                                        <circle cx="12" cy="13" r="3"/>
+                                                    </svg>
+                                                    <div class="w-7 h-7 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                                                </div>
+                                            </template>
                                         </div>
                                     </template>
                                 </div>

@@ -33,6 +33,7 @@ const registerApp = () => {
         cameras: [],
         selectedCamera: '',
         isCameraActive: false,
+        cameraError: '',
 
         // Slideshow
         slides: window._kioskCollections || [],
@@ -282,6 +283,7 @@ const registerApp = () => {
 
         // --- Camera Logic ---
         async initScanner() {
+            this.cameraError = '';
             try {
                 const videoInputDevices = await BrowserMultiFormatReader.listVideoInputDevices();
                 this.cameras = videoInputDevices;
@@ -296,9 +298,12 @@ const registerApp = () => {
 
                     this.selectedCamera = preferredCam ? preferredCam.deviceId : this.cameras[0].deviceId;
                     this.startScanning();
+                } else {
+                    this.cameraError = 'No webcam found. Please connect a camera.';
                 }
             } catch (err) {
                 console.error("Camera init error:", err);
+                this.cameraError = 'Init Error: ' + (err.message || err.name || 'Unknown');
             }
         },
 
@@ -364,12 +369,21 @@ const registerApp = () => {
                             }
                         }
                     } catch (e) {
-                        // Ignore decode frame errors (normal when no barcode in view)
+                        // Ignore decode frame errors
                     }
                 }, 200);
 
             } catch (err) {
                 console.error("Camera start error:", err);
+                if (err.name === 'NotAllowedError' || err.name === 'SecurityError') {
+                    this.cameraError = 'Camera access denied. Please grant permission.';
+                } else if (err.name === 'NotFoundError') {
+                    this.cameraError = 'No camera device found.';
+                } else if (err.name === 'NotReadableError') {
+                    this.cameraError = 'Camera is already in use by another application.';
+                } else {
+                    this.cameraError = 'Could not start camera: ' + err.message;
+                }
             }
         },
 
