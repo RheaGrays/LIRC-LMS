@@ -188,6 +188,21 @@ function createWindow() {
         }
     });
 
+    // Grant camera/media permissions explicitly
+    mainWindow.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
+        if (permission === 'media') {
+            return callback(true);
+        }
+        callback(false);
+    });
+
+    mainWindow.webContents.session.setPermissionCheckHandler((webContents, permission) => {
+        if (permission === 'media') {
+            return true;
+        }
+        return false;
+    });
+
     mainWindow.webContents.once('did-finish-load', () => {
         if (mainWindow && !mainWindow.isVisible()) {
             mainWindow.show();
