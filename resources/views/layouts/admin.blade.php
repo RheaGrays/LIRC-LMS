@@ -2,9 +2,7 @@
 
 @section('content')
 @push('styles')
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/airbnb.css">
-    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
+
     <style>
         /* Custom Modern Tom Select Styling */
         .ts-wrapper {
@@ -232,8 +230,7 @@
 <x-admin.toast />
 
 @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Initialize Flatpickr

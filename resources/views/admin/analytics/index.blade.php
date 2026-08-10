@@ -4,7 +4,7 @@
 @section('header_title', 'Analytics & Reports')
 
 @push('styles')
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <script>
 function analyticsApp() {
     return {
