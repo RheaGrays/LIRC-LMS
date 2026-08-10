@@ -166,7 +166,7 @@ function analyticsApp() {
                 </div>
             </div>
             
-            <form action="{{ route('admin.analytics.export-monthly-report') }}" method="GET" @submit="if(window.showToast) window.showToast('Generating and downloading report...', 'info')" class="w-full grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3 bg-gray-50/60 p-4 rounded-xl border border-gray-100">
+            <form action="{{ route('admin.analytics.export-monthly-report') }}" method="GET" @submit="if(window.showToast) window.showToast('Generating and downloading report...', 'info')" class="w-full grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-3 bg-gray-50/60 p-4 rounded-xl border border-gray-100">
                 
                 <!-- 1. School Year Filter -->
                 <div>
@@ -289,9 +289,9 @@ function analyticsApp() {
 
                 <!-- Export Button -->
                 <div>
-                    <label class="text-[11px] font-bold uppercase tracking-wider text-transparent select-none mb-1.5 hidden xl:block">&nbsp;</label>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-transparent select-none mb-1.5 hidden md:block">&nbsp;</label>
                     <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-6 bg-[var(--cjc-red)] hover:bg-red-700 text-white text-[13px] font-bold rounded-lg shadow-sm transition-all whitespace-nowrap h-[40px] hover:-translate-y-0.5">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                         Generate
                     </button>
                 </div>
