@@ -313,7 +313,15 @@ class AnalyticsController extends Controller
             </head>
             <body>
                 <div class='no-print' style='margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;'>
-                    <button onclick='window.print()' style='background: #c41e3a; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer;'>🖨️ Print / Save as PDF</button>
+                    <div style='display: flex; gap: 12px; align-items: center;'>
+                        <a href='javascript:history.back()' style='background: #ffffff; color: #475569; border: 1px solid #e2e8f0; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; text-decoration: none; display: flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                            Back
+                        </a>
+                        <button onclick='window.print()' style='background: #c41e3a; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(196,30,58,0.2);'>
+                            🖨️ Print / Save as PDF
+                        </button>
+                    </div>
                     <span style='color: #64748b; font-size: 13px;'>Press Ctrl + P to save as PDF</span>
                 </div>
                 <div class='header'>
