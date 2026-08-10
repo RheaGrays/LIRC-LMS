@@ -303,6 +303,13 @@ function createWindow() {
     });
 }
 
+// Force Chromium to treat the local network IP as a secure origin, 
+// so navigator.mediaDevices (the webcam) is not blocked on http://192.168.x.x
+const hostConfig = readHostConfig();
+if (hostConfig && hostConfig.host) {
+    app.commandLine.appendSwitch('unsafely-treat-insecure-origin-as-secure', `http://${hostConfig.host}:${hostConfig.port || 8000}`);
+}
+
 app.whenReady().then(() => {
     startPhpServer();
     createWindow();
