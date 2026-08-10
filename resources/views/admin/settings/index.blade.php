@@ -76,9 +76,16 @@
                 <h3 class="text-lg font-bold text-[var(--cjc-navy)] mb-1">Library Capacity</h3>
                 <p class="text-sm text-gray-500 mb-5">Set the maximum number of students allowed inside the library simultaneously.</p>
                 
-                <div class="max-w-xs">
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">Max Occupancy Limit</label>
-                    <input type="number" name="max_occupancy" value="{{ $settings['max_occupancy'] ?? 200 }}" class="input" min="1">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-xl">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Max Occupancy Limit</label>
+                        <input type="number" name="max_occupancy" value="{{ $settings['max_occupancy'] ?? 200 }}" class="input" min="1">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Kiosk Idle Timeout (Seconds)</label>
+                        <input type="number" name="idle_timeout" value="{{ $settings['idle_timeout'] ?? 60 }}" class="input" min="10" max="3600">
+                        <p class="text-xs text-gray-500 mt-1">Time before the kiosk screen resets.</p>
+                    </div>
                 </div>
                 
                 <div class="mt-4 flex items-center">
