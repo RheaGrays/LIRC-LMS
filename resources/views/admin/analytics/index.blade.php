@@ -241,7 +241,13 @@ function analyticsApp() {
                     </div>
                 </div>
 
-                <!-- 5. Format / Type Selector -->
+                <!-- 5. Patron ID Filter (NEW) -->
+                <div class="w-full sm:w-auto sm:flex-1 min-w-[140px]">
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1.5 ml-1">Patron ID</label>
+                    <input type="text" name="patron_id" placeholder="Optional" class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-[13px] text-gray-800 focus:outline-none focus:border-[var(--cjc-navy)] focus:ring-1 focus:ring-[var(--cjc-navy)] font-medium h-[44px] shadow-sm transition-shadow">
+                </div>
+
+                <!-- 6. Format / Type Selector -->
                 <div class="w-full sm:w-auto sm:flex-1 min-w-[140px] relative" x-data="{ openFormatDropdown: false, selectedFormat: 'excel' }">
                     <input type="hidden" name="format" :value="selectedFormat">
                     <label class="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1.5 ml-1">Format</label>
@@ -323,7 +329,7 @@ function analyticsApp() {
     </div>
 
     <!-- Summary Cards Row -->
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-5">
         <!-- Card 1: Patrons -->
         <div class="bg-white rounded-[16px] p-5 border border-gray-100 shadow-sm flex flex-col relative overflow-hidden transition-all hover:shadow-md">
             <div class="flex items-center justify-between mb-3">
@@ -372,6 +378,18 @@ function analyticsApp() {
             </div>
             <div class="text-[12px] font-bold text-gray-400 uppercase tracking-wider mb-2">Most Active Dept</div>
             <div class="text-[16px] font-bold text-[var(--cjc-navy)] leading-tight truncate" x-text="summary.active_dept" :title="summary.active_dept">-</div>
+        </div>
+
+        <!-- Card 5: Top Patron -->
+        <div class="bg-white rounded-[16px] p-5 border border-gray-100 shadow-sm flex flex-col relative overflow-hidden transition-all hover:shadow-md">
+            <div class="flex items-center justify-between mb-3">
+                <div class="w-10 h-10 rounded-[12px] bg-purple-50 text-purple-600 flex items-center justify-center">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>
+                </div>
+                <div class="flex items-center text-[10px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md"><svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg> Top</div>
+            </div>
+            <div class="text-[12px] font-bold text-gray-400 uppercase tracking-wider mb-2">Most Active Patron</div>
+            <div class="text-[16px] font-bold text-[var(--cjc-navy)] leading-tight truncate" x-text="summary.top_patron" :title="summary.top_patron">-</div>
         </div>
     </div>
 

@@ -55,6 +55,7 @@ class AnalyticsController extends Controller
         $monthInput = $request->input('month');
         $programId  = $request->input('program_id');
         $deptId     = $request->input('department_id');
+        $patronId   = $request->input('patron_id');
         $format     = strtolower($request->input('format', 'excel'));
 
         // PERF-03 FIX: Build the query once and reuse it for both COUNT and lazy iteration.
@@ -111,6 +112,12 @@ class AnalyticsController extends Controller
 
         $programName = $programId ? (AcademicProgram::query()->find($programId)?->name ?? 'All Programs') : 'All Programs';
         $deptName    = $deptId ? (AcademicDepartment::query()->find($deptId)?->name ?? 'All Departments') : 'All Departments';
+
+        // 5. Filter by Patron
+        if ($patronId) {
+            $query->where('student_id', $patronId);
+            $programName .= " | Patron: {$patronId}";
+        }
 
         // PERF-03 FIX: Use a fast COUNT query for the total — avoid loading all rows just for count().
         $totalCount = (clone $query)->count();
@@ -460,12 +467,22 @@ class AnalyticsController extends Controller
         $monthTraffic = AttendanceLog::where('action', 'check_in')->whereMonth('logged_at', now()->month)->whereYear('logged_at', now()->year)->count();
         $mostActiveDept = !empty($deptLabels) ? $deptLabels[0] : 'N/A';
 
+        // Top Patron calculation
+        $topPatronData = clone $query;
+        $topPatron = $topPatronData->join('students', 'attendance_logs.student_id', '=', 'students.id')
+            ->selectRaw('students.full_name as name, COUNT(*) as aggregate')
+            ->groupBy('name')
+            ->orderByDesc('aggregate')
+            ->first();
+        $topPatronName = $topPatron ? $topPatron->name : 'N/A';
+
         return [
             'summary' => [
                 'total_patrons' => $totalPatrons,
                 'today_traffic' => $todayTraffic,
                 'month_traffic' => $monthTraffic,
-                'active_dept' => $mostActiveDept
+                'active_dept' => $mostActiveDept,
+                'top_patron' => $topPatronName
             ],
             'traffic' => [
                 'labels' => $trafficLabels,
