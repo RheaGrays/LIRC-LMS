@@ -447,7 +447,18 @@ class AnalyticsController extends Controller
             }
         }
 
+        $totalPatrons = Student::count();
+        $todayTraffic = AttendanceLog::where('action', 'check_in')->whereDate('logged_at', now()->toDateString())->count();
+        $monthTraffic = AttendanceLog::where('action', 'check_in')->whereMonth('logged_at', now()->month)->whereYear('logged_at', now()->year)->count();
+        $mostActiveDept = !empty($deptLabels) ? $deptLabels[0] : 'N/A';
+
         return [
+            'summary' => [
+                'total_patrons' => $totalPatrons,
+                'today_traffic' => $todayTraffic,
+                'month_traffic' => $monthTraffic,
+                'active_dept' => $mostActiveDept
+            ],
             'traffic' => [
                 'labels' => $trafficLabels,
                 'values' => $trafficValues

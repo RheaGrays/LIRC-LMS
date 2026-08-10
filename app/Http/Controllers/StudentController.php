@@ -92,6 +92,11 @@ class StudentController extends Controller
 
     public function store(Request $request)
     {
+        // Sanitize barcode scanner input: replace slash with hyphen
+        if ($request->has('id')) {
+            $request->merge(['id' => str_replace('/', '-', trim($request->input('id')))]);
+        }
+
         $validated = $request->validate([
             'id'              => 'required|string|max:50|unique:students,id',
             'first_name'      => 'required|string|max:255',

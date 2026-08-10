@@ -12,6 +12,7 @@ function analyticsApp() {
         term_id: '',
         loading: true,
         totalTraffic: 0,
+        summary: { total_patrons: 0, today_traffic: 0, month_traffic: 0, active_dept: '-' },
         trafficChartInstance: null,
         deptChartInstance: null,
         pollTimer: null,
@@ -46,12 +47,19 @@ function analyticsApp() {
                 const data = await response.json();
                 
                 this.totalTraffic = (data.traffic.values || []).reduce((a, b) => a + b, 0);
+                this.summary = data.summary || this.summary;
                 
                 // Render or Update Traffic Volume (Line Chart)
                 const trafficCanvas = document.getElementById('trafficChart');
                 if (trafficCanvas) {
+                    const trafficCtx = trafficCanvas.getContext('2d');
+                    
+                    // Create beautiful gradient like the reference image
+                    let gradient = trafficCtx.createLinearGradient(0, 0, 0, 400);
+                    gradient.addColorStop(0, 'rgba(196, 30, 42, 0.5)'); // Strong red at top
+                    gradient.addColorStop(1, 'rgba(196, 30, 42, 0.0)'); // Transparent at bottom
+
                     if (!this.trafficChartInstance) {
-                        const trafficCtx = trafficCanvas.getContext('2d');
                         this.trafficChartInstance = new Chart(trafficCtx, {
                             type: 'line',
                             data: {
@@ -60,8 +68,8 @@ function analyticsApp() {
                                     label: 'Entries',
                                     data: data.traffic.values,
                                     borderColor: '#c41e2a',
-                                    backgroundColor: 'rgba(196, 30, 42, 0.1)',
-                                    borderWidth: 2,
+                                    backgroundColor: gradient,
+                                    borderWidth: 3,
                                     fill: true,
                                     tension: 0.4,
                                     pointBackgroundColor: '#ffffff',
@@ -95,7 +103,8 @@ function analyticsApp() {
                 // Render or Update Department Breakdown (Doughnut Chart)
                 const deptCanvas = document.getElementById('deptChart');
                 if (deptCanvas) {
-                    const colors = ['#c41e2a', '#d4a418', '#0f2744', '#3b82f6', '#10b981'];
+                    // Match the vibrant colors from the reference
+                    const colors = ['#c41e2a', '#d4a418', '#3b82f6', '#10b981', '#8b5cf6'];
                     if (!this.deptChartInstance) {
                         const deptCtx = deptCanvas.getContext('2d');
                         this.deptChartInstance = new Chart(deptCtx, {
@@ -113,10 +122,10 @@ function analyticsApp() {
                                 responsive: true,
                                 maintainAspectRatio: false,
                                 plugins: {
-                                    legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true } },
+                                    legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true, boxWidth: 8, font: { size: 11, weight: 'bold' } } },
                                     tooltip: { backgroundColor: '#0f2744', padding: 12, cornerRadius: 8 }
                                 },
-                                cutout: '70%'
+                                cutout: '75%'
                             }
                         });
                     } else {
@@ -141,25 +150,28 @@ function analyticsApp() {
 @endpush
 
 @section('admin_content')
-<div class="space-y-6" x-data="analyticsApp()">
+<div class="space-y-6 pb-10" x-data="analyticsApp()">
 
-    <!-- Dedicated Monthly Attendance Report Generator (Per Program / Per Month) -->
-    <div class="rounded-2xl p-6 bg-white border border-gray-200 shadow-sm">
-        <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-            <div>
-                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-red-50 text-[var(--cjc-red)] border border-red-200 mb-3 uppercase tracking-wider">
-                    <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 01-2-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                    Official Librarian Report Generator
+    <!-- Dedicated Monthly Attendance Report Generator -->
+    <div class="rounded-2xl p-6 bg-white border border-gray-100 shadow-sm mb-6 w-full">
+        <div class="flex flex-col items-start gap-4 w-full">
+            <div class="w-full flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-lg font-bold text-[var(--cjc-navy)] tracking-tight">Monthly Attendance Report</h2>
+                    <p class="text-[13px] text-gray-500 mt-0.5 font-medium">Generate and download consolidated attendance logs.</p>
                 </div>
-                <h2 class="text-xl font-bold text-[var(--cjc-navy)]">Monthly Attendance Report per Program</h2>
-                <p class="text-sm text-gray-500 mt-1">Generate and download consolidated attendance logs aggregated per academic program and month.</p>
+                <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold bg-red-50 text-[var(--cjc-red)] uppercase tracking-wider border border-red-50">
+                    <svg class="w-3.5 h-3.5 text-[var(--cjc-red)] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 01-2-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    Report Generator
+                </div>
             </div>
             
-            <form action="{{ route('admin.analytics.export-monthly-report') }}" method="GET" @submit="if(window.showToast) window.showToast('Generating and downloading report...', 'info')" class="w-full flex flex-col xl:flex-row items-stretch xl:items-end gap-3 bg-gray-50 p-4 rounded-xl border border-gray-200">
+            <form action="{{ route('admin.analytics.export-monthly-report') }}" method="GET" @submit="if(window.showToast) window.showToast('Generating and downloading report...', 'info')" class="w-full grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3 bg-gray-50/60 p-4 rounded-xl border border-gray-100">
+                
                 <!-- 1. School Year Filter -->
                 <div>
-                    <label class="block text-[11px] font-bold uppercase tracking-wider text-gray-600 mb-1">School Year</label>
-                    <select name="term_id" class="no-tomselect w-full xl:w-48 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:border-[var(--cjc-navy)] font-semibold h-[42px]">
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1.5 ml-1">School Year</label>
+                    <select name="term_id" class="no-tomselect w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-[13px] text-gray-800 focus:outline-none focus:border-[var(--cjc-navy)] focus:ring-1 focus:ring-[var(--cjc-navy)] font-medium h-[40px] shadow-sm transition-shadow">
                         <option value="">AY {{ date('Y') }}-{{ date('Y') + 1 }} (Current)</option>
                         @foreach($terms as $term)
                             <option value="{{ $term->id }}">{{ $term->name }}</option>
@@ -169,107 +181,118 @@ function analyticsApp() {
 
                 <!-- 2. Month Filter -->
                 <div>
-                    <label class="block text-[11px] font-bold uppercase tracking-wider text-gray-600 mb-1">Month</label>
-                    <input type="month" name="month" value="{{ date('Y-m') }}" class="w-full xl:w-auto px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:border-[var(--cjc-navy)] font-semibold h-[42px]">
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1.5 ml-1">Month</label>
+                    <input type="month" name="month" value="{{ date('Y-m') }}" class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-[13px] text-gray-800 focus:outline-none focus:border-[var(--cjc-navy)] focus:ring-1 focus:ring-[var(--cjc-navy)] font-medium h-[40px] shadow-sm transition-shadow">
                 </div>
 
-                <!-- 3. Program Filter -->
+                <!-- 3. Department Filter (NEW) -->
+                <div class="relative" x-data="{ 
+                    openDeptDropdown: false, 
+                    selectedDeptId: '', 
+                    selectedDeptName: 'All Departments' 
+                }">
+                    <input type="hidden" name="department_id" :value="selectedDeptId">
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1.5 ml-1">Department</label>
+                    
+                    <button type="button" @click="openDeptDropdown = !openDeptDropdown" @click.outside="openDeptDropdown = false" class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-[13px] text-gray-800 focus:outline-none focus:border-[var(--cjc-navy)] focus:ring-1 focus:ring-[var(--cjc-navy)] font-medium h-[40px] flex items-center justify-between gap-2 shadow-sm whitespace-nowrap transition-shadow">
+                        <span class="truncate" x-text="selectedDeptName">All Departments</span>
+                        <svg class="w-4 h-4 text-gray-400 transition-transform shrink-0" :class="{'rotate-180': openDeptDropdown}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+
+                    <!-- Dropdown Options Menu -->
+                    <div x-show="openDeptDropdown" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="transform opacity-0 scale-95" x-transition:enter-end="transform opacity-100 scale-100" class="absolute left-0 mt-2 w-full min-w-[16rem] max-h-60 overflow-y-auto bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50">
+                        <button type="button" @click="selectedDeptId = ''; selectedDeptName = 'All Departments'; openDeptDropdown = false" class="w-full px-4 py-2 text-left text-[13px] font-semibold flex items-center gap-2 hover:bg-gray-50 text-gray-800 transition-colors" :class="{'bg-red-50 text-[var(--cjc-red)] font-bold': selectedDeptId === ''}">
+                            <span>🏢</span>
+                            <span>All Departments</span>
+                        </button>
+                        @foreach($departments as $dept)
+                            <button type="button" @click="selectedDeptId = '{{ $dept->id }}'; selectedDeptName = '{{ addslashes($dept->name) }}'; openDeptDropdown = false" class="w-full px-4 py-2 text-left text-[13px] font-medium hover:bg-gray-50 text-gray-700 transition-colors truncate" :class="{'bg-red-50 text-[var(--cjc-red)] font-bold': selectedDeptId === '{{ $dept->id }}'}">
+                                {{ $dept->name }}
+                            </button>
+                        @endforeach
+                    </div>
+                </div>
+
+                <!-- 4. Program Filter -->
                 <div class="relative" x-data="{ 
                     openProgDropdown: false, 
                     selectedProgId: '', 
                     selectedProgName: 'All Programs' 
                 }">
                     <input type="hidden" name="program_id" :value="selectedProgId">
-                    <label class="block text-[11px] font-bold uppercase tracking-wider text-gray-600 mb-1">Program</label>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1.5 ml-1">Program</label>
                     
-                    <button type="button" @click="openProgDropdown = !openProgDropdown" @click.outside="openProgDropdown = false" class="w-full xl:w-56 px-3.5 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:border-[var(--cjc-navy)] font-semibold h-[42px] flex items-center justify-between gap-2 shadow-sm whitespace-nowrap">
+                    <button type="button" @click="openProgDropdown = !openProgDropdown" @click.outside="openProgDropdown = false" class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-[13px] text-gray-800 focus:outline-none focus:border-[var(--cjc-navy)] focus:ring-1 focus:ring-[var(--cjc-navy)] font-medium h-[40px] flex items-center justify-between gap-2 shadow-sm whitespace-nowrap transition-shadow">
                         <span class="truncate" x-text="selectedProgName">All Programs</span>
                         <svg class="w-4 h-4 text-gray-400 transition-transform shrink-0" :class="{'rotate-180': openProgDropdown}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                     </button>
 
                     <!-- Dropdown Options Menu -->
-                    <div x-show="openProgDropdown" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="transform opacity-0 scale-95" x-transition:enter-end="transform opacity-100 scale-100" class="absolute left-0 mt-1 w-64 max-h-60 overflow-y-auto bg-white rounded-xl shadow-xl border border-gray-200 py-1.5 z-50">
-                        <button type="button" @click="selectedProgId = ''; selectedProgName = 'All Programs'; openProgDropdown = false" class="w-full px-3.5 py-2 text-left text-sm font-semibold flex items-center gap-2 hover:bg-gray-100 text-gray-800 transition-colors" :class="{'bg-red-50 text-[var(--cjc-red)] font-bold': selectedProgId === ''}">
+                    <div x-show="openProgDropdown" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="transform opacity-0 scale-95" x-transition:enter-end="transform opacity-100 scale-100" class="absolute left-0 mt-2 w-full min-w-[16rem] max-h-60 overflow-y-auto bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50">
+                        <button type="button" @click="selectedProgId = ''; selectedProgName = 'All Programs'; openProgDropdown = false" class="w-full px-4 py-2 text-left text-[13px] font-semibold flex items-center gap-2 hover:bg-gray-50 text-gray-800 transition-colors" :class="{'bg-red-50 text-[var(--cjc-red)] font-bold': selectedProgId === ''}">
                             <span>🎓</span>
                             <span>All Programs</span>
                         </button>
                         @foreach($programs as $prog)
-                            <button type="button" @click="selectedProgId = '{{ $prog->id }}'; selectedProgName = '{{ addslashes($prog->name) }}'; openProgDropdown = false" class="w-full px-3.5 py-2 text-left text-sm font-medium hover:bg-gray-100 text-gray-700 transition-colors truncate" :class="{'bg-red-50 text-[var(--cjc-red)] font-bold': selectedProgId === '{{ $prog->id }}'}">
+                            <button type="button" @click="selectedProgId = '{{ $prog->id }}'; selectedProgName = '{{ addslashes($prog->name) }}'; openProgDropdown = false" class="w-full px-4 py-2 text-left text-[13px] font-medium hover:bg-gray-50 text-gray-700 transition-colors truncate" :class="{'bg-red-50 text-[var(--cjc-red)] font-bold': selectedProgId === '{{ $prog->id }}'}">
                                 {{ $prog->name }}
                             </button>
                         @endforeach
                     </div>
                 </div>
 
-                <!-- 4. Format / Type Selector -->
+                <!-- 5. Format / Type Selector -->
                 <div class="relative" x-data="{ openFormatDropdown: false, selectedFormat: 'excel' }">
                     <input type="hidden" name="format" :value="selectedFormat">
-                    <label class="block text-[11px] font-bold uppercase tracking-wider text-gray-600 mb-1">Type / Format</label>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1.5 ml-1">Format</label>
                     
-                    <button type="button" @click="openFormatDropdown = !openFormatDropdown" @click.outside="openFormatDropdown = false" class="w-full xl:w-auto min-w-[175px] px-3.5 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:border-[var(--cjc-navy)] font-bold h-[42px] flex items-center justify-between gap-2 shadow-sm whitespace-nowrap">
+                    <button type="button" @click="openFormatDropdown = !openFormatDropdown" @click.outside="openFormatDropdown = false" class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-[13px] text-gray-800 focus:outline-none focus:border-[var(--cjc-navy)] focus:ring-1 focus:ring-[var(--cjc-navy)] font-medium h-[40px] flex items-center justify-between gap-2 shadow-sm whitespace-nowrap transition-shadow">
                         <div class="flex items-center gap-2">
                             <template x-if="selectedFormat === 'excel'">
-                                <span class="flex items-center gap-1.5 text-emerald-700 font-bold whitespace-nowrap">
-                                    <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zM15.8 17.5L14 15l-1.8 2.5h-1.7l2.6-3.5-2.5-3.5h1.7l1.7 2.4 1.7-2.4h1.7l-2.5 3.5 2.6 3.5h-1.7zM13 9V3.5L18.5 9H13z"/></svg>
-                                    Excel (.xlsx)
+                                <span class="flex items-center gap-1.5 text-emerald-700 font-semibold whitespace-nowrap">
+                                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zM15.8 17.5L14 15l-1.8 2.5h-1.7l2.6-3.5-2.5-3.5h1.7l1.7 2.4 1.7-2.4h1.7l-2.5 3.5 2.6 3.5h-1.7zM13 9V3.5L18.5 9H13z"/></svg>
+                                    Excel
                                 </span>
                             </template>
                             <template x-if="selectedFormat === 'word'">
-                                <span class="flex items-center gap-1.5 text-blue-700 font-bold whitespace-nowrap">
-                                    <svg class="w-4 h-4 text-blue-600 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm1.8 15.5h-1.6l-1.2-4.5-1.2 4.5H10.2L8.5 10h1.5l1.1 4.5 1.2-4.5h1.4l1.2 4.5 1.1-4.5h1.5l-1.7 7.5zM13 9V3.5L18.5 9H13z"/></svg>
-                                    Word (.doc)
+                                <span class="flex items-center gap-1.5 text-blue-700 font-semibold whitespace-nowrap">
+                                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm1.8 15.5h-1.6l-1.2-4.5-1.2 4.5H10.2L8.5 10h1.5l1.1 4.5 1.2-4.5h1.4l1.2 4.5 1.1-4.5h1.5l-1.7 7.5zM13 9V3.5L18.5 9H13z"/></svg>
+                                    Word
                                 </span>
                             </template>
                             <template x-if="selectedFormat === 'pdf'">
-                                <span class="flex items-center gap-1.5 text-red-700 font-bold whitespace-nowrap">
-                                    <svg class="w-4 h-4 text-red-600 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9.5 8.5c0 .8-.7 1.5-1.5 1.5H7v2H5.5V9H8c.8 0 1.5.7 1.5 1.5v1zm5 2c0 .8-.7 1.5-1.5 1.5h-2.5V9h2.5c.8 0 1.5.7 1.5 1.5v3zm3.5-3.5h-3v5H18v-1.5h-1.5v-1H18V10z"/></svg>
-                                    PDF / Print
+                                <span class="flex items-center gap-1.5 text-red-700 font-semibold whitespace-nowrap">
+                                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9.5 8.5c0 .8-.7 1.5-1.5 1.5H7v2H5.5V9H8c.8 0 1.5.7 1.5 1.5v1zm5 2c0 .8-.7 1.5-1.5 1.5h-2.5V9h2.5c.8 0 1.5.7 1.5 1.5v3zm3.5-3.5h-3v5H18v-1.5h-1.5v-1H18V10z"/></svg>
+                                    PDF
                                 </span>
                             </template>
                         </div>
-                        <svg class="w-4 h-4 text-gray-400 transition-transform shrink-0 ml-1" :class="{'rotate-180': openFormatDropdown}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        <svg class="w-4 h-4 text-gray-400 transition-transform shrink-0" :class="{'rotate-180': openFormatDropdown}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                     </button>
 
                     <!-- Dropdown Options Menu -->
-                    <div x-show="openFormatDropdown" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="transform opacity-0 scale-95" x-transition:enter-end="transform opacity-100 scale-100" class="absolute left-0 mt-1 w-52 bg-white rounded-xl shadow-xl border border-gray-200 py-1.5 z-50">
-                        <button type="button" @click="selectedFormat = 'excel'; openFormatDropdown = false" class="w-full px-3.5 py-2 text-left text-sm font-semibold flex items-center gap-2.5 hover:bg-emerald-50 hover:text-emerald-700 transition-colors" :class="{'bg-emerald-50 text-emerald-700': selectedFormat === 'excel'}">
-                            <div class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
-                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zM15.8 17.5L14 15l-1.8 2.5h-1.7l2.6-3.5-2.5-3.5h1.7l1.7 2.4 1.7-2.4h1.7l-2.5 3.5 2.6 3.5h-1.7zM13 9V3.5L18.5 9H13z"/></svg>
-                            </div>
-                            <div>
-                                <div class="font-bold">Excel Spreadsheet</div>
-                                <div class="text-[11px] text-gray-500 font-normal">Microsoft Excel (.xlsx)</div>
-                            </div>
+                    <div x-show="openFormatDropdown" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="transform opacity-0 scale-95" x-transition:enter-end="transform opacity-100 scale-100" class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50">
+                        <button type="button" @click="selectedFormat = 'excel'; openFormatDropdown = false" class="w-full px-4 py-2 text-left text-[13px] font-medium flex items-center gap-2 hover:bg-emerald-50 hover:text-emerald-700 transition-colors" :class="{'bg-emerald-50 text-emerald-700 font-semibold': selectedFormat === 'excel'}">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zM15.8 17.5L14 15l-1.8 2.5h-1.7l2.6-3.5-2.5-3.5h1.7l1.7 2.4 1.7-2.4h1.7l-2.5 3.5 2.6 3.5h-1.7zM13 9V3.5L18.5 9H13z"/></svg>
+                            Excel (.xlsx)
                         </button>
-
-                        <button type="button" @click="selectedFormat = 'word'; openFormatDropdown = false" class="w-full px-3.5 py-2 text-left text-sm font-semibold flex items-center gap-2.5 hover:bg-blue-50 hover:text-blue-700 transition-colors" :class="{'bg-blue-50 text-blue-700': selectedFormat === 'word'}">
-                            <div class="w-7 h-7 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
-                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm1.8 15.5h-1.6l-1.2-4.5-1.2 4.5H10.2L8.5 10h1.5l1.1 4.5 1.2-4.5h1.4l1.2 4.5 1.1-4.5h1.5l-1.7 7.5zM13 9V3.5L18.5 9H13z"/></svg>
-                            </div>
-                            <div>
-                                <div class="font-bold">Word Document</div>
-                                <div class="text-[11px] text-gray-500 font-normal">Microsoft Word (.doc)</div>
-                            </div>
+                        <button type="button" @click="selectedFormat = 'word'; openFormatDropdown = false" class="w-full px-4 py-2 text-left text-[13px] font-medium flex items-center gap-2 hover:bg-blue-50 hover:text-blue-700 transition-colors" :class="{'bg-blue-50 text-blue-700 font-semibold': selectedFormat === 'word'}">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm1.8 15.5h-1.6l-1.2-4.5-1.2 4.5H10.2L8.5 10h1.5l1.1 4.5 1.2-4.5h1.4l1.2 4.5 1.1-4.5h1.5l-1.7 7.5zM13 9V3.5L18.5 9H13z"/></svg>
+                            Word (.doc)
                         </button>
-
-                        <button type="button" @click="selectedFormat = 'pdf'; openFormatDropdown = false" class="w-full px-3.5 py-2 text-left text-sm font-semibold flex items-center gap-2.5 hover:bg-red-50 hover:text-red-700 transition-colors" :class="{'bg-red-50 text-red-700': selectedFormat === 'pdf'}">
-                            <div class="w-7 h-7 rounded-lg bg-red-100 text-red-600 flex items-center justify-center shrink-0">
-                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9.5 8.5c0 .8-.7 1.5-1.5 1.5H7v2H5.5V9H8c.8 0 1.5.7 1.5 1.5v1zm5 2c0 .8-.7 1.5-1.5 1.5h-2.5V9h2.5c.8 0 1.5.7 1.5 1.5v3zm3.5-3.5h-3v5H18v-1.5h-1.5v-1H18V10z"/></svg>
-                            </div>
-                            <div>
-                                <div class="font-bold">PDF Document</div>
-                                <div class="text-[11px] text-gray-500 font-normal">Printable PDF (.pdf)</div>
-                            </div>
+                        <button type="button" @click="selectedFormat = 'pdf'; openFormatDropdown = false" class="w-full px-4 py-2 text-left text-[13px] font-medium flex items-center gap-2 hover:bg-red-50 hover:text-red-700 transition-colors" :class="{'bg-red-50 text-red-700 font-semibold': selectedFormat === 'pdf'}">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9.5 8.5c0 .8-.7 1.5-1.5 1.5H7v2H5.5V9H8c.8 0 1.5.7 1.5 1.5v1zm5 2c0 .8-.7 1.5-1.5 1.5h-2.5V9h2.5c.8 0 1.5.7 1.5 1.5v3zm3.5-3.5h-3v5H18v-1.5h-1.5v-1H18V10z"/></svg>
+                            PDF (.pdf)
                         </button>
                     </div>
                 </div>
 
                 <!-- Export Button -->
                 <div>
-                    <label class="text-[11px] font-bold uppercase tracking-wider text-transparent select-none mb-1 hidden xl:block">&nbsp;</label>
-                    <button type="submit" class="w-full xl:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[var(--cjc-red)] hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-sm transition-all whitespace-nowrap h-[42px]">
+                    <label class="text-[11px] font-bold uppercase tracking-wider text-transparent select-none mb-1.5 hidden xl:block">&nbsp;</label>
+                    <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-6 bg-[var(--cjc-red)] hover:bg-red-700 text-white text-[13px] font-bold rounded-lg shadow-sm transition-all whitespace-nowrap h-[40px] hover:-translate-y-0.5">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                        Generate Report
+                        Generate
                     </button>
                 </div>
             </form>
@@ -277,19 +300,20 @@ function analyticsApp() {
     </div>
 
     <!-- Header & Controls -->
-    <div class="card p-5 bg-white flex flex-col md:flex-row items-center justify-between gap-4">
+    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-transparent py-1 mb-2">
         <div>
-            <h2 class="text-xl font-bold text-[var(--cjc-navy)]">Attendance Overview</h2>
-            <p class="text-sm text-gray-500">Visualize library foot traffic and trends</p>
+            <h2 class="text-xl font-bold text-[var(--cjc-navy)] tracking-tight">Dashboard Analytics</h2>
+            <p class="text-[13px] text-gray-500 mt-0.5">Overview of library activity and foot traffic</p>
         </div>
-        <div class="flex items-center gap-3 w-full md:w-auto">
-            <select x-model="term_id" @change="fetchData()" class="no-tomselect input bg-white font-medium text-sm w-full md:w-48">
+        <div class="flex items-center gap-3 w-full md:w-auto bg-white p-1.5 rounded-lg border border-gray-200 shadow-sm">
+            <select x-model="term_id" @change="fetchData()" class="no-tomselect border-none bg-transparent font-medium text-[12px] w-full md:w-40 focus:ring-0 text-gray-700 cursor-pointer">
                 <option value="">By Term (All Time)</option>
                 @foreach($terms as $term)
                     <option value="{{ $term->id }}">{{ $term->name }}</option>
                 @endforeach
             </select>
-            <select x-model="period" @change="fetchData()" :disabled="term_id !== ''" class="no-tomselect input bg-white font-medium text-sm w-full md:w-48" :class="{'opacity-50': term_id !== ''}">
+            <div class="w-px h-4 bg-gray-200"></div>
+            <select x-model="period" @change="fetchData()" :disabled="term_id !== ''" class="no-tomselect border-none bg-transparent font-medium text-[12px] w-full md:w-40 focus:ring-0 text-gray-700 cursor-pointer" :class="{'opacity-40': term_id !== ''}">
                 <option value="today">Today (Hourly)</option>
                 <option value="week">This Week (Daily)</option>
                 <option value="month">This Month (Daily)</option>
@@ -298,36 +322,109 @@ function analyticsApp() {
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Summary Cards Row -->
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+        <!-- Card 1: Patrons -->
+        <div class="bg-white rounded-[16px] p-5 border border-gray-100 shadow-sm flex flex-col relative overflow-hidden transition-all hover:shadow-md">
+            <div class="flex items-center justify-between mb-3">
+                <div class="w-10 h-10 rounded-[12px] bg-blue-50 text-blue-600 flex items-center justify-center">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                </div>
+                <div class="flex items-center text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md"><svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg> Active</div>
+            </div>
+            <div class="text-[12px] font-bold text-gray-400 uppercase tracking-wider mb-1">Total Patrons</div>
+            <div class="text-[28px] font-bold text-[var(--cjc-navy)] leading-none" x-text="summary.total_patrons.toLocaleString()">0</div>
+        </div>
+
+        <!-- Card 2: Today -->
+        <div class="bg-white rounded-[16px] p-5 border border-gray-100 shadow-sm flex flex-col relative overflow-hidden transition-all hover:shadow-md">
+            <div class="flex items-center justify-between mb-3">
+                <div class="w-10 h-10 rounded-[12px] bg-[var(--cjc-red)]/10 text-[var(--cjc-red)] flex items-center justify-center">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                </div>
+                <div class="flex items-center text-[10px] font-bold text-[var(--cjc-red)] bg-red-50 px-2 py-0.5 rounded-md"><svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg> +Daily</div>
+            </div>
+            <div class="text-[12px] font-bold text-gray-400 uppercase tracking-wider mb-1">Today's Entries</div>
+            <div class="text-[28px] font-bold text-[var(--cjc-navy)] leading-none" x-text="summary.today_traffic.toLocaleString()">0</div>
+        </div>
+
+        <!-- Card 3: Month -->
+        <div class="bg-white rounded-[16px] p-5 border border-gray-100 shadow-sm flex flex-col relative overflow-hidden transition-all hover:shadow-md">
+            <div class="flex items-center justify-between mb-3">
+                <div class="w-10 h-10 rounded-[12px] bg-orange-50 text-orange-500 flex items-center justify-center">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                </div>
+                <div class="flex items-center text-[10px] font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-md"><svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg> ~Avg</div>
+            </div>
+            <div class="text-[12px] font-bold text-gray-400 uppercase tracking-wider mb-1">Monthly Traffic</div>
+            <div class="text-[28px] font-bold text-[var(--cjc-navy)] leading-none" x-text="summary.month_traffic.toLocaleString()">0</div>
+        </div>
+
+        <!-- Card 4: Top Dept -->
+        <div class="bg-white rounded-[16px] p-5 border border-gray-100 shadow-sm flex flex-col relative overflow-hidden transition-all hover:shadow-md">
+            <div class="flex items-center justify-between mb-3">
+                <div class="w-10 h-10 rounded-[12px] bg-emerald-50 text-emerald-500 flex items-center justify-center">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                </div>
+                <div class="w-6 h-6 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 cursor-pointer hover:bg-gray-100">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path></svg>
+                </div>
+            </div>
+            <div class="text-[12px] font-bold text-gray-400 uppercase tracking-wider mb-2">Most Active Dept</div>
+            <div class="text-[16px] font-bold text-[var(--cjc-navy)] leading-tight truncate" x-text="summary.active_dept" :title="summary.active_dept">-</div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
         
         <!-- Main Line Chart -->
-        <div class="lg:col-span-2 card p-6 bg-white flex flex-col relative min-h-[400px]">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-base font-bold text-gray-800">Traffic Volume</h3>
+        <div class="lg:col-span-2 bg-white rounded-[20px] p-6 border border-gray-100 shadow-sm flex flex-col relative min-h-[380px]">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h3 class="text-lg font-bold text-[var(--cjc-navy)] tracking-tight">Traffic Volume</h3>
+                    <p class="text-[13px] text-gray-500 font-medium mt-0.5" x-text="period === 'today' ? 'Hourly attendance for the current day' : (period === 'week' ? 'Daily attendance for the current week' : 'Historical traffic overview')"></p>
+                </div>
                 <template x-if="!loading && totalTraffic === 0">
-                    <span class="text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">No activity recorded for this period</span>
+                    <span class="text-[11px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-md shadow-sm">No activity recorded</span>
                 </template>
             </div>
             
-            <div x-show="loading" class="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center">
-                <div class="w-10 h-10 border-4 border-gray-200 border-t-[var(--cjc-red)] rounded-full animate-spin"></div>
+            <div x-show="loading" class="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-[20px]">
+                <div class="w-8 h-8 border-3 border-gray-200 border-t-[var(--cjc-red)] rounded-full animate-spin"></div>
             </div>
             
-            <div class="flex-1 relative w-full h-full min-h-[300px]">
+            <div class="flex-1 relative w-full h-full min-h-[280px]">
                 <canvas id="trafficChart"></canvas>
             </div>
         </div>
         
         <!-- Department Breakdown (Doughnut) -->
-        <div class="card p-6 bg-white flex flex-col relative min-h-[400px]">
-            <h3 class="text-base font-bold text-gray-800 mb-4">By Department</h3>
-            
-            <div x-show="loading" class="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center">
-                <div class="w-10 h-10 border-4 border-gray-200 border-t-[var(--cjc-red)] rounded-full animate-spin"></div>
+        <div class="bg-white rounded-[20px] p-6 border border-gray-100 shadow-sm flex flex-col relative min-h-[380px]">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h3 class="text-lg font-bold text-[var(--cjc-navy)] tracking-tight">By Department</h3>
+                    <p class="text-[13px] text-gray-500 font-medium mt-0.5">Distribution ratio</p>
+                </div>
+                <div class="w-6 h-6 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 cursor-pointer hover:bg-gray-100 transition-colors">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path></svg>
+                </div>
             </div>
             
-            <div class="flex-1 relative w-full h-full flex items-center justify-center min-h-[300px]">
-                <canvas id="deptChart"></canvas>
+            <div x-show="loading" class="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-[20px]">
+                <div class="w-8 h-8 border-3 border-gray-200 border-t-[var(--cjc-red)] rounded-full animate-spin"></div>
+            </div>
+            
+            <div class="flex-1 relative w-full h-full flex flex-col items-center justify-center min-h-[220px]">
+                <!-- Custom chart size wrapper -->
+                <div class="relative w-[200px] h-[200px]">
+                    <canvas id="deptChart"></canvas>
+                    <!-- Center absolute total text -->
+                    <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mb-10">
+                        <span class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Total</span>
+                        <span class="text-2xl font-bold text-[var(--cjc-navy)] leading-none mt-1" x-text="totalTraffic.toLocaleString()"></span>
+                    </div>
+                </div>
             </div>
         </div>
         

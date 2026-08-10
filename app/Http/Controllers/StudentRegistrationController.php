@@ -17,6 +17,11 @@ class StudentRegistrationController extends Controller
 
     public function store(Request $request)
     {
+        // Sanitize barcode scanner input: replace slash with hyphen
+        if ($request->has('studentId')) {
+            $request->merge(['studentId' => str_replace('/', '-', trim($request->input('studentId')))]);
+        }
+
         $inputCategory = trim($request->input('patronCategory', ''));
         if (in_array(strtolower($inputCategory), ['staff', 'faculty', 'employee'])) {
             $inputCategory = 'Employee';

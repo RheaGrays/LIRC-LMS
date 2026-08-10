@@ -4,8 +4,8 @@
          'border-orange-500': result?.status === 'offline'
      }">
 
-    <!-- Error State -->
-    <template x-if="result?.status === 'error'">
+    <!-- Error & Cooldown State -->
+    <template x-if="result?.status === 'error' || result?.status === 'cooldown'">
         <div class="p-8 pb-10 text-center flex-1 flex flex-col items-center justify-center relative w-full overflow-hidden">
             
             <!-- Floating Sparkles (Background) -->
@@ -23,15 +23,23 @@
             <div class="relative z-10 mb-4 mt-2">
                 <div class="w-32 h-32 rounded-full bg-red-50/50 flex items-center justify-center mx-auto relative before:absolute before:inset-2 before:rounded-full before:bg-red-50 before:shadow-[0_0_30px_rgba(220,38,38,0.15)]">
                     <div class="w-[85px] h-[85px] rounded-full bg-white border-[3px] border-red-100 flex items-center justify-center shadow-md relative z-10">
-                        <svg class="w-[45px] h-[45px] text-[#e31818]" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-                        </svg>
+                        <!-- Switch icon based on error or cooldown -->
+                        <template x-if="result?.status === 'cooldown'">
+                            <svg class="w-[45px] h-[45px] text-orange-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </template>
+                        <template x-if="result?.status === 'error'">
+                            <svg class="w-[45px] h-[45px] text-[#e31818]" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                            </svg>
+                        </template>
                     </div>
                 </div>
             </div>
 
             <!-- Text Content -->
-            <h3 class="text-[34px] font-extrabold text-[#08152c] mb-1 relative z-10 tracking-tight">Access Denied</h3>
+            <h3 class="text-[34px] font-extrabold text-[#08152c] mb-1 relative z-10 tracking-tight" x-text="result?.status === 'cooldown' ? 'Please Wait' : 'Access Denied'"></h3>
             
             <!-- Decorative Line -->
             <div class="flex items-center justify-center gap-2 mb-3 relative z-10">
@@ -42,23 +50,29 @@
 
             <p class="text-[17px] text-[#e31818] font-medium relative z-10" x-text="result?.message"></p>
 
-            <!-- Info Box -->
-            <div class="mt-8 mb-6 w-full max-w-[550px] bg-white border border-gray-100 rounded-[16px] p-5 flex items-center gap-5 shadow-[0_4px_20px_rgba(0,0,0,0.03)] relative z-10 text-left mx-auto">
-                <div class="w-[52px] h-[52px] rounded-[14px] bg-red-50 flex items-center justify-center shrink-0">
-                    <svg class="w-7 h-7 text-[#e31818]" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                        <rect x="3" y="7" width="18" height="12" rx="2" />
-                        <circle cx="8" cy="12" r="2" />
-                        <path d="M5 16c0-1.5 1.5-3 3-3s3 1.5 3 3" />
-                        <path d="M14 12h4M14 15h2" stroke-linecap="round" />
-                        <circle cx="12" cy="7" r="1.5" fill="currentColor" stroke="currentColor" />
-                    </svg>
+            <!-- Info Box (Only for Access Denied) -->
+            <template x-if="result?.status === 'error'">
+                <div class="mt-8 mb-6 w-full max-w-[550px] bg-white border border-gray-100 rounded-[16px] p-5 flex items-center gap-5 shadow-[0_4px_20px_rgba(0,0,0,0.03)] relative z-10 text-left mx-auto">
+                    <div class="w-[52px] h-[52px] rounded-[14px] bg-red-50 flex items-center justify-center shrink-0">
+                        <svg class="w-7 h-7 text-[#e31818]" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <rect x="3" y="7" width="18" height="12" rx="2" />
+                            <circle cx="8" cy="12" r="2" />
+                            <path d="M5 16c0-1.5 1.5-3 3-3s3 1.5 3 3" />
+                            <path d="M14 12h4M14 15h2" stroke-linecap="round" />
+                            <circle cx="12" cy="7" r="1.5" fill="currentColor" stroke="currentColor" />
+                        </svg>
+                    </div>
+                    <div class="h-10 w-px bg-gray-200 shrink-0"></div>
+                    <div>
+                        <h4 class="text-[#08152c] font-bold text-[15px] mb-0.5">Unregistered Student?</h4>
+                        <p class="text-gray-500 text-[13px] m-0">Check if the ID is correct, or register the student in the system first.</p>
+                    </div>
                 </div>
-                <div class="h-10 w-px bg-gray-200 shrink-0"></div>
-                <div>
-                    <h4 class="text-[#08152c] font-bold text-[15px] mb-0.5">Unregistered Student?</h4>
-                    <p class="text-gray-500 text-[13px] m-0">Check if the ID is correct, or register the student in the system first.</p>
-                </div>
-            </div>
+            </template>
+            
+            <template x-if="result?.status === 'cooldown'">
+                <div class="mt-8 mb-6 h-4"></div>
+            </template>
 
             <!-- Button -->
             <button @click="resetScan()" class="w-full max-w-[550px] mx-auto p-[18px] bg-gradient-to-b from-[#e31818] to-[#bd0e0e] text-white rounded-[14px] flex items-center justify-center gap-3 shadow-[0_8px_20px_rgba(227,24,24,0.25)] hover:shadow-[0_8px_25px_rgba(227,24,24,0.35)] hover:from-[#f01919] hover:to-[#a80c0c] transition-all relative z-10">

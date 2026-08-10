@@ -50,7 +50,9 @@ class AttendanceController extends Controller
      */
     public function process(Request $request): JsonResponse
     {
-        $term = trim($request->input('student_id', ''));
+        // Sanitize input: Barcode scanners sometimes type '/' instead of '-' depending on keyboard layout
+        $term = str_replace('/', '-', trim($request->input('student_id', '')));
+        
         if (!$term) {
             return response()->json(['status' => 'error', 'message' => 'No student ID or name provided.'], 422);
         }
