@@ -465,10 +465,7 @@
                             
                             <!-- QR Code Display -->
                             <div class="bg-white p-3 border border-[var(--border-light)] rounded-[var(--radius-md)] shadow-sm relative">
-                                <template x-if="photoSyncMobileUrl">
-                                    <img :src="`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(photoSyncMobileUrl)}`"
-                                         alt="Scan QR Code to Capture Photo" class="w-[180px] h-[180px] object-contain" />
-                                </template>
+                                <canvas id="qrcode-canvas" class="w-[180px] h-[180px]" :class="photoSyncMobileUrl ? 'block' : 'hidden'"></canvas>
                                 <template x-if="!photoSyncMobileUrl">
                                     <div class="w-[180px] h-[180px] bg-gray-100 flex items-center justify-center text-xs text-gray-400">
                                         Generating QR Code…
@@ -738,6 +735,7 @@
             photoTaken: false,
             photoSyncMode: 'mobile',
             photoSyncSessionId: null,
+            photoSyncOwnerToken: null,
             photoSyncMobileUrl: null,
             photoSyncPollTimer: null,
 
@@ -924,8 +922,20 @@
                     if (res.ok) {
                         const data = await res.json();
                         this.photoSyncSessionId = data.session_id;
+                        this.photoSyncOwnerToken = data.owner_token;
                         this.photoSyncMobileUrl = data.mobile_url;
                         this.photoSyncPollTimer = setInterval(() => this.checkPhotoSyncSession(), 1500);
+
+                        this.$nextTick(() => {
+                            const canvas = document.getElementById('qrcode-canvas');
+                            if (canvas && window.QRCode) {
+                                window.QRCode.toCanvas(canvas, this.photoSyncMobileUrl, {
+                                    width: 180,
+                                    margin: 2,
+                                    color: { dark: '#0f2744', light: '#ffffff' }
+                                });
+                            }
+                        });
                     }
                 } catch (e) {}
             },
@@ -936,10 +946,29 @@
                     const res = await fetch(`/api/register/photo-session/check/${this.photoSyncSessionId}`);
                     if (res.ok) {
                         const data = await res.json();
-                        if (data.status === 'completed' && data.photoDataUrl) {
-                            this.capturedImage = data.photoDataUrl;
-                            this.photoTaken = true;
-                            this.stopPhotoSyncPolling();
+                        if (data.status === 'completed') {
+                            let csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+                            const consumeRes = await fetch(`/api/register/photo-session/consume`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': csrfToken,
+                                    'Accept': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    session_id: this.photoSyncSessionId,
+                                    owner_token: this.photoSyncOwnerToken
+                                })
+                            });
+                            
+                            if (consumeRes.ok) {
+                                const consumeData = await consumeRes.json();
+                                if (consumeData.status === 'completed' && consumeData.photoDataUrl) {
+                                    this.capturedImage = consumeData.photoDataUrl;
+                                    this.photoTaken = true;
+                                    this.stopPhotoSyncPolling();
+                                }
+                            }
                         }
                     }
                 } catch (e) {}
