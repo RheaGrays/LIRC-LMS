@@ -285,8 +285,8 @@ const registerApp = () => {
         async initScanner() {
             this.cameraError = '';
             try {
-                const videoInputDevices = await BrowserMultiFormatReader.listVideoInputDevices();
-                this.cameras = videoInputDevices;
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                this.cameras = devices.filter(device => device.kind === 'videoinput');
                 
                 if (this.cameras.length > 0) {
                     // Filter out mobile phone links (e.g. Phone Link / DroidCam) and prefer built-in / USB Webcams
