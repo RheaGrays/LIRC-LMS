@@ -36,12 +36,12 @@ Route::prefix('kiosk')->name('kiosk.')->middleware(\App\Http\Middleware\KioskTok
 });
 
 // ── Student Registration (public, rate-limited) ──────────────
-// Critical Fix #2: Rate limited to 10 page views/min and 5 submissions/min
-// to prevent DB flooding with fake student records.
-Route::middleware('throttle:10,1')->group(function () {
+// Critical Fix #2: Rate limited to 60 page views/min and 60 submissions/min
+// to prevent DB flooding with fake student records while allowing kiosk usage.
+Route::middleware('throttle:60,1')->group(function () {
     Route::get('/register', [App\Http\Controllers\StudentRegistrationController::class, 'index'])->name('register.index');
 });
-Route::middleware('throttle:5,1')->group(function () {
+Route::middleware('throttle:60,1')->group(function () {
     Route::post('/register', [App\Http\Controllers\StudentRegistrationController::class, 'store'])->name('register.store');
 });
 
