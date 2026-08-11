@@ -97,11 +97,13 @@ Route::prefix('admin')->name('admin.')->middleware('auth.admin')->group(function
     Route::get('/students/{id}/edit', [StudentController::class, 'edit'])->name('students.edit');
     Route::put('/students/{id}',      [StudentController::class, 'update'])->name('students.update');
 
-    // Students — delete, import (Super Admin only)
+    // Students — delete (Super Admin only)
     Route::middleware('admin.role:Super Admin')->group(function () {
         Route::delete('/students/{id}',   [StudentController::class, 'destroy'])->name('students.destroy');
-        Route::post('/students/import',   [StudentController::class, 'import'])->name('students.import');
     });
+
+    // Students — import (all roles)
+    Route::post('/students/import',   [StudentController::class, 'import'])->name('students.import');
 
     // Violations (all roles, except destroy)
     Route::get('/students/{id}/violations',        [ViolationController::class, 'index'])->name('violations.index');
