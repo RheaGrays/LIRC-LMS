@@ -330,9 +330,6 @@ const registerApp = () => {
                 await videoEl.play();
                 this.isCameraActive = true;
 
-                // Offscreen canvas for frame sampling
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
                 // Decoupled decoding loop running every 200ms (5 scans/sec)
                 // leaves main video thread at 100% 60 FPS hardware speed with 0 lag
@@ -353,19 +350,19 @@ const registerApp = () => {
                             }
                         }
 
-                        // 2. Fallback ZXing reader on targeted canvas frame
+                        // 2. Fallback ZXing reader
                         if (videoEl.videoWidth > 0 && videoEl.videoHeight > 0) {
-                            canvas.width = videoEl.videoWidth;
-                            canvas.height = videoEl.videoHeight;
-                            ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
-
-                            const result = this.codeReader.decodeFromCanvas(canvas);
-                            if (result && result.getText() && !this.isProcessing) {
-                                const code = result.getText();
-                                if (code && code.trim()) {
-                                    this.manualId = code.trim();
-                                    this.submitManual();
+                            try {
+                                const result = this.codeReader.decode(videoEl);
+                                if (result && result.getText() && !this.isProcessing) {
+                                    const code = result.getText();
+                                    if (code && code.trim()) {
+                                        this.manualId = code.trim();
+                                        this.submitManual();
+                                    }
                                 }
+                            } catch (e) {
+                                // ZXing throws NotFoundException if no barcode is found in the frame, ignore it
                             }
                         }
                     } catch (e) {
