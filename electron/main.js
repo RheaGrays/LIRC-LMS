@@ -13,22 +13,30 @@ let phpProcess = null;
 
 function checkServerReady(url, callback) {
     let attempts = 0;
-    const maxAttempts = 25; // max 7.5 seconds wait
+    const maxAttempts = 60; // 60 * 500ms = 30 seconds max wait
 
     const doCheck = () => {
         attempts++;
-        http.get(url, (res) => {
-            res.resume(); // Consume data to free the socket immediately
+        const req = http.get(url, { timeout: 2000 }, (res) => {
+            res.resume();
             if (res.statusCode === 200 || res.statusCode === 302 || res.statusCode === 404 || res.statusCode === 500) {
                 callback(true);
             } else if (attempts < maxAttempts) {
-                setTimeout(doCheck, 300);
+                setTimeout(doCheck, 500);
             } else {
                 callback(false);
             }
-        }).on('error', () => {
+        });
+        
+        req.on('timeout', () => {
+            req.destroy();
+            if (attempts < maxAttempts) setTimeout(doCheck, 500);
+            else callback(false);
+        });
+
+        req.on('error', (err) => {
             if (attempts < maxAttempts) {
-                setTimeout(doCheck, 300);
+                setTimeout(doCheck, 500);
             } else {
                 callback(false);
             }
@@ -138,7 +146,7 @@ function startPhpServer() {
             LARAVEL_STORAGE_PATH: userStoragePath
         };
 
-        phpProcess = spawn(phpExec, ['artisan', 'serve', '--port=8000'], {
+        phpProcess = spawn(phpExec, ['artisan', 'serve', '--port=8000', '--no-reload'], {
             cwd: projectPath,
             detached: false,
             stdio: 'ignore',
@@ -149,7 +157,7 @@ function startPhpServer() {
             console.error('PHP spawn error:', err);
             if (phpExec !== 'php') {
                 try {
-                    const fallbackProcess = spawn('php', ['artisan', 'serve', '--port=8000'], {
+                    const fallbackProcess = spawn('php', ['artisan', 'serve', '--port=8000', '--no-reload'], {
                         cwd: projectPath,
                         detached: false,
                         stdio: 'ignore',
