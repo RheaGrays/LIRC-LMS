@@ -377,11 +377,17 @@ class AttendanceController extends Controller
     
     private function formatStudent(Student $s): array
     {
-        $s->loadMissing('academicDepartment');
+        $s->loadMissing(['academicDepartment', 'academicProgram']);
+        
+        $deptText = $s->academicDepartment?->name ?? '—';
+        if ($s->academicProgram) {
+            $deptText .= ' - ' . $s->academicProgram->code;
+        }
+
         return [
             'id'        => $s->id,
             'name'      => $s->full_name,
-            'dept'      => $s->academicDepartment?->name ?? '—',
+            'dept'      => $deptText,
             'year'      => $s->year_level,
             'photo_url' => $s->photo_url,
         ];
