@@ -16,19 +16,10 @@
     "build": {
         "appId": "com.cjc.lirc.lems",
         "productName": "Library Entrance Monitoring System (LEMS)",
-        "asar": true,
+        "asar": false,
         "directories": {
             "output": "dist"
         },
-        "extraResources": [
-            {
-                "from": "php_bundle",
-                "to": "php_bundle",
-                "filter": [
-                    "**/*"
-                ]
-            }
-        ],
         "files": [
             "electron/**/*",
             "public/**/*",
