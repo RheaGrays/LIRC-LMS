@@ -140,6 +140,12 @@ function startPhpServer() {
             }
         });
 
+        // Ensure bootstrap/cache exists in the project path
+        const bootstrapCachePath = path.join(projectPath, 'bootstrap', 'cache');
+        if (!fs.existsSync(bootstrapCachePath)) {
+            fs.mkdirSync(bootstrapCachePath, { recursive: true });
+        }
+
         const env = { 
             ...process.env, 
             PATH: `${phpDir};${process.env.PATH}`,

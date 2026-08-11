@@ -214,35 +214,48 @@ class AttendanceController extends Controller
         }
 
         // ── Cooldown Buffer (Prevents duplicate scans within 5 minutes) ──
-        // Use an atomic lock to prevent race conditions from concurrent requests
         $cooldownMinutes = (int) \App\Models\SystemSetting::get('checkin_cooldown_minutes', 5);
         $lockKey = 'checkin_lock:' . $student->id;
 
-        $result = Cache::lock($lockKey, 10)->block(5, function () use ($student, $request, $cooldownMinutes) {
-            $recentLog = AttendanceLog::query()->where('student_id', $student->id)
-                ->where('logged_at', '>=', now()->subMinutes($cooldownMinutes))
-                ->first();
+        // BUG-NEW-03 FIX: Wrap in try/catch so a lock timeout returns a retriable 503
+        // instead of an uncaught exception that crashes offline queue replay.
+        try {
+            $result = Cache::lock($lockKey, 10)->block(5, function () use ($student, $request, $cooldownMinutes) {
+                $recentLog = AttendanceLog::query()->where('student_id', $student->id)
+                    ->where('logged_at', '>=', now()->subMinutes($cooldownMinutes))
+                    ->first();
 
-            if ($recentLog) {
-                // Return success so Kiosk still greets the student, but DO NOT save duplicate to DB
-                return response()->json([
-                    'success'   => true,
-                    'duplicate' => true,
-                    'message'   => 'Duplicate scan ignored (within 5-minute cooldown).'
+                if ($recentLog) {
+                    return response()->json([
+                        'success'   => true,
+                        'duplicate' => true,
+                        'message'   => 'Duplicate scan ignored (within 5-minute cooldown).'
+                    ]);
+                }
+
+                AttendanceLog::create([
+                    'student_id' => $student->id,
+                    'action'     => $request->action,
+                    'logged_at'  => now(),
                 ]);
-            }
 
-            AttendanceLog::create([
-                'student_id' => $student->id,
-                'action'     => $request->action,
-                'logged_at'  => now(),
-            ]);
+                // BUG-NEW-02 FIX: Invalidate occupancy and dashboard caches after write
+                // so offline-replayed scans are reflected immediately in the dashboard.
+                Cache::forget('occupancy_today');
+                Cache::forget('dashboard_today_entries');
 
-            return response()->json(['success' => true]);
-        });
+                return response()->json(['success' => true]);
+            });
+        } catch (\Illuminate\Contracts\Cache\LockTimeoutException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Server busy processing another scan. Please retry.',
+            ], 503);
+        }
 
         return $result;
     }
+
 
     /**
      * Get the last action today for a student (check_in or check_out).
