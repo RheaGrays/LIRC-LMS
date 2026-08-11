@@ -158,7 +158,11 @@
                         Automating Library Foot Traffic & <br/> Academic Compliance
                     </h2>
                     <p class="text-[13px] md:text-sm text-gray-600 leading-[1.8] max-w-xl font-medium">
-                        The Library Entrance & Attendance Monitoring System (LEMS) was developed to eliminate manual logbooks and provide Cor Jesu College librarians with real-time insight into patron visitation patterns. By leveraging high-speed barcode readers and mobile app synchronization, LEMS records exact entry timestamps, patron categories, and program affiliations with zero friction.
+                        LIRC-LMS (Library Information & Resource Center - Library Management & Entrance Monitoring System) is an automated, real-time digital entrance monitoring and library management solution built specifically for Cor Jesu College (CJC).
+                    </p>
+                    <p class="text-[13px] md:text-sm text-gray-600 leading-[1.8] max-w-xl font-medium">     
+                        The primary objective of LIRC-LMS is to upgrade the old LIRC (Library Information & Resource Center) System with a seamless, contactless, and intelligent digital kiosk system. 
+                        It registers student and staff attendance upon entering or leaving the library, while providing library administrators with real-time occupancy monitoring, patron record management, and comprehensive attendance analytics.
                     </p>
                 </div>
 
@@ -551,7 +555,7 @@
                     The Minds Behind LEMS
                 </h2>
                 <p class="text-sm text-gray-600 font-medium leading-relaxed max-w-4xl mb-12">
-                    The Library Entrance & Attendance Monitoring System was developed by a dedicated team of student developers from <strong>Cor Jesu College</strong>, committed to creating an efficient and modern solution for the Learning Information Resource Center.
+                    The Library Entrance & Attendance Monitoring System was developed by a dedicated team of Information Technology & Computer Science students from <strong>Cor Jesu College</strong>, committed to creating an efficient and modern solution for the Learning Information Resource Center.
                 </p>
 
                 <!-- Developers Grid -->
@@ -570,17 +574,6 @@
                     <!-- Developer 2 -->
                     <div class="p-8 rounded-3xl bg-white shadow-[0_2px_12px_-4px_rgba(0,0,0,0.06)] border border-gray-100 text-center space-y-4 transform hover:-translate-y-1 transition-transform">
                         <div class="mx-auto rounded-full bg-gray-50 border-4 border-white shadow-md flex items-center justify-center overflow-hidden shrink-0" style="width: 100px; height: 100px;">
-                            <img src="/developers/John Mark Limsan.png" alt="John Mark Limsan" style="width: 100%; height: 100%; object-fit: cover;">
-                        </div>
-                        <div>
-                            <h3 class="font-extrabold text-sm text-[var(--cjc-navy)]">John Mark Limsan</h3>
-                            <p class="font-bold text-[var(--cjc-red)] uppercase tracking-wider mt-1" style="font-size: 10px;">System Analyst</p>
-                        </div>
-                    </div>
-
-                    <!-- Developer 3 -->
-                    <div class="p-8 rounded-3xl bg-white shadow-[0_2px_12px_-4px_rgba(0,0,0,0.06)] border border-gray-100 text-center space-y-4 transform hover:-translate-y-1 transition-transform">
-                        <div class="mx-auto rounded-full bg-gray-50 border-4 border-white shadow-md flex items-center justify-center overflow-hidden shrink-0" style="width: 100px; height: 100px;">
                             <img src="/developers/Rhea Grace Balatero.jpg" alt="Rhea Grace Balatero" style="width: 100%; height: 100%; object-fit: cover;">
                         </div>
                         <div>
@@ -589,6 +582,17 @@
                         </div>
                     </div>
 
+                    <!-- Developer 3 -->
+                    <div class="p-8 rounded-3xl bg-white shadow-[0_2px_12px_-4px_rgba(0,0,0,0.06)] border border-gray-100 text-center space-y-4 transform hover:-translate-y-1 transition-transform">
+                        <div class="mx-auto rounded-full bg-gray-50 border-4 border-white shadow-md flex items-center justify-center overflow-hidden shrink-0" style="width: 100px; height: 100px;">
+                            <img src="/developers/John Mark Limsan.png" alt="John Mark Limsan" style="width: 100%; height: 100%; object-fit: cover;">
+                        </div>
+                        <div>
+                            <h3 class="font-extrabold text-sm text-[var(--cjc-navy)]">John Mark Limsan</h3>
+                            <p class="font-bold text-[var(--cjc-red)] uppercase tracking-wider mt-1" style="font-size: 10px;">System Analyst</p>
+                        </div>
+                    </div>
+                    
                     <!-- Developer 4 -->
                     <div class="p-8 rounded-3xl bg-white shadow-[0_2px_12px_-4px_rgba(0,0,0,0.06)] border border-gray-100 text-center space-y-4 transform hover:-translate-y-1 transition-transform">
                         <div class="mx-auto rounded-full bg-gray-50 border-4 border-white shadow-md flex items-center justify-center overflow-hidden shrink-0" style="width: 100px; height: 100px;">
