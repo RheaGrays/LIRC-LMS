@@ -80,11 +80,17 @@ class StudentController extends Controller
 
         $students = $query->paginate(20)->withQueryString();
         $patronCategories = SystemSetting::get('patron_categories', ['Student', 'Employee', 'Post Graduate', 'Alumni', 'Visitor']);
-        
-        $departmentsList = \App\Models\AcademicDepartment::all();
-        $programsList = \App\Models\AcademicProgram::all();
+
+        // PERF-NEW-03 FIX: Cache departments and programs — they change rarely
+        // but are loaded on every students page request (filtering, sorting, pagination).
+        $departmentsList = \Illuminate\Support\Facades\Cache::remember('academic_departments_all', 600, function () {
+            return \App\Models\AcademicDepartment::query()->orderBy('name', 'asc')->get();
+        });
+        $programsList = \Illuminate\Support\Facades\Cache::remember('academic_programs_all', 600, function () {
+            return \App\Models\AcademicProgram::query()->orderBy('name', 'asc')->get();
+        });
         $yearLevelsList = \Illuminate\Support\Facades\Cache::remember('student_year_levels', 300, function () {
-            return Student::query()->select('year_level')->whereNotNull('year_level')->where('year_level', '!=', '', 'and')->distinct()->pluck('year_level')->sort()->values();
+            return Student::query()->select('year_level')->whereNotNull('year_level')->where('year_level', '!=', '')->distinct()->pluck('year_level')->sort()->values();
         });
 
         return view('admin.students.index', compact('students', 'patronCategories', 'departmentsList', 'programsList', 'yearLevelsList'));

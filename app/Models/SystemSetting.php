@@ -39,10 +39,20 @@ class SystemSetting extends Model
         static::query()->updateOrCreate(['key' => $key], ['value' => $value]);
         // PERF-02 FIX: Bust the individual key cache on write
         Cache::forget("system_setting_{$key}");
+        // BUG-NEW-01 FIX: Also bust the allSettings() cache so KioskController
+        // and SettingsController pick up changes without waiting for TTL expiry.
+        Cache::forget('system_settings_all');
     }
 
+    /**
+     * BUG-NEW-01 FIX: Cache allSettings() for 5 minutes.
+     * Previously ran a full table SELECT on every kiosk page load.
+     * set() busts this cache so updates are always reflected immediately.
+     */
     public static function allSettings(): array
     {
-        return static::all()->pluck('value', 'key')->toArray();
+        return Cache::remember('system_settings_all', 300, function () {
+            return static::all()->pluck('value', 'key')->toArray();
+        });
     }
 }

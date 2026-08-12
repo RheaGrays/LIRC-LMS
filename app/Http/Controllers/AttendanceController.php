@@ -175,7 +175,7 @@ class AttendanceController extends Controller
         $concatSql = $driver === 'sqlite' ? "first_name || ' ' || last_name" : "CONCAT(first_name, ' ', last_name)";
         $concatSqlRev = $driver === 'sqlite' ? "last_name || ' ' || first_name" : "CONCAT(last_name, ' ', first_name)";
 
-        $students = Student::with('academicDepartment')
+        $students = Student::query()->with('academicDepartment')
             ->where(function($q) use ($searchTerm, $concatSql, $concatSqlRev) {
                 // BUG-02 FIX: whereRaw/orWhereRaw only accept 2 args; removed invalid 3rd arg
                 $q->where('id', 'LIKE', $searchTerm)
@@ -308,11 +308,18 @@ class AttendanceController extends Controller
             return response()->json($unreadEvents);
         }
 
-        // Fallback for database logs if event cache was cleared
+        // BUG-NEW-06 FIX: The fallback now queries by today's date, not by log ID.
+        // The previous code used `WHERE id > $afterSeq`, but $afterSeq is a Cache::increment()
+        // counter (starts at 1 each boot) while attendance_logs.id is a DB auto-increment
+        // potentially in the thousands — so the comparison was meaningless and would either
+        // replay old logs or return nothing depending on ID alignment.
+        //
+        // The fallback's only purpose is to recover display continuity after a cache flush.
+        // Returning the most recent log from today is the correct recovery behaviour.
         $latestLog = AttendanceLog::query()
-            ->where('id', '>', $afterSeq)
+            ->where('logged_at', '>=', now()->startOfDay())
             ->with('student')
-            ->orderBy('id', 'asc')
+            ->orderByDesc('logged_at')
             ->first();
 
         if (!$latestLog || !$latestLog->student) {

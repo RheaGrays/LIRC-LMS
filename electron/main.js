@@ -203,17 +203,19 @@ function createWindow() {
         }
     });
 
-    // Grant camera/media permissions explicitly
+    // SEC-REM-01 FIX: Only grant permissions that LEMS actually needs (camera for registration).
+    // Previously callback(true) granted everything: microphone, geolocation, notifications, MIDI, etc.
+    const ALLOWED_PERMISSIONS = new Set(['camera', 'media', 'mediaKeySystem']);
     mainWindow.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
-        callback(true);
+        callback(ALLOWED_PERMISSIONS.has(permission));
     });
 
     mainWindow.webContents.session.setPermissionCheckHandler((webContents, permission) => {
-        return true;
+        return ALLOWED_PERMISSIONS.has(permission);
     });
 
     mainWindow.webContents.session.setDevicePermissionHandler((details) => {
-        return true;
+        return details.deviceType === 'camera';
     });
 
     mainWindow.webContents.once('did-finish-load', () => {

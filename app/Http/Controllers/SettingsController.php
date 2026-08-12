@@ -13,7 +13,11 @@ class SettingsController extends Controller
         $admin    = Auth::guard('admin')->user();
         $settings = SystemSetting::allSettings();
 
-        $terms = \App\Models\AcademicTerm::orderBy('start_date', 'desc')->get();
+        // BUG-NEW-04 FIX: use ::query() to satisfy Intelephense P1005 on orderBy().
+        // Also cached — terms almost never change, no need to query on every page load.
+        $terms = \Illuminate\Support\Facades\Cache::remember('academic_terms_settings', 300, function () {
+            return \App\Models\AcademicTerm::query()->orderBy('start_date', 'desc')->get();
+        });
         $latestTerm = $terms->first();
 
         $defaultCategories = ['Student', 'Employee', 'Post Graduate', 'Alumni', 'Visitor'];
@@ -98,6 +102,8 @@ class SettingsController extends Controller
         }
         
         \App\Models\AcademicTerm::create($data);
+        \Illuminate\Support\Facades\Cache::forget('academic_terms_settings');
+        \Illuminate\Support\Facades\Cache::forget('academic_terms_all');
         return redirect()->back()->with('success', 'Academic Term created successfully.');
     }
 
@@ -120,12 +126,16 @@ class SettingsController extends Controller
         }
         
         \App\Models\AcademicTerm::findOrFail($id)->update($data);
+        \Illuminate\Support\Facades\Cache::forget('academic_terms_settings');
+        \Illuminate\Support\Facades\Cache::forget('academic_terms_all');
         return redirect()->back()->with('success', 'Academic Term updated successfully.');
     }
 
     public function destroyTerm($id)
     {
         \App\Models\AcademicTerm::findOrFail($id)->delete();
+        \Illuminate\Support\Facades\Cache::forget('academic_terms_settings');
+        \Illuminate\Support\Facades\Cache::forget('academic_terms_all');
         return redirect()->back()->with('success', 'Academic Term deleted successfully.');
     }
 }
