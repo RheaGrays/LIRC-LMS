@@ -36,7 +36,11 @@ class ReportService
      */
     public function exportStudentsExcel()
     {
-        $students = Student::with(['academicDepartment'])->withCount('violations')->get();
+        // PERF-A02 FIX: Use lazy(200) instead of get() so students are streamed in
+        // chunks of 200 rows rather than loading the entire table into PHP memory.
+        // lazy() returns a LazyCollection — the foreach loop below works identically.
+        $students = Student::query()->with(['academicDepartment'])->withCount('violations')->lazy(200);
+
         
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();

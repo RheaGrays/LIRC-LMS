@@ -101,10 +101,13 @@ class StudentRegistrationController extends Controller
         // Generate a unique ID for Visitors if none provided
         $patronId = $validated['studentId'] ?? ('VIS-' . strtoupper(Str::random(6)));
 
-        // Ensure uniqueness for generated Visitor IDs
-        while (Student::query()->find($patronId)) {
-            $patronId = 'VIS-' . strtoupper(Str::random(6));
+        // SEC-A02 FIX: Cap retry attempts to prevent a theoretical infinite loop.
+        // In practice this will never trigger (26^6 combinations), but it's defensive.
+        $attempts = 0;
+        while (Student::query()->find($patronId) && $attempts++ < 10) {
+            $patronId = 'VIS-' . strtoupper(Str::random(8)); // wider on retry
         }
+
 
         $student = new Student();
         $student->id             = $patronId;

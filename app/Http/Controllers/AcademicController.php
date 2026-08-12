@@ -6,6 +6,7 @@ use App\Models\AcademicDepartment;
 use App\Models\AcademicProgram;
 use App\Models\AcademicTerm;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rule;
 
 class AcademicController extends Controller
@@ -36,6 +37,11 @@ class AcademicController extends Controller
             'name'  => $name,
         ]);
 
+        // BUG-A05 FIX: Bust StudentController's cached departments list so the
+        // filter dropdown reflects new/updated/deleted departments immediately.
+        Cache::forget('academic_departments_all');
+        Cache::forget('academic_programs_all');
+
         return redirect()->back()->with('success', 'Department added successfully.');
     }
 
@@ -58,6 +64,9 @@ class AcademicController extends Controller
             'name'  => $name,
         ]);
 
+        Cache::forget('academic_departments_all');
+        Cache::forget('academic_programs_all');
+
         return redirect()->back()->with('success', 'Department updated successfully.');
     }
 
@@ -65,6 +74,10 @@ class AcademicController extends Controller
     public function destroyDepartment($id)
     {
         AcademicDepartment::findOrFail($id)->delete();
+
+        Cache::forget('academic_departments_all');
+        Cache::forget('academic_programs_all');
+
         return redirect()->back()->with('success', 'Department deleted successfully.');
     }
 
@@ -90,6 +103,9 @@ class AcademicController extends Controller
             'code'          => $request->code,
             'years'         => $request->years,
         ]);
+
+        Cache::forget('academic_departments_all');
+        Cache::forget('academic_programs_all');
 
         return redirect()->back()->with('success', 'Program added successfully.');
     }
@@ -117,6 +133,9 @@ class AcademicController extends Controller
             'years'         => $request->years,
         ]);
 
+        Cache::forget('academic_departments_all');
+        Cache::forget('academic_programs_all');
+
         return redirect()->back()->with('success', 'Program updated successfully.');
     }
 
@@ -124,12 +143,25 @@ class AcademicController extends Controller
     public function destroyProgram($id)
     {
         AcademicProgram::findOrFail($id)->delete();
+
+        Cache::forget('academic_departments_all');
+        Cache::forget('academic_programs_all');
+
         return redirect()->back()->with('success', 'Program deleted successfully.');
     }
 
-    // API: Get departments and programs for dropdowns
+    /**
+     * API: Get departments and programs for dropdowns (used by Registration form).
+     *
+     * SEC-A01 FIX: Scope select() to only the fields the UI actually needs.
+     * Previously returned full model data including created_at, updated_at, etc.
+     */
     public function apiData()
     {
-        return response()->json(AcademicDepartment::with('programs')->get());
+        return response()->json(
+            AcademicDepartment::query()
+                ->with(['programs:id,department_id,name,code,years'])
+                ->get(['id', 'name', 'level'])
+        );
     }
 }

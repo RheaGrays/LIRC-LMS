@@ -113,7 +113,8 @@ class StudentArchiveController extends Controller
             'student_ids.*' => 'string|exists:students,id'
         ]);
 
-        Student::query()->whereIn('id', $request->student_ids, 'and', false)->update(['status' => 'inactive']);
+        Student::query()->whereIn('id', $request->student_ids)->update(['status' => 'inactive']);
+
 
         return redirect()->route('admin.students.archive')->with('success', count($request->student_ids) . ' students successfully archived (deactivated).');
     }

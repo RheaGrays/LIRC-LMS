@@ -98,13 +98,17 @@ class Student extends Model
 
     public function scopeSearch($query, $term)
     {
-        return $query->where(function ($q) use ($term) {
-            $q->where('id', 'LIKE', "%{$term}%")
-              ->orWhere('last_name', 'LIKE', "%{$term}%")
-              ->orWhere('first_name', 'LIKE', "%{$term}%")
-              ->orWhereHas('academicDepartment', function ($dq) use ($term) {
-                  $dq->where('name', 'LIKE', "%{$term}%");
-              });
-        });
+        // BUG-A04 FIX: Replace orWhereHas() correlated subquery with a LEFT JOIN.
+        // orWhereHas() generates an EXISTS subquery per row — O(n) at scale.
+        // A single LEFT JOIN lets MySQL use indexes and scan once.
+        return $query
+            ->leftJoin('academic_departments', 'students.department_id', '=', 'academic_departments.id')
+            ->where(function ($q) use ($term) {
+                $q->where('students.id',         'LIKE', "%{$term}%")
+                  ->orWhere('students.last_name',  'LIKE', "%{$term}%")
+                  ->orWhere('students.first_name',  'LIKE', "%{$term}%")
+                  ->orWhere('academic_departments.name', 'LIKE', "%{$term}%");
+            })
+            ->select('students.*'); // prevent JOIN columns from shadowing student columns
     }
 }

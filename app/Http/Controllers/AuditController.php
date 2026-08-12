@@ -3,9 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\AttendanceLog;
-use App\Models\Student;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Carbon\Carbon;
 
 class AuditController extends Controller
 {
@@ -13,12 +14,15 @@ class AuditController extends Controller
     {
         $admin = Auth::guard('admin')->user();
 
-        $query = AttendanceLog::with(['student.academicDepartment'])
+        // CQ-A03 FIX: use ::query() so Intelephense resolves Builder type (P1005)
+        $query = AttendanceLog::query()
+            ->with(['student.academicDepartment'])
             ->orderByDesc('logged_at');
 
         if ($request->filled('date')) {
-            $date = $request->date;
-            $query->whereDate('logged_at', '=', $date, 'and');
+            // BUG-A01 FIX: whereDate($col, $value) — removed redundant '=' operator
+            // and the invalid 4th 'and' argument (it's the default and was causing P1005).
+            $query->whereDate('logged_at', $request->date);
         }
 
         if ($request->filled('search')) {
@@ -33,15 +37,25 @@ class AuditController extends Controller
         }
 
         if ($request->filled('action')) {
-            $query->where('action', '=', $request->action, 'and');
+            // BUG-A01 FIX: removed redundant '=' and invalid 4th 'and' arg
+            $query->where('action', $request->action);
         }
+
         $logs = $query->paginate(25)->withQueryString();
 
-        $stats = [
-            'total_logs' => AttendanceLog::count('*'),
-            'today_logs' => AttendanceLog::whereDate('logged_at', '=', \Carbon\Carbon::today(), 'and')->count('*'),
-            'first_log' => AttendanceLog::orderBy('logged_at', 'asc')->first(),
-        ];
+        // PERF-A03 FIX: Cache audit stats for 60 seconds.
+        // These are aggregate stats shown in the header — they don't need to be
+        // real-time. Previously re-ran 3 separate queries on every page load/filter.
+        //
+        // CQ-A03 FIX: use ::query() on all static calls (P1005).
+        // BUG-A01 FIX: count() with no args (count('*') is not a valid column name).
+        $stats = Cache::remember('audit_page_stats', 60, function () {
+            return [
+                'total_logs' => AttendanceLog::query()->count(),
+                'today_logs' => AttendanceLog::query()->whereDate('logged_at', Carbon::today())->count(),
+                'first_log'  => AttendanceLog::query()->orderBy('logged_at', 'asc')->first(),
+            ];
+        });
 
         return view('admin.audit.index', compact('admin', 'logs', 'stats'));
     }
