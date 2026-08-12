@@ -171,9 +171,23 @@ class StudentController extends Controller
                 $id = $row[0] ?? null;
                 if (!$id) continue;
 
-                // Simple resolution by name (assumes name matches exactly)
-                $dept = \App\Models\AcademicDepartment::where('name', '=', $row[5] ?? '', 'and')->first();
-                $prog = \App\Models\AcademicProgram::where('name', '=', $row[6] ?? '', 'and')->first();
+                $deptName = trim($row[5] ?? '');
+                $progName = trim($row[6] ?? '');
+
+                $dept = null;
+                if ($deptName !== '') {
+                    $dept = \App\Models\AcademicDepartment::firstOrCreate(
+                        ['name' => $deptName],
+                        ['level' => 'college']
+                    );
+                }
+
+                $prog = null;
+                if ($progName !== '') {
+                    $prog = \App\Models\AcademicProgram::firstOrCreate(
+                        ['name' => $progName, 'department_id' => $dept?->id]
+                    );
+                }
 
                 Student::updateOrCreate(
                     ['id' => $id],
