@@ -48,7 +48,7 @@ function checkServerReady(url, callback) {
 
 function findPhpExecutable() {
     const projectPath = app.isPackaged 
-        ? path.join(process.resourcesPath, 'php_bundle')
+        ? path.join(process.resourcesPath, 'app', 'php_bundle')
         : path.join(__dirname, '../php_bundle');
 
     const bundledPhp = path.join(projectPath, 'php.exe');
@@ -158,13 +158,19 @@ function startPhpServer() {
             ...process.env, 
             PATH: `${phpDir};${process.env.PATH}`,
             LARAVEL_STORAGE_PATH: userStoragePath,
+            APP_PACKAGES_CACHE: path.relative(projectPath, path.join(userStoragePath, 'packages.php')),
+            APP_SERVICES_CACHE: path.relative(projectPath, path.join(userStoragePath, 'services.php')),
+            VIEW_COMPILED_PATH: path.join(userStoragePath, 'framework', 'views'),
             ...sqliteOverride,
         };
 
+        const outLog = fs.openSync(path.join(app.getPath('userData'), 'php_server.log'), 'a');
+        const errLog = fs.openSync(path.join(app.getPath('userData'), 'php_error.log'), 'a');
+        
         phpProcess = spawn(phpExec, ['artisan', 'serve', '--port=8000', '--no-reload'], {
             cwd: projectPath,
             detached: false,
-            stdio: 'ignore',
+            stdio: ['ignore', outLog, errLog],
             env: env
         });
 
@@ -381,6 +387,9 @@ app.whenReady().then(async () => {
             ...process.env,
             PATH: `${phpDir};${process.env.PATH}`,
             LARAVEL_STORAGE_PATH: userStoragePath,
+            APP_PACKAGES_CACHE: path.relative(projectPath, path.join(userStoragePath, 'packages.php')),
+            APP_SERVICES_CACHE: path.relative(projectPath, path.join(userStoragePath, 'services.php')),
+            VIEW_COMPILED_PATH: path.join(userStoragePath, 'framework', 'views'),
             ...sqliteOverride,
         };
         await runMigrations(phpExec, projectPath, env);

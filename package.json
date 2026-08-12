@@ -24,6 +24,7 @@
             "electron/**/*",
             "php_bundle/**/*",
             "public/**/*",
+            "!public/hot",
             "app/**/*",
             "bootstrap/**/*",
             "config/**/*",
