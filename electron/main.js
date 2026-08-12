@@ -146,10 +146,19 @@ function startPhpServer() {
             fs.mkdirSync(bootstrapCachePath, { recursive: true });
         }
 
+        // SQLite: when packaged, point DB to the writable userData directory.
+        // This overrides whatever DB_CONNECTION is set in .env — XAMPP/MySQL is
+        // never needed. userData (AppData/Roaming/LEMS) persists between app restarts.
+        const sqliteOverride = app.isPackaged ? {
+            DB_CONNECTION: 'sqlite',
+            DB_DATABASE: path.join(app.getPath('userData'), 'lems.sqlite'),
+        } : {};
+
         const env = { 
             ...process.env, 
             PATH: `${phpDir};${process.env.PATH}`,
-            LARAVEL_STORAGE_PATH: userStoragePath
+            LARAVEL_STORAGE_PATH: userStoragePath,
+            ...sqliteOverride,
         };
 
         phpProcess = spawn(phpExec, ['artisan', 'serve', '--port=8000', '--no-reload'], {
@@ -179,6 +188,31 @@ function startPhpServer() {
     } catch (e) {
         console.error('Failed to spawn PHP server:', e);
     }
+}
+
+/**
+ * Run Laravel migrations automatically on every launch.
+ * Safe to run repeatedly — Laravel skips already-applied migrations.
+ * Ensures the SQLite database and all tables exist before artisan serve starts.
+ */
+function runMigrations(phpExec, projectPath, env) {
+    return new Promise((resolve) => {
+        console.log('[LEMS] Running database migrations...');
+        const migrate = spawn(phpExec, ['artisan', 'migrate', '--force'], {
+            cwd: projectPath,
+            detached: false,
+            stdio: 'ignore',
+            env: env,
+        });
+        migrate.on('close', (code) => {
+            console.log(`[LEMS] Migration finished (exit ${code})`);
+            resolve();
+        });
+        migrate.on('error', (err) => {
+            console.error('[LEMS] Migration error:', err);
+            resolve(); // still continue — serve may work with existing DB
+        });
+    });
 }
 
 function createWindow() {
@@ -290,7 +324,7 @@ function createWindow() {
                     <h2>Server Not Running</h2>
                     <p>LEMS could not connect to the local server or host network server at <code>http://127.0.0.1:8000</code>.</p>
                     <p><strong>To resolve this on the Host PC:</strong></p>
-                    <span class="code">1. Start MySQL in XAMPP<br>2. Run: php artisan serve --host=0.0.0.0 --port=8000</span>
+                    <span class="code">The database is created automatically on first launch.<br>No XAMPP or MySQL required.</span>
                     <button onclick="window.location.reload()">Retry Connection</button>
                 </div>
             </body>
@@ -331,7 +365,27 @@ if (hostConfig && hostConfig.host) {
     app.commandLine.appendSwitch('unsafely-treat-insecure-origin-as-secure', `http://${hostConfig.host}:${hostConfig.port || 8000}`);
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+    // Run migrations BEFORE starting artisan serve so the SQLite database
+    // and all tables are ready before the first HTTP request comes in.
+    if (app.isPackaged) {
+        const projectPath = path.join(process.resourcesPath, 'app');
+        const phpExec = findPhpExecutable();
+        const phpDir = path.dirname(phpExec);
+        const userStoragePath = path.join(app.getPath('userData'), 'laravel_storage');
+        const sqliteOverride = {
+            DB_CONNECTION: 'sqlite',
+            DB_DATABASE: path.join(app.getPath('userData'), 'lems.sqlite'),
+        };
+        const env = {
+            ...process.env,
+            PATH: `${phpDir};${process.env.PATH}`,
+            LARAVEL_STORAGE_PATH: userStoragePath,
+            ...sqliteOverride,
+        };
+        await runMigrations(phpExec, projectPath, env);
+    }
+
     startPhpServer();
     createWindow();
 
