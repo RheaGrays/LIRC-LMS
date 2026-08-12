@@ -47,12 +47,14 @@ class AuditController extends Controller
         // These are aggregate stats shown in the header — they don't need to be
         // real-time. Previously re-ran 3 separate queries on every page load/filter.
         //
-        // CQ-A03 FIX: use ::query() on all static calls (P1005).
-        // BUG-A01 FIX: count() with no args (count('*') is not a valid column name).
+        // CQ-A03 / PERF-A03 FIX: Cached stats with ::query() prefix.
+        // Intelephense stubs require explicit args even for params that have defaults at runtime:
+        //   count('*')              — stub marks $columns as required
+        //   whereDate($col,'=',$val) — stub requires the operator arg
         $stats = Cache::remember('audit_page_stats', 60, function () {
             return [
-                'total_logs' => AttendanceLog::query()->count(),
-                'today_logs' => AttendanceLog::query()->whereDate('logged_at', Carbon::today())->count(),
+                'total_logs' => AttendanceLog::query()->count('*'),
+                'today_logs' => AttendanceLog::query()->whereDate('logged_at', '=', Carbon::today())->count('*'),
                 'first_log'  => AttendanceLog::query()->orderBy('logged_at', 'asc')->first(),
             ];
         });

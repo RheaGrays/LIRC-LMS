@@ -106,9 +106,11 @@ class AnalyticsService
 
     private function getDepartmentData(string $period): array
     {
+        // Intelephense stubs require all 6 join() args explicitly.
+        // 'inner' and false are the defaults at runtime — this changes nothing functionally.
         $now   = Carbon::now();
         $query = AttendanceLog::query()
-            ->join('students', 'attendance_logs.student_id', '=', 'students.id')
+            ->join('students', 'attendance_logs.student_id', '=', 'students.id', 'inner', false)
             ->leftJoin('academic_departments', 'students.department_id', '=', 'academic_departments.id')
             ->where('attendance_logs.action', 'check_in');
 

@@ -82,7 +82,7 @@ class SectionController extends Controller
             ->pluck('id');
 
         $rows = SectionLog::query()
-            ->whereIn('id', $latestIds)
+            ->whereIn('id', $latestIds, 'and', false)
             ->orderBy('section_code')
             ->get();
 
