@@ -107,7 +107,7 @@ class SettingsController extends Controller
         return redirect()->back()->with('success', 'Academic Term created successfully.');
     }
 
-    public function updateTerm(Request $request, $id)
+    public function updateTerm(Request $request, int|string $id)
     {
         $request->validate([
             'academic_year' => 'required|string|max:50',
@@ -122,7 +122,7 @@ class SettingsController extends Controller
         $data['is_active'] = $request->boolean('is_active');
         
         if ($data['is_active']) {
-            \App\Models\AcademicTerm::where('id', '!=', $id)->update(['is_active' => false]);
+            \App\Models\AcademicTerm::query()->where('id', '!=', $id)->update(['is_active' => false]);
         }
         
         \App\Models\AcademicTerm::findOrFail($id)->update($data);
@@ -131,7 +131,7 @@ class SettingsController extends Controller
         return redirect()->back()->with('success', 'Academic Term updated successfully.');
     }
 
-    public function destroyTerm($id)
+    public function destroyTerm(int|string $id)
     {
         \App\Models\AcademicTerm::findOrFail($id)->delete();
         \Illuminate\Support\Facades\Cache::forget('academic_terms_settings');

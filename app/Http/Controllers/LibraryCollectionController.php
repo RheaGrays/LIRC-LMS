@@ -55,7 +55,8 @@ class LibraryCollectionController extends Controller
      */
     public function destroy(LibraryCollection $libraryCollection)
     {
-        $libraryCollection->delete();
+        $libraryCollection->delete(null);
+
         return back()->with('success', 'Collection slide deleted.');
     }
 }

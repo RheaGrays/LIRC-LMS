@@ -475,9 +475,9 @@ class AnalyticsController extends Controller
             }
         }
 
-        $totalPatrons = Student::count();
-        $todayTraffic = AttendanceLog::where('action', 'check_in')->whereDate('logged_at', now()->toDateString())->count();
-        $monthTraffic = AttendanceLog::where('action', 'check_in')->whereMonth('logged_at', now()->month)->whereYear('logged_at', now()->year)->count();
+        $totalPatrons = Student::query()->count('*');
+        $todayTraffic = AttendanceLog::query()->where('action', 'check_in')->whereDate('logged_at', '=', now()->toDateString(), 'and')->count('*');
+        $monthTraffic = AttendanceLog::query()->where('action', 'check_in')->whereMonth('logged_at', '=', now()->month, 'and')->whereYear('logged_at', '=', now()->year, 'and')->count('*');
         $mostActiveDept = !empty($deptLabels) ? $deptLabels[0] : 'N/A';
 
         // Top Patron calculation

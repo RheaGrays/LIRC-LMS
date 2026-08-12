@@ -12,10 +12,11 @@ class AboutController extends Controller
 {
     public function index()
     {
-        $totalStudents    = Student::count();
-        $totalLogs        = AttendanceLog::count();
-        $totalDepartments = AcademicDepartment::count();
-        $totalPrograms    = AcademicProgram::count();
+        $totalStudents    = Student::query()->count('*');
+        $totalLogs        = AttendanceLog::query()->count('*');
+        $totalDepartments = AcademicDepartment::query()->count('*');
+        $totalPrograms    = AcademicProgram::query()->count('*');
+
 
         return view('about.index', compact(
             'totalStudents',

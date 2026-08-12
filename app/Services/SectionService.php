@@ -18,12 +18,12 @@ class SectionService
             $today = Carbon::today();
             
             // Get the most recent log per section for today
-            $latestIds = SectionLog::whereDate('date', $today)
-                ->selectRaw('MAX(id) as id')
+            $latestIds = SectionLog::query()->whereDate('date', '=', $today, 'and')
+                ->selectRaw('MAX(id) as id', [])
                 ->groupBy('section_code')
                 ->pluck('id');
 
-            return SectionLog::whereIn('id', $latestIds)
+            return SectionLog::query()->whereIn('id', $latestIds, 'and', false)
                 ->orderBy('section_code')
                 ->get();
         });

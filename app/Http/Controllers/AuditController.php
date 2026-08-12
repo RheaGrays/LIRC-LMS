@@ -54,7 +54,8 @@ class AuditController extends Controller
         $stats = Cache::remember('audit_page_stats', 60, function () {
             return [
                 'total_logs' => AttendanceLog::query()->count('*'),
-                'today_logs' => AttendanceLog::query()->whereDate('logged_at', '=', Carbon::today())->count('*'),
+                'today_logs' => AttendanceLog::query()->whereDate('logged_at', '=', Carbon::today(), 'and')->count('*'),
+
                 'first_log'  => AttendanceLog::query()->orderBy('logged_at', 'asc')->first(),
             ];
         });
