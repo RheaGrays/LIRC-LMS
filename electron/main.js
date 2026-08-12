@@ -198,7 +198,7 @@ function startPhpServer() {
 function runMigrations(phpExec, projectPath, env) {
     return new Promise((resolve) => {
         console.log('[LEMS] Running database migrations...');
-        const migrate = spawn(phpExec, ['artisan', 'migrate', '--force'], {
+        const migrate = spawn(phpExec, ['artisan', 'migrate', '--force', '--seed'], {
             cwd: projectPath,
             detached: false,
             stdio: 'ignore',
