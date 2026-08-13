@@ -33,6 +33,17 @@ LEMS tracks student and patron attendance at the college library via barcode/QR 
 
 ---
 
+## Team Roles & Codebase Ownership
+
+| Developer Role | Primary Responsibility | Key Codebase Directories |
+| :--- | :--- | :--- |
+| **Lead Backend & Systems Architect** | Laravel controllers, models, APIs, database & Electron launcher | `app/Http/Controllers/`, `app/Models/`, `electron/` |
+| **Frontend & UI/UX Engineer** | Admin views, kiosk interfaces, registration portal & Blade styling | `resources/views/`, `resources/css/`, `resources/js/` |
+| **Mobile & Hardware Integration Developer** | Expo React Native app, barcode engine, camera & subnet sync | `lems-mobile-scanner/`, `public/` |
+| **QA, Security & Automation Engineer** | PHPUnit test suites, security auditing, rate limiting & export reports | `tests/`, `app/Services/ReportService.php` |
+
+---
+
 ## Project Structure
 
 ```

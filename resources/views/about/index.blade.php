@@ -568,6 +568,7 @@
                         <div>
                             <h3 class="font-extrabold text-sm text-[var(--cjc-navy)]">Alfie Lynard Polacas</h3>
                             <p class="font-bold text-[var(--cjc-red)] uppercase tracking-wider mt-1" style="font-size: 10px;">Lead Developer</p>
+                            <span class="inline-block mt-2 px-2.5 py-1 rounded-full text-[9px] font-extrabold bg-red-50 text-red-700 border border-red-100 uppercase tracking-tight">Lead Backend & Systems</span>
                         </div>
                     </div>
 
@@ -578,7 +579,8 @@
                         </div>
                         <div>
                             <h3 class="font-extrabold text-sm text-[var(--cjc-navy)]">Rhea Grace Balatero</h3>
-                            <p class="font-bold text-[var(--cjc-red)] uppercase tracking-wider mt-1" style="font-size: 10px;">Data Analyst / UI/UX Designer</p>
+                            <p class="font-bold text-[var(--cjc-red)] uppercase tracking-wider mt-1" style="font-size: 10px;">UI/UX Designer</p>
+                            <span class="inline-block mt-2 px-2.5 py-1 rounded-full text-[9px] font-extrabold bg-blue-50 text-blue-700 border border-blue-100 uppercase tracking-tight">Frontend & Kiosk UI</span>
                         </div>
                     </div>
 
@@ -590,6 +592,7 @@
                         <div>
                             <h3 class="font-extrabold text-sm text-[var(--cjc-navy)]">John Mark Limsan</h3>
                             <p class="font-bold text-[var(--cjc-red)] uppercase tracking-wider mt-1" style="font-size: 10px;">System Analyst</p>
+                            <span class="inline-block mt-2 px-2.5 py-1 rounded-full text-[9px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-100 uppercase tracking-tight">Mobile & Hardware</span>
                         </div>
                     </div>
                     
@@ -601,6 +604,7 @@
                         <div>
                             <h3 class="font-extrabold text-sm text-[var(--cjc-navy)]">Z Andrie Barraba</h3>
                             <p class="font-bold text-[var(--cjc-red)] uppercase tracking-wider mt-1" style="font-size: 10px;">Quality Assurance</p>
+                            <span class="inline-block mt-2 px-2.5 py-1 rounded-full text-[9px] font-extrabold bg-purple-50 text-purple-700 border border-purple-100 uppercase tracking-tight">QA & Security Testing</span>
                         </div>
                     </div>
                 </div>
