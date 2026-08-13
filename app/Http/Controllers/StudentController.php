@@ -165,10 +165,15 @@ class StudentController extends Controller
         
         $totalDataRows = count($rows) - 1; // Exclude header row
         $count = 0;
+        $unmatchedDepts = [];
+        $unmatchedProgs = [];
         
-        \Illuminate\Support\Facades\DB::transaction(function () use ($rows, &$count) {
+        // Pre-load all departments and programs for fast matching
+        $allDepts = \App\Models\AcademicDepartment::query()->get();
+        $allProgs = \App\Models\AcademicProgram::query()->get();
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($rows, &$count, &$unmatchedDepts, &$unmatchedProgs, $allDepts, $allProgs) {
             // Process ALL data rows (skip header row at index 0).
-            // Previously array_slice($rows, 1, 5000) silently truncated beyond 5K rows.
             foreach (array_slice($rows, 1) as $row) {
                 $id = $row[0] ?? null;
                 if (!$id) continue;
@@ -176,18 +181,84 @@ class StudentController extends Controller
                 $deptName = trim($row[5] ?? '');
                 $progName = trim($row[6] ?? '');
 
+                // Smart Department Matching: exact → case-insensitive → fuzzy
                 $dept = null;
                 if ($deptName !== '') {
-                    $dept = \App\Models\AcademicDepartment::query()->where('name', $deptName)->first();
+                    $deptLower = mb_strtolower($deptName);
+                    
+                    // 1. Exact match
+                    $dept = $allDepts->firstWhere('name', $deptName);
+                    
+                    // 2. Case-insensitive match
+                    if (!$dept) {
+                        $dept = $allDepts->first(fn($d) => mb_strtolower($d->name) === $deptLower);
+                    }
+                    
+                    // 3. Fuzzy: check if Excel name CONTAINS the DB name or vice versa
+                    if (!$dept) {
+                        $dept = $allDepts->first(function($d) use ($deptLower) {
+                            $dbLower = mb_strtolower($d->name);
+                            return str_contains($deptLower, $dbLower) || str_contains($dbLower, $deptLower);
+                        });
+                    }
+                    
+                    if (!$dept && !in_array($deptName, $unmatchedDepts)) {
+                        $unmatchedDepts[] = $deptName;
+                    }
                 }
 
+                // Smart Program Matching: exact → case-insensitive → fuzzy keyword
                 $prog = null;
                 if ($progName !== '') {
-                    $prog = \App\Models\AcademicProgram::query()->where('name', $progName)
-                        ->when($dept, function($q) use ($dept) {
-                            return $q->where('department_id', $dept->id);
-                        })
-                        ->first();
+                    $progLower = mb_strtolower($progName);
+                    
+                    // Scope to dept if matched, otherwise search all programs
+                    $searchProgs = $dept 
+                        ? $allProgs->where('department_id', $dept->id) 
+                        : $allProgs;
+                    
+                    // 1. Exact match
+                    $prog = $searchProgs->firstWhere('name', $progName);
+                    
+                    // 2. Case-insensitive match
+                    if (!$prog) {
+                        $prog = $searchProgs->first(fn($p) => mb_strtolower($p->name) === $progLower);
+                    }
+                    
+                    // 3. Fuzzy: extract key words and match
+                    if (!$prog) {
+                        // Remove common filler words and try contains-match
+                        $cleanProg = preg_replace('/\s+/', ' ', $progLower);
+                        $prog = $searchProgs->first(function($p) use ($cleanProg) {
+                            $dbLower = mb_strtolower($p->name);
+                            $cleanDb = preg_replace('/\s+/', ' ', $dbLower);
+                            return str_contains($cleanProg, $cleanDb) || str_contains($cleanDb, $cleanProg);
+                        });
+                    }
+                    
+                    // 4. Last resort: match by abbreviation/code (e.g. "BSBA", "MM")
+                    if (!$prog) {
+                        $prog = $searchProgs->first(fn($p) => 
+                            $p->code && mb_strtolower($p->code) === $progLower
+                        );
+                    }
+                    
+                    // 5. Broaden search to ALL programs if dept-scoped search failed
+                    if (!$prog && $dept) {
+                        $prog = $allProgs->first(fn($p) => mb_strtolower($p->name) === $progLower);
+                        if (!$prog) {
+                            $cleanProg = preg_replace('/\s+/', ' ', $progLower);
+                            $prog = $allProgs->first(function($p) use ($cleanProg) {
+                                $dbLower = mb_strtolower($p->name);
+                                $cleanDb = preg_replace('/\s+/', ' ', $dbLower);
+                                return str_contains($cleanProg, $cleanDb) || str_contains($cleanDb, $cleanProg);
+                            });
+                        }
+                    }
+                    
+                    if (!$prog && !in_array($progName, $unmatchedProgs)) {
+                        $unmatchedProgs[] = $progName;
+                    }
                 }
 
                 Student::query()->updateOrCreate(
@@ -212,9 +283,16 @@ class StudentController extends Controller
         if ($skipped > 0) {
             $message .= " ({$skipped} rows skipped due to missing ID.)";
         }
+        if (!empty($unmatchedDepts)) {
+            $message .= " ⚠ " . count($unmatchedDepts) . " department name(s) not found in system: " . implode(', ', array_slice($unmatchedDepts, 0, 5));
+        }
+        if (!empty($unmatchedProgs)) {
+            $message .= " ⚠ " . count($unmatchedProgs) . " program name(s) not found in system: " . implode(', ', array_slice($unmatchedProgs, 0, 5));
+        }
 
         return back()->with('success', $message);
     }
+
 
     public function export()
     {
