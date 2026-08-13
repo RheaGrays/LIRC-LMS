@@ -162,8 +162,8 @@
                                         <span x-text="form.level === 'basic_ed' ? 'Department' : 'College / School'"></span>
                                         <span :class="form.level ? 'text-[var(--cjc-red)]' : 'text-red-300'">*</span>
                                     </label>
-                                    <div class="relative" x-data="{ open: false }" :class="open ? 'z-50' : 'z-10'">
-                                        <button type="button" @click="if(form.level) open = !open"
+                                    <div class="relative" x-data="{ open: false, search: '' }" :class="open ? 'z-50' : 'z-10'" @click.away="open = false; search = ''">
+                                        <button type="button" @click="if(form.level) { open = !open; if(open) { $nextTick(() => $refs.collegeSearchInput?.focus()); } }"
                                             :disabled="!form.level"
                                             class="w-full px-[13px] py-[10px] text-left font-['JetBrains_Mono'] text-sm font-medium border rounded-[var(--radius-md)] text-[var(--cjc-navy)] outline-none transition-all duration-150 flex justify-between items-center focus:border-[var(--cjc-navy)] focus:shadow-[0_0_0_3px_rgba(15,39,68,0.08)]"
                                             :class="{
@@ -174,15 +174,38 @@
                                             <span class="truncate pr-4" x-text="form.college ? form.college : (!form.level ? 'Select a level first' : (form.level === 'basic_ed' ? '— Select Department —' : '— Select College —'))"></span>
                                             <svg class="w-4 h-4 transition-transform duration-200 shrink-0" :class="{'rotate-180': open, 'text-gray-300': !form.level, 'text-gray-500': form.level}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                                         </button>
-                                        <div x-show="open" @click.away="open = false" x-transition.opacity.duration.200ms class="absolute z-50 w-full mt-1 bg-white border border-[var(--border-light)] rounded-[var(--radius-md)] shadow-lg overflow-hidden max-h-60 overflow-y-auto py-1" style="display: none;">
-                                            <template x-for="c in collegeOptions" :key="c">
-                                                <div @click="form.college = c; onCollegeChange(); open = false"
-                                                     class="px-[13px] py-1.5 text-sm font-['JetBrains_Mono'] cursor-pointer transition-colors hover:bg-gray-50 flex items-center justify-between"
-                                                     :class="form.college === c ? 'text-[var(--cjc-red)] bg-red-50/50' : 'text-[var(--cjc-navy)]'">
-                                                    <span x-text="c"></span>
-                                                    <svg x-show="form.college === c" class="w-4 h-4 shrink-0 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                        <div x-show="open" @click.away="open = false; search = ''" x-transition.opacity.duration.200ms class="absolute z-50 w-full mt-1 bg-white border border-[var(--border-light)] rounded-[var(--radius-md)] shadow-xl overflow-hidden py-1" style="display: none;">
+                                            <!-- Search Bar -->
+                                            <div class="p-2 border-b border-gray-100 bg-gray-50/90 sticky top-0 z-10">
+                                                <div class="relative">
+                                                    <input type="text" 
+                                                           x-ref="collegeSearchInput"
+                                                           x-model="search"
+                                                           @keydown.escape="open = false; search = ''"
+                                                           placeholder="Search department..." 
+                                                           class="w-full pl-8 pr-7 py-1.5 text-xs font-['JetBrains_Mono'] bg-white border border-gray-200 rounded-md text-[var(--cjc-navy)] focus:outline-none focus:border-[var(--cjc-navy)] focus:ring-1 focus:ring-[var(--cjc-navy)] placeholder-gray-400" />
+                                                    <svg class="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0" />
+                                                    </svg>
+                                                    <button type="button" x-show="search" @click="search = ''" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                    </button>
                                                 </div>
-                                            </template>
+                                            </div>
+                                            <div class="max-h-60 overflow-y-auto py-1">
+                                                <template x-for="c in collegeOptions.filter(opt => !search || opt.toLowerCase().includes(search.toLowerCase().trim()))" :key="c">
+                                                    <div @click="form.college = c; onCollegeChange(); open = false; search = ''"
+                                                         class="px-[13px] py-2 text-xs md:text-sm font-['JetBrains_Mono'] cursor-pointer transition-colors hover:bg-gray-50 flex items-center justify-between"
+                                                         :class="form.college === c ? 'text-[var(--cjc-red)] bg-red-50/50 font-bold' : 'text-[var(--cjc-navy)]'">
+                                                        <span class="truncate pr-2" x-text="c"></span>
+                                                        <svg x-show="form.college === c" class="w-4 h-4 shrink-0 text-[var(--cjc-red)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                                    </div>
+                                                </template>
+                                                <div x-show="collegeOptions.filter(opt => !search || opt.toLowerCase().includes(search.toLowerCase().trim())).length === 0" 
+                                                     class="px-4 py-4 text-center text-xs font-['Inter'] text-gray-400 italic">
+                                                    No matching departments found
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                     <template x-if="errors.college">
@@ -202,8 +225,8 @@
                                                    :class="form.college ? 'text-[var(--text-muted)]' : 'text-gray-300'">
                                                 Program / Course <span :class="form.college ? 'text-[var(--cjc-red)]' : 'text-red-300'">*</span>
                                             </label>
-                                            <div class="relative" x-data="{ open: false }" :class="open ? 'z-50' : 'z-10'">
-                                                <button type="button" @click="if(form.college) open = !open"
+                                            <div class="relative" x-data="{ open: false, search: '' }" :class="open ? 'z-50' : 'z-10'" @click.away="open = false; search = ''">
+                                                <button type="button" @click="if(form.college) { open = !open; if(open) { $nextTick(() => $refs.programSearchInput?.focus()); } }"
                                                     :disabled="!form.college"
                                                     class="w-full px-[13px] py-[10px] text-left font-['JetBrains_Mono'] text-sm font-medium border rounded-[var(--radius-md)] text-[var(--cjc-navy)] outline-none transition-all duration-150 flex justify-between items-center focus:border-[var(--cjc-navy)] focus:shadow-[0_0_0_3px_rgba(15,39,68,0.08)]"
                                                     :class="{
@@ -211,18 +234,41 @@
                                                         'border-[var(--border-light)] bg-white cursor-pointer': !errors.department && form.college,
                                                         'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed opacity-50': !form.college
                                                     }">
-                                                    <span class="truncate pr-4" x-text="form.department ? form.department : (!form.college ? 'Select a college first' : '— Select Program —')"></span>
+                                                    <span class="truncate pr-4" x-text="form.department ? form.department : (!form.college ? 'Select a college first' : '— Select Program / Course —')"></span>
                                                     <svg class="w-4 h-4 transition-transform duration-200 shrink-0" :class="{'rotate-180': open, 'text-gray-300': !form.college, 'text-gray-500': form.college}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                                                 </button>
-                                                <div x-show="open" @click.away="open = false" x-transition.opacity.duration.200ms class="absolute z-50 w-full mt-1 bg-white border border-[var(--border-light)] rounded-[var(--radius-md)] shadow-lg overflow-hidden max-h-60 overflow-y-auto py-1" style="display: none;">
-                                                    <template x-for="p in programOptions" :key="p">
-                                                        <div @click="form.department = p; errors.department = ''; open = false"
-                                                             class="px-[13px] py-1.5 text-sm font-['JetBrains_Mono'] cursor-pointer transition-colors hover:bg-gray-50 flex items-center justify-between"
-                                                             :class="form.department === p ? 'text-[var(--cjc-red)] bg-red-50/50' : 'text-[var(--cjc-navy)]'">
-                                                            <span class="truncate" x-text="p"></span>
-                                                            <svg x-show="form.department === p" class="w-4 h-4 shrink-0 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                                <div x-show="open" @click.away="open = false; search = ''" x-transition.opacity.duration.200ms class="absolute z-50 w-full mt-1 bg-white border border-[var(--border-light)] rounded-[var(--radius-md)] shadow-xl overflow-hidden py-1" style="display: none;">
+                                                    <!-- Search Bar -->
+                                                    <div class="p-2 border-b border-gray-100 bg-gray-50/90 sticky top-0 z-10">
+                                                        <div class="relative">
+                                                            <input type="text" 
+                                                                   x-ref="programSearchInput"
+                                                                   x-model="search"
+                                                                   @keydown.escape="open = false; search = ''"
+                                                                   placeholder="Search program or course..." 
+                                                                   class="w-full pl-8 pr-7 py-1.5 text-xs font-['JetBrains_Mono'] bg-white border border-gray-200 rounded-md text-[var(--cjc-navy)] focus:outline-none focus:border-[var(--cjc-navy)] focus:ring-1 focus:ring-[var(--cjc-navy)] placeholder-gray-400" />
+                                                            <svg class="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0" />
+                                                            </svg>
+                                                            <button type="button" x-show="search" @click="search = ''" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                            </button>
                                                         </div>
-                                                    </template>
+                                                    </div>
+                                                    <div class="max-h-60 overflow-y-auto py-1">
+                                                        <template x-for="p in programOptions.filter(opt => !search || opt.toLowerCase().includes(search.toLowerCase().trim()))" :key="p">
+                                                            <div @click="form.department = p; errors.department = ''; open = false; search = ''"
+                                                                 class="px-[13px] py-2 text-xs md:text-sm font-['JetBrains_Mono'] cursor-pointer transition-colors hover:bg-gray-50 flex items-center justify-between"
+                                                                 :class="form.department === p ? 'text-[var(--cjc-red)] bg-red-50/50 font-bold' : 'text-[var(--cjc-navy)]'">
+                                                                <span class="truncate pr-2" x-text="p"></span>
+                                                                <svg x-show="form.department === p" class="w-4 h-4 shrink-0 text-[var(--cjc-red)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                                            </div>
+                                                        </template>
+                                                        <div x-show="programOptions.filter(opt => !search || opt.toLowerCase().includes(search.toLowerCase().trim())).length === 0" 
+                                                             class="px-4 py-4 text-center text-xs font-['Inter'] text-gray-400 italic">
+                                                            No matching programs found
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                             <template x-if="errors.department">
