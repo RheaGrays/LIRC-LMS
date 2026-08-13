@@ -578,7 +578,7 @@
                         </div>
                         <div>
                             <h3 class="font-extrabold text-sm text-[var(--cjc-navy)]">Rhea Grace Balatero</h3>
-                            <p class="font-bold text-[var(--cjc-red)] uppercase tracking-wider mt-1" style="font-size: 10px;">UI/UX Designer</p>
+                            <p class="font-bold text-[var(--cjc-red)] uppercase tracking-wider mt-1" style="font-size: 10px;">Data Analyst / UI/UX Designer</p>
                         </div>
                     </div>
 
@@ -604,12 +604,94 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Developer Resources & Source Code Repository Card (Full Width) -->
+                <div class="rounded-[2rem] p-10 lg:p-14 shadow-2xl text-white relative overflow-hidden border border-slate-800 mt-8 w-full" style="background-color: #0b172a;">
+                    <!-- Background accent glow -->
+                    <div class="absolute -right-20 -bottom-20 w-[400px] h-[400px] rounded-full" style="background-color: rgba(196, 30, 42, 0.15); filter: blur(80px); pointer-events: none;"></div>
+                    <div class="absolute -left-20 -top-20 w-[300px] h-[300px] rounded-full" style="background-color: rgba(59, 130, 246, 0.15); filter: blur(80px); pointer-events: none;"></div>
+
+                    <div class="relative z-10 space-y-8">
+                        <!-- Section Header -->
+                        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-8 border-b border-slate-800">
+                            <div>
+                                <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-extrabold bg-red-500/10 text-red-400 border border-red-500/20 uppercase tracking-widest mb-3" style="line-height: 1;">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+                                    DEVELOPER RESOURCES & SOURCE CODE
+                                </div>
+                                <h2 class="font-black text-white" style="font-size: clamp(24px, 2.5vw, 36px); line-height: 1.2;">
+                                    Official GitHub Repository
+                                </h2>
+                                <p class="text-xs md:text-sm text-slate-400 font-medium mt-2 max-w-2xl leading-relaxed">
+                                    Access the official LEMS version-control repository for code inspection, local deployment, environment setup, and future development contributions.
+                                </p>
+                            </div>
+
+                            <!-- Main Primary GitHub CTA Button -->
+                            <div class="shrink-0">
+                                <a href="https://github.com/RheaGrays/LIRC-LMS" target="_blank" rel="noopener noreferrer" 
+                                   class="inline-flex items-center gap-3 px-6 py-4 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-extrabold text-sm shadow-xl shadow-red-900/30 transition-all hover:scale-105 active:scale-95 group">
+                                    <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+                                    <span>View Source Code on GitHub</span>
+                                    <svg class="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Display URL Box & Quick Copy -->
+                        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 font-mono text-xs text-slate-300">
+                            <div class="flex items-center gap-3 overflow-x-auto">
+                                <span class="text-slate-500 select-none">$ git clone</span>
+                                <span class="text-emerald-400 font-bold select-all">https://github.com/RheaGrays/LIRC-LMS.git</span>
+                            </div>
+                            <a href="https://github.com/RheaGrays/LIRC-LMS" target="_blank" rel="noopener noreferrer" class="text-xs font-sans font-bold text-red-400 hover:text-red-300 transition-colors shrink-0 flex items-center gap-1">
+                                <span>github.com/RheaGrays/LIRC-LMS</span>
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                            </a>
+                        </div>
+
+                        <!-- Maintainer & Contributor Workflow Capabilities Grid -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
+                            <!-- Box 1: Complete Source Code -->
+                            <div class="p-6 rounded-2xl bg-slate-900/50 border border-slate-800/80 space-y-2">
+                                <div class="w-9 h-9 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center mb-3">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+                                </div>
+                                <h3 class="font-extrabold text-sm text-white">Full Core Codebase</h3>
+                                <p class="text-xs text-slate-400 font-medium leading-relaxed">
+                                    Access all Laravel backend controllers, Eloquent models, Blade templates, Electron launcher scripts, and Expo mobile scanner files.
+                                </p>
+                            </div>
+
+                            <!-- Box 2: Environment Setup -->
+                            <div class="p-6 rounded-2xl bg-slate-900/50 border border-slate-800/80 space-y-2">
+                                <div class="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center mb-3">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                </div>
+                                <h3 class="font-extrabold text-sm text-white">Local Environment Setup</h3>
+                                <p class="text-xs text-slate-400 font-medium leading-relaxed">
+                                    Easily clone the repository directly to your workstation, configure standard dependencies, and run database migrations.
+                                </p>
+                            </div>
+
+                            <!-- Box 3: Version Control & Contributions -->
+                            <div class="p-6 rounded-2xl bg-slate-900/50 border border-slate-800/80 space-y-2">
+                                <div class="w-9 h-9 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center mb-3">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+                                </div>
+                                <h3 class="font-extrabold text-sm text-white">Version Control Workflow</h3>
+                                <p class="text-xs text-slate-400 font-medium leading-relaxed">
+                                    Pull updates, manage feature branches, push changes, and maintain system updates without manual file transfers.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
 
     </main>
 
-    <!-- Page Footer (Exact Match) -->
+    <!-- Page Footer -->
     <footer class="bg-white border-t border-gray-100 py-6 px-4 md:px-8 lg:px-12 xl:px-20 mt-auto">
         <div class="w-full mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-[10px] text-gray-500 font-bold" style="max-width: 1400px;">
             <div class="flex items-center gap-3">
@@ -624,13 +706,14 @@
                 <span class="text-gray-300">|</span>
                 <a href="{{ route('register.index') }}" class="hover:text-[var(--cjc-navy)] transition-colors">Registration</a>
                 <span class="text-gray-300">|</span>
+                <a href="https://github.com/RheaGrays/LIRC-LMS" target="_blank" rel="noopener noreferrer" class="hover:text-[var(--cjc-navy)] transition-colors text-red-600 font-bold flex items-center gap-1">
+                    <span>Source Code</span>
+                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+                </a>
+                <span class="text-gray-300">|</span>
                 <a href="{{ route('admin.login') }}" class="hover:text-[var(--cjc-navy)] transition-colors">Admin Login</a>
             </div>
         </div>
-    </footer>
-
-</body>
-</html>/div>
     </footer>
 
 </body>

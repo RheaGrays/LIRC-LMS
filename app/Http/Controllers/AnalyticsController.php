@@ -412,38 +412,49 @@ class AnalyticsController extends Controller
 
         $deptQuery = clone $query;
 
-        $logs = $query->get(['id', 'student_id', 'logged_at']);
+        // PERF-FIX: Push all groupBy/count into SQL — no longer loads every log row into PHP.
+        // Previously: $query->get() loaded ALL matching rows, then grouped in a PHP Collection (O(n) memory).
+        // Now: SELECT period_key, COUNT(*) GROUP BY period_key — DB does the work, returns only summary rows.
+        $driver = \Illuminate\Support\Facades\DB::connection()->getDriverName();
 
         $trafficLabels = [];
         $trafficValues = [];
 
         if ($termId || $period === 'year') {
-            $grouped = $logs->groupBy(function ($log) {
-                return Carbon::parse($log->logged_at)->format('Y-m');
-            })->sortKeys();
+            $groupExpr = $driver === 'sqlite' ? "strftime('%Y-%m', logged_at)" : "DATE_FORMAT(logged_at, '%Y-%m')";
+            $grouped = (clone $query)
+                ->selectRaw("{$groupExpr} as period_key, COUNT(*) as cnt", [])
+                ->groupBy('period_key')
+                ->orderBy('period_key')
+                ->pluck('cnt', 'period_key');
 
-            foreach ($grouped as $yearMonth => $group) {
+            foreach ($grouped as $yearMonth => $count) {
                 $trafficLabels[] = Carbon::createFromFormat('Y-m', $yearMonth)->format('M Y');
-                $trafficValues[] = $group->count();
+                $trafficValues[] = (int) $count;
             }
         } elseif ($period === 'month' || $period === 'week') {
-            $grouped = $logs->groupBy(function ($log) {
-                return Carbon::parse($log->logged_at)->format('Y-m-d');
-            })->sortKeys();
+            $groupExpr = $driver === 'sqlite' ? "strftime('%Y-%m-%d', logged_at)" : "DATE(logged_at)";
+            $grouped = (clone $query)
+                ->selectRaw("{$groupExpr} as period_key, COUNT(*) as cnt", [])
+                ->groupBy('period_key')
+                ->orderBy('period_key')
+                ->pluck('cnt', 'period_key');
 
-            foreach ($grouped as $dateStr => $group) {
+            foreach ($grouped as $dateStr => $count) {
                 $trafficLabels[] = Carbon::parse($dateStr)->format('M d (D)');
-                $trafficValues[] = $group->count();
+                $trafficValues[] = (int) $count;
             }
         } else {
-            $hourlyCounts = $logs->groupBy(function ($log) {
-                return (int) Carbon::parse($log->logged_at)->format('G');
-            });
+            $groupExpr = $driver === 'sqlite' ? "CAST(strftime('%H', logged_at) AS INTEGER)" : "HOUR(logged_at)";
+            $hourlyCounts = (clone $query)
+                ->selectRaw("{$groupExpr} as period_key, COUNT(*) as cnt", [])
+                ->groupBy('period_key')
+                ->pluck('cnt', 'period_key');
 
             for ($h = 6; $h <= 22; $h++) {
                 $label = $h < 12 ? "{$h}AM" : ($h === 12 ? "12PM" : ($h - 12) . "PM");
                 $trafficLabels[] = $label;
-                $trafficValues[] = isset($hourlyCounts[$h]) ? $hourlyCounts[$h]->count() : 0;
+                $trafficValues[] = (int) ($hourlyCounts[$h] ?? 0);
             }
         }
 

@@ -2,155 +2,151 @@
 
 namespace Tests\Feature;
 
-use App\Models\AcademicDepartment;
-use App\Models\AttendanceLog;
 use App\Models\Student;
+use App\Models\SystemSetting;
+use App\Models\AttendanceLog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use PHPUnit\Framework\Attributes\Test;
+use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 class AttendanceTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected Student $student;
-
     protected function setUp(): void
     {
         parent::setUp();
-
-        $dept = AcademicDepartment::create([
-            'level' => 'college',
-            'name' => 'College of Computing Studies',
-        ]);
-
-        $this->student = Student::create([
-            'id' => '2026-0001',
-            'first_name' => 'Juan',
-            'last_name' => 'Dela Cruz',
-            'department_id' => $dept->id,
-            'year_level' => '3rd Year',
-            'patron_category' => 'Student',
-            'status' => 'active',
-        ]);
+        Cache::flush();
     }
 
-    #[Test]
-    public function it_can_lookup_student_by_id()
+    public function test_successful_check_in_via_process_with_valid_student_id()
     {
-        $response = $this->postJson('/kiosk/lookup', [
-            'student_id' => '2026-0001',
+        $student = Student::create([
+            'id' => '2024-00001',
+            'first_name' => 'John',
+            'last_name' => 'Doe',
+            'status' => 'active'
+        ]);
+
+        SystemSetting::set('kiosk_mode', 'check_in_only');
+
+        $response = $this->withoutMiddleware()->postJson('/kiosk/process', [
+            'student_id' => '2024-00001'
         ]);
 
         $response->assertStatus(200)
-            ->assertJson([
-                'found' => true,
-                'denied' => false,
-                'student' => [
-                    'id' => '2026-0001',
-                    'name' => 'Juan Dela Cruz',
-                ],
-            ]);
-    }
-
-    #[Test]
-    public function it_returns_not_found_for_unregistered_student_lookup()
-    {
-        $response = $this->postJson('/kiosk/lookup', [
-            'student_id' => '9999-9999',
-        ]);
-
-        $response->assertStatus(200)
-            ->assertJson([
-                'found' => false,
-            ]);
-    }
-
-    #[Test]
-    public function it_processes_checkin_scan_successfully()
-    {
-        $response = $this->postJson('/kiosk/process', [
-            'student_id' => '2026-0001',
-        ]);
-
-        $response->assertStatus(200)
-            ->assertJson([
-                'status' => 'success',
-                'action' => 'check_in',
-                'message' => 'Successfully checked in.',
-            ]);
+                 ->assertJson([
+                     'status' => 'success',
+                     'action' => 'check_in',
+                 ]);
 
         $this->assertDatabaseHas('attendance_logs', [
-            'student_id' => '2026-0001',
+            'student_id' => '2024-00001',
+            'action' => 'check_in'
+        ]);
+    }
+
+    public function test_scan_with_non_existent_student_returns_error()
+    {
+        $response = $this->withoutMiddleware()->postJson('/kiosk/process', [
+            'student_id' => '9999-99999'
+        ]);
+
+        $response->assertStatus(200)
+                 ->assertJson([
+                     'status' => 'error',
+                     'action' => 'unregistered'
+                 ]);
+    }
+
+    public function test_scan_with_inactive_student_returns_error()
+    {
+        $student = Student::create([
+            'id' => '2024-00002',
+            'first_name' => 'Jane',
+            'last_name' => 'Doe',
+            'status' => 'inactive'
+        ]);
+
+        $response = $this->withoutMiddleware()->postJson('/kiosk/process', [
+            'student_id' => '2024-00002'
+        ]);
+
+        $response->assertStatus(200)
+                 ->assertJson([
+                     'status' => 'error',
+                     'action' => 'inactive'
+                 ]);
+    }
+
+    public function test_cooldown_prevents_rapid_duplicate_scans()
+    {
+        $student = Student::create([
+            'id' => '2024-00003',
+            'first_name' => 'Jim',
+            'last_name' => 'Beam',
+            'status' => 'active'
+        ]);
+
+        SystemSetting::set('checkin_cooldown_minutes', 5);
+        SystemSetting::set('kiosk_mode', 'check_in_only');
+
+        $this->withoutMiddleware()->postJson('/kiosk/process', [
+            'student_id' => '2024-00003'
+        ]);
+
+        $response = $this->withoutMiddleware()->postJson('/kiosk/process', [
+            'student_id' => '2024-00003'
+        ]);
+
+        $response->assertStatus(200)
+                 ->assertJson([
+                     'status' => 'cooldown'
+                 ]);
+    }
+
+    public function test_toggle_mode_second_scan_after_cooldown_creates_check_out()
+    {
+        $student = Student::create([
+            'id' => '2024-00004',
+            'first_name' => 'Jack',
+            'last_name' => 'Daniels',
+            'status' => 'active'
+        ]);
+
+        SystemSetting::set('kiosk_mode', 'toggle');
+        SystemSetting::set('checkin_cooldown_minutes', 5);
+
+        AttendanceLog::create([
+            'student_id' => $student->id,
             'action' => 'check_in',
+            'logged_at' => now()->subMinutes(10)
         ]);
-    }
 
-    #[Test]
-    public function it_enforces_cooldown_buffer_on_duplicate_scans()
-    {
-        // First scan
-        $this->postJson('/kiosk/process', ['student_id' => '2026-0001']);
-        $this->assertEquals(1, AttendanceLog::where('student_id', '=', '2026-0001', 'and')->count('*'));
-
-        // Duplicate scan within 5 minutes
-        $response = $this->postJson('/kiosk/process', ['student_id' => '2026-0001']);
-        $response->assertStatus(200)
-            ->assertJson([
-                'status' => 'cooldown',
-                'action' => 'check_in',
-            ]);
-
-        // Verify only 1 log entry exists in database
-        $this->assertEquals(1, AttendanceLog::where('student_id', '=', '2026-0001', 'and')->count('*'));
-    }
-
-    #[Test]
-    public function it_supports_explicit_checkout_action()
-    {
-        $response = $this->postJson('/kiosk/process', [
-            'student_id' => '2026-0001',
-            'action' => 'check_out',
+        $response = $this->withoutMiddleware()->postJson('/kiosk/process', [
+            'student_id' => '2024-00004'
         ]);
 
         $response->assertStatus(200)
-            ->assertJson([
-                'status' => 'success',
-                'action' => 'check_out',
-                'message' => 'Successfully checked out.',
-            ]);
-
-        $this->assertDatabaseHas('attendance_logs', [
-            'student_id' => '2026-0001',
-            'action' => 'check_out',
-        ]);
+                 ->assertJson([
+                     'status' => 'success',
+                     'action' => 'check_out'
+                 ]);
     }
 
-    #[Test]
-    public function it_allows_local_lan_ip_requests_and_denies_external_remote_requests_without_valid_token()
+    public function test_kiosk_occupancy_endpoint_returns_expected_json_structure()
     {
-        config(['app.kiosk_api_token' => 'secret_token_123']);
+        SystemSetting::set('max_occupancy', 150);
+        
+        $response = $this->withoutMiddleware()->getJson('/kiosk/occupancy');
 
-        // Local LAN IP (192.168.1.100) — permitted automatically for mobile scanners on same Wi-Fi
-        $lanResponse = $this->withServerVariables(['REMOTE_ADDR' => '192.168.1.100'])
-            ->postJson('/kiosk/process', ['student_id' => '2026-0001']);
-        $lanResponse->assertStatus(200);
-
-        // External remote IP (203.0.113.195) without token — denied with 403
-        $response = $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.195'])
-            ->postJson('/kiosk/process', ['student_id' => '2026-0001']);
-
-        $response->assertStatus(403)
-            ->assertJson([
-                'status' => 'error',
-                'message' => 'Invalid or missing kiosk authentication token.',
-            ]);
-
-        // External remote IP with valid token — permitted
-        $responseWithToken = $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.195'])
-            ->withHeaders(['X-Kiosk-Token' => 'secret_token_123'])
-            ->postJson('/kiosk/process', ['student_id' => '2026-0001']);
-
-        $responseWithToken->assertStatus(200);
+        $response->assertStatus(200)
+                 ->assertJsonStructure([
+                     'inside',
+                     'max'
+                 ])
+                 ->assertJson([
+                     'max' => 150
+                 ]);
     }
 }

@@ -36,7 +36,7 @@ class OccupancyService
                     DB::raw('(
                         SELECT student_id, MAX(logged_at) as last_log
                         FROM attendance_logs
-                        WHERE logged_at >= \'' . $today . '\'
+                        WHERE logged_at >= ?
                         AND deleted_at IS NULL
                         GROUP BY student_id
                     ) as latest'),
@@ -47,6 +47,7 @@ class OccupancyService
                 )
                 ->where('a.action', 'check_in')
                 ->whereNull('a.deleted_at')
+                ->addBinding($today, 'join')
                 ->count();
 
             $max = (int) SystemSetting::get('max_occupancy', 200);

@@ -1,172 +1,170 @@
-<div align="center">
-    <a href="https://www.php.net">
-        <img
-            alt="PHP"
-            src="https://www.php.net/images/logos/new-php-logo.svg"
-            width="150">
-    </a>
-</div>
+# LEMS — Library Entrance Monitoring System
 
-# The PHP Interpreter
+> A full-stack library entrance monitoring and attendance tracking system built for the **Cor Jesu College — Library & Information Resource Center (LIRC)**.
 
-PHP is a popular general-purpose scripting language that is especially suited to
-web development. Fast, flexible and pragmatic, PHP powers everything from your
-blog to the most popular websites in the world. PHP is distributed under the
-[PHP License v3.01](LICENSE).
+---
 
-[![Push](https://github.com/php/php-src/actions/workflows/push.yml/badge.svg)](https://github.com/php/php-src/actions/workflows/push.yml)
-[![Fuzzing Status](https://oss-fuzz-build-logs.storage.googleapis.com/badges/php.svg)](https://issues.oss-fuzz.com/issues?q=project:php)
+## Overview
 
-## Documentation
+LEMS tracks student and patron attendance at the college library via barcode/QR scanning. It ships as a **self-contained Electron desktop app** with a bundled PHP runtime — no XAMPP or MySQL installation required. A companion **Expo mobile scanner app** extends scanning capability to any phone on the LAN.
 
-The PHP manual is available at [php.net/docs](https://www.php.net/docs).
+### Key Features
 
-## Installation
+- **Kiosk Mode** — Full-screen barcode scanning with real-time occupancy display and library slideshow
+- **Admin Panel** — Student CRUD, analytics dashboards, violation tracking, section management, report exports
+- **Offline-First** — Both kiosk and mobile apps queue scans locally when the server is unreachable
+- **Self-Registration** — Students can register themselves with QR-paired mobile photo capture
+- **Multi-Format Reports** — Export attendance data as Excel, Word, or PDF
+- **Role-Based Access** — Super Admin, Staff, and Librarian roles with approval-based signup
 
-### Prebuilt packages and binaries
+---
 
-Prebuilt packages and binaries can be used to get up and running fast with PHP.
+## Tech Stack
 
-For Windows, the PHP binaries can be obtained from
-[windows.php.net](https://windows.php.net). After extracting the archive the
-`*.exe` files are ready to use.
+| Layer | Technology |
+|-------|-----------|
+| Backend | Laravel 12, PHP 8.2+ |
+| Database | SQLite (desktop) / MySQL (web/XAMPP) |
+| Frontend | Blade, Alpine.js, Tailwind CSS 3, Chart.js |
+| Desktop | Electron 43, bundled PHP runtime |
+| Mobile | React Native / Expo with expo-camera |
+| Build | Vite (assets), electron-builder (installer) |
+| Reports | PhpSpreadsheet, DomPDF |
 
-For other systems, see the [installation chapter](https://www.php.net/install).
+---
 
-### Building PHP source code
+## Project Structure
 
-*For Windows, see [Build your own PHP on Windows](https://wiki.php.net/internals/windows/stepbystepbuild_sdk_2).*
-
-For a minimal PHP build from Git, you will need autoconf, bison, and re2c. For
-a default build, you will additionally need libxml2 and libsqlite3.
-
-On Ubuntu, you can install these using:
-
-```shell
-sudo apt install -y pkg-config build-essential autoconf bison re2c libxml2-dev libsqlite3-dev
+```
+LEMS/
+├── app/
+│   ├── Http/Controllers/     # 18+ controllers
+│   ├── Http/Middleware/       # Admin auth, role check, kiosk token
+│   ├── Models/                # 13 Eloquent models
+│   └── Services/              # Occupancy, analytics, reports, sections
+├── database/
+│   ├── migrations/            # 19 migration files
+│   ├── seeders/               # Default admin + settings
+│   └── lems_database.sql      # Full MySQL setup script (XAMPP)
+├── resources/
+│   ├── views/                 # Blade templates (admin, kiosk, register)
+│   ├── js/kiosk/              # Kiosk scanner + offline queue
+│   └── css/                   # Custom styles
+├── electron/                  # Electron main process + preload
+├── lems-mobile-scanner/       # Expo React Native scanner app
+├── php_bundle/                # Bundled PHP runtime (for builds)
+└── public/                    # Entry point + compiled assets
 ```
 
-On Fedora, you can install these using:
+---
 
-```shell
-sudo dnf install re2c bison autoconf make libtool ccache libxml2-devel sqlite-devel
+## Getting Started
+
+### Option A: Desktop App (Recommended)
+
+The Electron app bundles everything — no server setup needed.
+
+```bash
+# Install dependencies
+npm install
+
+# Run in development mode (requires PHP in PATH or Herd/XAMPP)
+npm start              # Kiosk mode (default)
+npm start -- --admin   # Admin mode
+
+# Build production installer
+npm run build
 ```
 
-On MacOS, you can install these using `brew`:
+The app will:
+1. Find or use bundled PHP
+2. Run database migrations automatically
+3. Start `artisan serve` on port 8000
+4. Open the kiosk or admin interface
 
-```shell
-brew install autoconf bison re2c libiconv libxml2 sqlite
+### Option B: Web Server (XAMPP / Herd)
+
+```bash
+# 1. Install PHP dependencies
+composer install
+
+# 2. Copy and configure environment
+cp .env.example .env
+php artisan key:generate
+
+# 3. Setup database
+#    For SQLite: touch database/database.sqlite
+#    For MySQL:  import database/lems_database.sql into phpMyAdmin
+
+# 4. Run migrations and seed
+php artisan migrate --seed
+
+# 5. Build frontend assets
+npm install
+npm run build
+
+# 6. Start the server
+php artisan serve --host=0.0.0.0 --port=8000
 ```
 
-or with `MacPorts`:
+### Mobile Scanner
 
-```shell
-sudo port install autoconf bison re2c libiconv libxml2 sqlite3
+```bash
+cd lems-mobile-scanner
+npm install
+npx expo start
 ```
 
-Generate configure:
+Configure the server IP in the app's Settings screen.
 
-```shell
-./buildconf
+---
+
+## Default Credentials
+
+| Role | Email | Password |
+|------|-------|----------|
+| Super Admin | `admin@corjesucollege.edu.ph` | `admin123` |
+
+> ⚠️ **Change the default password immediately after first login.**
+
+---
+
+## Network Configuration
+
+For LAN access (mobile scanners, client kiosks), create `lems.host.json` in the project root:
+
+```json
+{
+  "host": "192.168.x.x",
+  "port": 8000
+}
 ```
 
-Configure your build. `--enable-debug` is recommended for development, see
-`./configure --help` for a full list of options.
+The Electron app reads this file to connect kiosks to the host server.
 
-```shell
-# For development
-./configure --enable-debug
-# For production
-./configure
+---
+
+## API Endpoints
+
+The mobile scanner uses a single API endpoint:
+
+```
+POST /api/kiosk/process
+Body: { "student_id": "2024-00123" }
+Header: X-Kiosk-Token: <token> (required for non-LAN access)
 ```
 
-Build PHP. To speed up the build, specify the maximum number of jobs using the
-`-j` argument:
+---
 
-```shell
-make -j4
-```
+## Architecture Notes
 
-The number of jobs should usually match the number of available cores, which
-can be determined using `nproc`.
+- **Attendance Flow**: Scans are processed with atomic cache locks to prevent duplicate check-ins within a configurable cooldown window.
+- **Occupancy Tracking**: Net occupancy (students currently inside) is calculated via a subquery that finds each student's latest action today.
+- **Settings Cache**: `SystemSetting` model caches all settings for 5 minutes with bust-on-write.
+- **Electron Storage**: In packaged builds, SQLite database and Laravel storage are redirected to `%APPDATA%/LEMS/`.
 
-## Testing PHP source code
+---
 
-PHP ships with an extensive test suite, the command `make test` is used after
-successful compilation of the sources to run this test suite.
+## License
 
-It is possible to run tests using multiple cores by setting `-jN` in
-`TEST_PHP_ARGS` or `TESTS`:
-
-```shell
-make TEST_PHP_ARGS=-j4 test
-```
-
-Shall run `make test` with a maximum of 4 concurrent jobs: Generally the maximum
-number of jobs should not exceed the number of cores available.
-
-Use the `TEST_PHP_ARGS` or `TESTS` variable to test only specific directories:
-
-```shell
-make TESTS=tests/lang/ test
-```
-
-The [qa.php.net](https://qa.php.net) site provides more detailed info about
-testing and quality assurance.
-
-## Installing PHP built from source
-
-After a successful build (and test), PHP may be installed with:
-
-```shell
-make install
-```
-
-Depending on your permissions and prefix, `make install` may need superuser
-permissions.
-
-## PHP extensions
-
-Extensions provide additional functionality on top of PHP. PHP consists of many
-essential bundled extensions. Additional extensions can be found in the PHP
-Extension Community Library - [PECL](https://pecl.php.net).
-
-## Contributing
-
-The PHP source code is located in the Git repository at
-[github.com/php/php-src](https://github.com/php/php-src). Contributions are most
-welcome by forking the repository and sending a pull request.
-
-Discussions are done on GitHub, but depending on the topic can also be relayed
-to the official PHP developer mailing list internals@lists.php.net.
-
-New features require an RFC and must be accepted by the developers. See
-[Request for comments - RFC](https://wiki.php.net/rfc) and
-[Voting on PHP features](https://wiki.php.net/rfc/voting) for more information
-on the process.
-
-Bug fixes don't require an RFC. If the bug has a GitHub issue, reference it in
-the commit message using `GH-NNNNNN`. Use `#NNNNNN` for tickets in the old
-[bugs.php.net](https://bugs.php.net) bug tracker.
-
-    Fix GH-7815: php_uname doesn't recognise latest Windows versions
-    Fix #55371: get_magic_quotes_gpc() throws deprecation warning
-
-See [Git workflow](https://wiki.php.net/vcs/gitworkflow) for details on how pull
-requests are merged.
-
-### Guidelines for contributors
-
-See further documents in the repository for more information on how to
-contribute:
-
-- [Contributing to PHP](/CONTRIBUTING.md)
-- [PHP coding standards](/CODING_STANDARDS.md)
-- [Internal documentation](https://php.github.io/php-src/)
-- [Mailing list rules](/docs/mailinglist-rules.md)
-- [PHP release process](/docs/release-process.md)
-
-## Credits
-
-For the list of people who've put work into PHP, please see the
-[PHP credits page](https://www.php.net/credits.php).
+This project is developed for Cor Jesu College internal use.

@@ -321,6 +321,8 @@ INSERT INTO `migrations` (`migration`, `batch`) VALUES
     ('2026_08_06_000001_create_library_collections_table', 1);
 
 -- SEED DATA
+-- ⚠️ SECURITY: Change the default admin password immediately after first login.
+-- Default credentials: admin@corjesucollege.edu.ph / (ask your system administrator)
 INSERT INTO `admins` (`email`, `password`, `full_name`, `role`, `avatar_initials`, `is_active`, `created_at`, `updated_at`)
 VALUES (
     'admin@corjesucollege.edu.ph',
