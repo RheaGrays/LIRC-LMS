@@ -182,7 +182,7 @@ class StudentController extends Controller
                 $deptName = trim($row[5] ?? '');
                 $progName = trim($row[6] ?? '');
 
-                // Smart Department Matching: exact → case-insensitive → fuzzy
+                // Department Matching (SSOT Reference - No Auto-Creation)
                 $dept = null;
                 if ($deptName !== '') {
                     $deptLower = mb_strtolower($deptName);
@@ -192,32 +192,34 @@ class StudentController extends Controller
                     
                     // 2. Case-insensitive match
                     if (!$dept) {
-                        $dept = $allDepts->first(fn($d) => mb_strtolower($d->name) === $deptLower);
+                        $dept = $allDepts->first(fn($d) => mb_strtolower(trim($d->name)) === $deptLower);
                     }
                     
-                    // 3. Fuzzy: check if Excel name CONTAINS the DB name or vice versa
+                    // 3. Match code/abbreviation (e.g. "CCIS", "CABE", "CEAS", "CHS", "COE")
+                    if (!$dept) {
+                        $dept = $allDepts->first(fn($d) => !empty($d->code) && mb_strtolower(trim($d->code)) === $deptLower);
+                    }
+
+                    // 4. Normalized substring / contains match
                     if (!$dept) {
                         $dept = $allDepts->first(function($d) use ($deptLower) {
-                            $dbLower = mb_strtolower($d->name);
+                            $dbLower = mb_strtolower(trim($d->name));
                             return str_contains($deptLower, $dbLower) || str_contains($dbLower, $deptLower);
                         });
                     }
                     
+                    // If still not matched, record as unmatched (DO NOT CREATE)
                     if (!$dept) {
-                        $dept = \App\Models\AcademicDepartment::create([
-                            'name' => $deptName,
-                            'level' => 'Tertiary',
-                        ]);
-                        $allDepts->push($dept);
+                        $unmatchedDepts[$deptName] = ($unmatchedDepts[$deptName] ?? 0) + 1;
                     }
                 }
 
-                // Smart Program Matching: exact → case-insensitive → fuzzy keyword → auto-create
+                // Program Matching (SSOT Reference - No Auto-Creation)
                 $prog = null;
                 if ($progName !== '') {
                     $progLower = mb_strtolower($progName);
                     
-                    // Scope to dept if matched, otherwise search all programs
+                    // Scope search to department if resolved, otherwise search all programs
                     $searchProgs = $dept 
                         ? $allProgs->where('department_id', $dept->id) 
                         : $allProgs;
@@ -225,59 +227,51 @@ class StudentController extends Controller
                     // 1. Exact match
                     $prog = $searchProgs->firstWhere('name', $progName);
                     
-                    // 2. Case-insensitive match
+                    // 2. Case-insensitive trimmed match
                     if (!$prog) {
-                        $prog = $searchProgs->first(fn($p) => mb_strtolower($p->name) === $progLower);
+                        $prog = $searchProgs->first(fn($p) => mb_strtolower(trim($p->name)) === $progLower);
                     }
                     
-                    // 3. Fuzzy: extract key words and match
+                    // 3. Match by program code/abbreviation (e.g. "BSIT", "BSCS", "BSCE", "BSA")
                     if (!$prog) {
-                        // Remove common filler words and try contains-match
+                        $prog = $searchProgs->first(fn($p) => 
+                            !empty($p->code) && mb_strtolower(trim($p->code)) === $progLower
+                        );
+                    }
+
+                    // 4. Normalized contains match within department
+                    if (!$prog) {
                         $cleanProg = preg_replace('/\s+/', ' ', $progLower);
                         $prog = $searchProgs->first(function($p) use ($cleanProg) {
-                            $dbLower = mb_strtolower($p->name);
+                            $dbLower = mb_strtolower(trim($p->name));
                             $cleanDb = preg_replace('/\s+/', ' ', $dbLower);
                             return str_contains($cleanProg, $cleanDb) || str_contains($cleanDb, $cleanProg);
                         });
                     }
                     
-                    // 4. Last resort: match by abbreviation/code (e.g. "BSBA", "MM")
-                    if (!$prog) {
-                        $prog = $searchProgs->first(fn($p) => 
-                            $p->code && mb_strtolower($p->code) === $progLower
-                        );
-                    }
-                    
-                    // 5. Broaden search to ALL programs if dept-scoped search failed
+                    // 5. Broaden search to ALL master programs if dept-scoped search failed
                     if (!$prog && $dept) {
-                        $prog = $allProgs->first(fn($p) => mb_strtolower($p->name) === $progLower);
+                        $prog = $allProgs->first(fn($p) => mb_strtolower(trim($p->name)) === $progLower);
+                        if (!$prog) {
+                            $prog = $allProgs->first(fn($p) => !empty($p->code) && mb_strtolower(trim($p->code)) === $progLower);
+                        }
                         if (!$prog) {
                             $cleanProg = preg_replace('/\s+/', ' ', $progLower);
                             $prog = $allProgs->first(function($p) use ($cleanProg) {
-                                $dbLower = mb_strtolower($p->name);
+                                $dbLower = mb_strtolower(trim($p->name));
                                 $cleanDb = preg_replace('/\s+/', ' ', $dbLower);
                                 return str_contains($cleanProg, $cleanDb) || str_contains($cleanDb, $cleanProg);
                             });
                         }
+                        // If found in another department, sync $dept
+                        if ($prog && $prog->department_id) {
+                            $dept = $allDepts->firstWhere('id', $prog->department_id) ?: $dept;
+                        }
                     }
                     
-                    // 6. Auto-create missing Academic Program if not found
+                    // If still not matched, record as unmatched (DO NOT CREATE)
                     if (!$prog) {
-                        $words = explode(' ', str_replace(['-', '.', ',', '/', '&', '(', ')'], ' ', $progName));
-                        $code = '';
-                        $ignore = ['of', 'in', 'and', 'major', 'on', 'science', 'arts', 'bachelor', 'bachelors', 'bacheloe'];
-                        foreach ($words as $w) {
-                            $w = trim($w);
-                            if ($w !== '' && !in_array(strtolower($w), $ignore)) {
-                                $code .= strtoupper($w[0]);
-                            }
-                        }
-                        $prog = \App\Models\AcademicProgram::create([
-                            'department_id' => $dept?->id,
-                            'name'          => $progName,
-                            'code'          => substr($code, 0, 15) ?: null,
-                        ]);
-                        $allProgs->push($prog);
+                        $unmatchedProgs[$progName] = ($unmatchedProgs[$progName] ?? 0) + 1;
                     }
                 }
 
@@ -298,7 +292,7 @@ class StudentController extends Controller
             }
         });
 
-        // Clear academic caches so UI reflects new entries immediately
+        // Clear academic caches so UI reflects updated records immediately
         \Illuminate\Support\Facades\Cache::forget('academic_departments_all');
         \Illuminate\Support\Facades\Cache::forget('academic_programs_all');
         \Illuminate\Support\Facades\Cache::forget('student_year_levels');
@@ -309,10 +303,12 @@ class StudentController extends Controller
             $message .= " ({$skipped} rows skipped due to missing ID.)";
         }
         if (!empty($unmatchedDepts)) {
-            $message .= " ⚠ " . count($unmatchedDepts) . " department name(s) not found in system: " . implode(', ', array_slice($unmatchedDepts, 0, 5));
+            $deptList = array_map(fn($k, $v) => "'{$k}' ({$v}x)", array_keys($unmatchedDepts), array_values($unmatchedDepts));
+            $message .= " Note: " . count($unmatchedDepts) . " department name(s) were not found in master records: " . implode(', ', array_slice($deptList, 0, 3)) . ".";
         }
         if (!empty($unmatchedProgs)) {
-            $message .= " ⚠ " . count($unmatchedProgs) . " program name(s) not found in system: " . implode(', ', array_slice($unmatchedProgs, 0, 5));
+            $progList = array_map(fn($k, $v) => "'{$k}' ({$v}x)", array_keys($unmatchedProgs), array_values($unmatchedProgs));
+            $message .= " Note: " . count($unmatchedProgs) . " program name(s) were not found in master records: " . implode(', ', array_slice($progList, 0, 3)) . ".";
         }
 
         return back()->with('success', $message);
