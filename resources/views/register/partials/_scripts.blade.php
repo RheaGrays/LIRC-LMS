@@ -352,6 +352,36 @@
                 } finally {
                     this.submitting = false;
                 }
+            },
+
+            resetForm() {
+                this.form = {
+                    patronCategory: '',
+                    studentId: '',
+                    lastName: '',
+                    firstName: '',
+                    middleName: '',
+                    level: '',
+                    college: '',
+                    department: '',
+                    yearLevel: '',
+                    email: '',
+                };
+                this.errors = {};
+                this.submitError = '';
+                this.submitting = false;
+                this.capturedImage = null;
+                this.photoTaken = false;
+                if (this.photoSyncPollTimer) {
+                    clearInterval(this.photoSyncPollTimer);
+                    this.photoSyncPollTimer = null;
+                }
+                this.photoSyncSessionId = null;
+                this.photoSyncOwnerToken = null;
+                this.photoSyncMobileUrl = null;
+                this.registeredId = null;
+                this.step = 'info';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             }
         };
     }

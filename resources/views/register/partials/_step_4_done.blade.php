@@ -14,11 +14,22 @@
                     <div class="bg-[var(--bg-cream-2)] border border-[var(--border-warm)] rounded-[var(--radius-md)] px-5 py-2.5 mt-1">
                         <span class="font-['JetBrains_Mono'] text-lg font-bold text-[var(--cjc-navy)] tracking-[0.05em]" x-text="registeredId || form.studentId"></span>
                     </div>
-                    <a href="{{ route('kiosk.index') }}"
-                            class="mt-2 px-8 py-3 bg-[var(--cjc-red)] text-white border-none rounded-[var(--radius-md)] text-sm font-semibold font-['Inter'] cursor-pointer flex items-center gap-2 hover:bg-red-700 transition-colors">
-                        <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-                            <path d="M7 2l5.5 5.5L7 13M12.5 7.5H1" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                        Go to Check-In Kiosk
-                    </a>
+                    <div class="mt-3 flex flex-col sm:flex-row items-center justify-center gap-3 w-full max-w-[440px]">
+                        <button type="button"
+                                @click="resetForm()"
+                                class="w-full sm:w-auto px-6 py-3 bg-[var(--cjc-navy)] hover:bg-[#1a385c] text-white rounded-[var(--radius-md)] text-sm font-semibold font-['Inter'] cursor-pointer flex items-center justify-center gap-2 transition-colors shadow-sm">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 5v14M5 12h14"/>
+                            </svg>
+                            <span>Add Another Registration</span>
+                        </button>
+
+                        <a href="{{ route('kiosk.index') }}"
+                           class="w-full sm:w-auto px-6 py-3 bg-[var(--cjc-red)] hover:bg-red-700 text-white border-none rounded-[var(--radius-md)] text-sm font-semibold font-['Inter'] cursor-pointer flex items-center justify-center gap-2 transition-colors shadow-sm">
+                            <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+                                <path d="M7 2l5.5 5.5L7 13M12.5 7.5H1" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            <span>Go to Check-In Kiosk</span>
+                        </a>
+                    </div>
                 </div>
