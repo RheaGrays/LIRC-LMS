@@ -55,6 +55,17 @@ class Student extends Model
 
     // ── Accessors ─────────────────────────────────────────────
 
+    public function getViolationsCountAttribute(): int
+    {
+        if (array_key_exists('violations_count', $this->attributes)) {
+            return (int) $this->attributes['violations_count'];
+        }
+        if ($this->relationLoaded('violations')) {
+            return $this->violations->count();
+        }
+        return $this->violations()->count();
+    }
+
     public function getFullNameAttribute(): string
     {
         return trim("{$this->first_name} {$this->last_name}");

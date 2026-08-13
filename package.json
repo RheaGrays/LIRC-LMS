@@ -11,6 +11,7 @@
         "dev": "vite",
         "electron": "electron .",
         "electron:admin": "electron . --admin",
+        "predist": "node -e \"try{require('fs').unlinkSync('public/hot')}catch(e){}\"",
         "dist": "electron-builder --win"
     },
     "build": {
@@ -25,6 +26,7 @@
             "php_bundle/**/*",
             "public/**/*",
             "!public/hot",
+            "!public/storage",
             "app/**/*",
             "bootstrap/**/*",
             "config/**/*",

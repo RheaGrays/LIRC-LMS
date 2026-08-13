@@ -35,6 +35,16 @@ $app = Application::configure(basePath: dirname(__DIR__))
         });
     })->create();
 
+// BUG-03-FIX: On Windows, Laravel's normalizeCachePath() only recognises '/' and '\\'
+// as absolute-path prefixes.  Paths like 'C:\Users\…' start with a drive letter and
+// are incorrectly treated as relative, causing Laravel to prepend the basePath.
+// Registering every drive letter as a valid absolute prefix fixes this.
+if (PHP_OS_FAMILY === 'Windows') {
+    foreach (range('A', 'Z') as $letter) {
+        $app->addAbsoluteCachePathPrefix($letter . ':');
+    }
+}
+
 $app->useStoragePath(env('LARAVEL_STORAGE_PATH', $app->basePath('storage')));
 
 return $app;

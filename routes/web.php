@@ -105,10 +105,11 @@ Route::prefix('admin')->name('admin.')->middleware('auth.admin')->group(function
     // Students — import (all roles)
     Route::post('/students/import',   [StudentController::class, 'import'])->name('students.import');
 
-    // Violations (all roles, except destroy)
+    // Violations (all roles)
     Route::get('/students/{id}/violations',        [ViolationController::class, 'index'])->name('violations.index');
     Route::post('/students/{id}/violations',       [ViolationController::class, 'store'])->name('violations.store');
     Route::put('/violations/{vid}',                [ViolationController::class, 'update'])->name('violations.update');
+    Route::delete('/violations/{vid}',             [ViolationController::class, 'destroy'])->name('violations.destroy');
 
     // Analytics (all roles)
     Route::get('/analytics',                      [AnalyticsController::class, 'index'])->name('analytics.index');

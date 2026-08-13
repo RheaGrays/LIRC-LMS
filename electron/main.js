@@ -11,34 +11,50 @@ const __dirname = path.dirname(__filename);
 let mainWindow = null;
 let phpProcess = null;
 
+/**
+ * BUG-04-FIX: 500 is NO LONGER treated as "server ready".
+ * Previously, a Laravel crash (HTTP 500) was accepted as "ready", causing Electron
+ * to load a blank error page → white screen. Now only 200/302 are accepted.
+ * The callback receives { ready, serverError } so the caller can show a targeted error.
+ */
 function checkServerReady(url, callback) {
     let attempts = 0;
     const maxAttempts = 60; // 60 * 500ms = 30 seconds max wait
+    let sawServerError = false;
 
     const doCheck = () => {
         attempts++;
         const req = http.get(url, { timeout: 2000 }, (res) => {
             res.resume();
-            if (res.statusCode === 200 || res.statusCode === 302 || res.statusCode === 404 || res.statusCode === 500) {
-                callback(true);
+            if (res.statusCode === 200 || res.statusCode === 302) {
+                callback({ ready: true, serverError: false });
+            } else if (res.statusCode >= 500) {
+                // Server IS running but Laravel is crashing — keep retrying
+                // (may be transient: caches warming, migrations running)
+                sawServerError = true;
+                if (attempts < maxAttempts) {
+                    setTimeout(doCheck, 500);
+                } else {
+                    callback({ ready: false, serverError: true });
+                }
             } else if (attempts < maxAttempts) {
                 setTimeout(doCheck, 500);
             } else {
-                callback(false);
+                callback({ ready: false, serverError: sawServerError });
             }
         });
         
         req.on('timeout', () => {
             req.destroy();
             if (attempts < maxAttempts) setTimeout(doCheck, 500);
-            else callback(false);
+            else callback({ ready: false, serverError: sawServerError });
         });
 
         req.on('error', (err) => {
             if (attempts < maxAttempts) {
                 setTimeout(doCheck, 500);
             } else {
-                callback(false);
+                callback({ ready: false, serverError: sawServerError });
             }
         });
     };
@@ -111,6 +127,74 @@ function readHostConfig() {
     return null; // no config — skip network fallback
 }
 
+/**
+ * Build the environment variables object used by both migrations and artisan serve.
+ * Centralised here so the two call-sites cannot drift out of sync.
+ *
+ * BUG-03-FIX: LARAVEL_STORAGE_PATH now receives the FULL absolute path (with
+ * drive letter). Only the cache-related env vars (APP_PACKAGES_CACHE, etc.)
+ * still have the drive letter stripped because Laravel's normalizeCachePath()
+ * only recognises '/' and '\\' as absolute-path prefixes.
+ * bootstrap/app.php has been patched to call addAbsoluteCachePathPrefix()
+ * so even cache paths work with the full drive-letter path.
+ */
+function buildLaravelEnv(phpDir, projectPath) {
+    const userStoragePath = path.join(app.getPath('userData'), 'laravel_storage');
+
+    // BUG-02-FIX: Create ALL directories Laravel requires — including sessions
+    // and cache/data which were previously missing from the packaged build.
+    const requiredDirs = [
+        'framework/cache/data',
+        'framework/sessions',
+        'framework/views',
+        'framework/testing',
+        'logs',
+        'app/public'
+    ];
+
+    if (!fs.existsSync(userStoragePath)) {
+        fs.mkdirSync(userStoragePath, { recursive: true });
+    }
+
+    requiredDirs.forEach(dir => {
+        const fullPath = path.join(userStoragePath, dir);
+        if (!fs.existsSync(fullPath)) {
+            fs.mkdirSync(fullPath, { recursive: true });
+        }
+    });
+
+    // Ensure bootstrap/cache exists in the project path
+    const bootstrapCachePath = path.join(projectPath, 'bootstrap', 'cache');
+    if (!fs.existsSync(bootstrapCachePath)) {
+        fs.mkdirSync(bootstrapCachePath, { recursive: true });
+    }
+
+    const sqliteOverride = app.isPackaged ? {
+        DB_CONNECTION: 'sqlite',
+        DB_DATABASE: path.join(app.getPath('userData'), 'lems.sqlite'),
+    } : {};
+
+    // BUG-03-FIX: Use the FULL absolute path for LARAVEL_STORAGE_PATH.
+    // useStoragePath() in bootstrap/app.php stores it as-is — no normalization.
+    // Cache env vars (APP_PACKAGES_CACHE etc.) still need the drive letter stripped
+    // because normalizeCachePath() only treats '/' and '\\' as absolute prefixes,
+    // BUT bootstrap/app.php now also calls addAbsoluteCachePathPrefix() to cover
+    // Windows drive-letter paths. We keep the strip as a belt-and-suspenders fallback.
+    const cacheSafePath = process.platform === 'win32'
+        ? userStoragePath.replace(/^[a-zA-Z]:/, '')
+        : userStoragePath;
+
+    return {
+        ...process.env,
+        PATH: `${phpDir};${process.env.PATH}`,
+        LARAVEL_STORAGE_PATH: userStoragePath,          // full path — Bug #3 fix
+        APP_PACKAGES_CACHE: path.join(cacheSafePath, 'packages.php'),
+        APP_SERVICES_CACHE: path.join(cacheSafePath, 'services.php'),
+        VIEW_COMPILED_PATH: path.join(cacheSafePath, 'framework', 'views'),
+        ...sqliteOverride,
+    };
+}
+
 function startPhpServer() {
     const projectPath = app.isPackaged 
         ? path.join(process.resourcesPath, 'app')
@@ -120,56 +204,7 @@ function startPhpServer() {
     const phpDir = path.dirname(phpExec);
 
     try {
-        // Move storage to AppData to avoid Read-Only errors in Program Files
-        const userStoragePath = path.join(app.getPath('userData'), 'laravel_storage');
-        const requiredDirs = [
-            'framework/cache/data',
-            'framework/sessions',
-            'framework/views',
-            'logs'
-        ];
-        
-        if (!fs.existsSync(userStoragePath)) {
-            fs.mkdirSync(userStoragePath, { recursive: true });
-        }
-
-        requiredDirs.forEach(dir => {
-            const fullPath = path.join(userStoragePath, dir);
-            if (!fs.existsSync(fullPath)) {
-                fs.mkdirSync(fullPath, { recursive: true });
-            }
-        });
-
-        // Ensure bootstrap/cache exists in the project path
-        const bootstrapCachePath = path.join(projectPath, 'bootstrap', 'cache');
-        if (!fs.existsSync(bootstrapCachePath)) {
-            fs.mkdirSync(bootstrapCachePath, { recursive: true });
-        }
-
-        // SQLite: when packaged, point DB to the writable userData directory.
-        // This overrides whatever DB_CONNECTION is set in .env — XAMPP/MySQL is
-        // never needed. userData (AppData/Roaming/LEMS) persists between app restarts.
-        const sqliteOverride = app.isPackaged ? {
-            DB_CONNECTION: 'sqlite',
-            DB_DATABASE: path.join(app.getPath('userData'), 'lems.sqlite'),
-        } : {};
-
-        // Laravel's path normalization thinks Windows absolute paths (e.g., C:\) are relative 
-        // because they don't start with '/' or '\', causing it to prepend the basePath!
-        // We strip the drive letter so the path starts with '\', which Laravel correctly sees as absolute.
-        const laravelSafeStoragePath = process.platform === 'win32' 
-            ? userStoragePath.replace(/^[a-zA-Z]:/, '') 
-            : userStoragePath;
-
-        const env = { 
-            ...process.env, 
-            PATH: `${phpDir};${process.env.PATH}`,
-            LARAVEL_STORAGE_PATH: laravelSafeStoragePath,
-            APP_PACKAGES_CACHE: path.join(laravelSafeStoragePath, 'packages.php'),
-            APP_SERVICES_CACHE: path.join(laravelSafeStoragePath, 'services.php'),
-            VIEW_COMPILED_PATH: path.join(laravelSafeStoragePath, 'framework', 'views'),
-            ...sqliteOverride,
-        };
+        const env = buildLaravelEnv(phpDir, projectPath);
 
         const outLog = fs.openSync(path.join(app.getPath('userData'), 'php_server.log'), 'a');
         const errLog = fs.openSync(path.join(app.getPath('userData'), 'php_error.log'), 'a');
@@ -314,17 +349,31 @@ function createWindow() {
         ? `http://${hostConfig.host}:${hostConfig.port}${targetRoute}`
         : null;
 
-    const renderErrorPage = () => {
+    /**
+     * BUG-04-FIX: Two distinct error pages — "server not running" vs "server crashed".
+     * Previously both cases showed white screen because 500 was treated as ready.
+     */
+    const renderErrorPage = (serverError = false) => {
         if (!mainWindow) return;
+        const userDataPath = app.getPath('userData').replace(/\\/g, '/');
+        const title = serverError ? 'Server Error' : 'Server Not Running';
+        const heading = serverError ? 'Server Started but Crashed' : 'Server Not Running';
+        const message = serverError
+            ? `LEMS server started but Laravel returned an error (HTTP 500). This usually means a missing directory, database issue, or configuration problem.`
+            : `LEMS could not connect to the local server or host network server at <code>http://127.0.0.1:8000</code>.`;
+        const hint = serverError
+            ? `Check the error logs for details:<br><code style="word-break:break-all;">${userDataPath}/php_error.log</code><br><code style="word-break:break-all;">${userDataPath}/php_server.log</code>`
+            : `The database is created automatically on first launch.<br>No XAMPP or MySQL required.`;
+
         const html = `
             <!DOCTYPE html>
             <html>
             <head>
                 <meta charset="UTF-8">
-                <title>LEMS Server Connection Error</title>
+                <title>LEMS — ${title}</title>
                 <style>
                     body { font-family: system-ui, sans-serif; background: #0f172a; color: #fff; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }
-                    .card { background: #1e293b; border: 1px solid #334155; padding: 40px; border-radius: 20px; max-width: 480px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
+                    .card { background: #1e293b; border: 1px solid #334155; padding: 40px; border-radius: 20px; max-width: 520px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
                     h2 { color: #f43f5e; margin-top: 0; }
                     p { color: #94a3b8; font-size: 14px; line-height: 1.6; }
                     .code { font-family: monospace; background: #020617; color: #38bdf8; padding: 10px; border-radius: 8px; font-size: 13px; margin: 15px 0; display: block; text-align: left; }
@@ -334,10 +383,10 @@ function createWindow() {
             </head>
             <body>
                 <div class="card">
-                    <h2>Server Not Running</h2>
-                    <p>LEMS could not connect to the local server or host network server at <code>http://127.0.0.1:8000</code>.</p>
-                    <p><strong>To resolve this on the Host PC:</strong></p>
-                    <span class="code">The database is created automatically on first launch.<br>No XAMPP or MySQL required.</span>
+                    <h2>${heading}</h2>
+                    <p>${message}</p>
+                    <p><strong>${serverError ? 'How to debug:' : 'To resolve this on the Host PC:'}</strong></p>
+                    <span class="code">${hint}</span>
                     <button onclick="window.location.reload()">Retry Connection</button>
                 </div>
             </body>
@@ -346,23 +395,23 @@ function createWindow() {
         mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
     };
 
-    checkServerReady('http://127.0.0.1:8000/kiosk', (isLocalReady) => {
+    checkServerReady('http://127.0.0.1:8000/kiosk', (result) => {
         if (!mainWindow) return;
-        if (isLocalReady) {
+        if (result.ready) {
             mainWindow.loadURL(localTargetUrl);
         } else if (networkTargetUrl && hostConfig) {
             // Only attempt network fallback if lems.host.json is configured
             const networkCheckUrl = `http://${hostConfig.host}:${hostConfig.port}/kiosk`;
-            checkServerReady(networkCheckUrl, (isNetworkReady) => {
+            checkServerReady(networkCheckUrl, (netResult) => {
                 if (!mainWindow) return;
-                if (isNetworkReady) {
+                if (netResult.ready) {
                     mainWindow.loadURL(networkTargetUrl);
                 } else {
-                    renderErrorPage();
+                    renderErrorPage(result.serverError || netResult.serverError);
                 }
             });
         } else {
-            renderErrorPage();
+            renderErrorPage(result.serverError);
         }
     });
 
@@ -379,30 +428,47 @@ if (hostConfig && hostConfig.host) {
 }
 
 app.whenReady().then(async () => {
+    const projectPath = app.isPackaged
+        ? path.join(process.resourcesPath, 'app')
+        : path.join(__dirname, '..');
+
+    // BUG-05-FIX: Delete leftover public/hot file.
+    // If this file exists, Laravel's @vite() directive loads assets from
+    // http://localhost:5173 (dev server) instead of the compiled build/ dir,
+    // causing a white screen because the dev server is not running.
+    const hotFilePath = path.join(projectPath, 'public', 'hot');
+    if (fs.existsSync(hotFilePath)) {
+        try { fs.unlinkSync(hotFilePath); } catch (e) {
+            console.warn('[LEMS] Could not delete public/hot:', e.message);
+        }
+    }
+
+    // BUG-01-FIX: Recreate the public/storage symlink at runtime.
+    // The original symlink points to the dev machine's absolute path and breaks
+    // on any other PC. We recreate it pointing to the AppData storage location.
+    if (app.isPackaged) {
+        const publicStorageLink = path.join(projectPath, 'public', 'storage');
+        const appPublicDir = path.join(app.getPath('userData'), 'laravel_storage', 'app', 'public');
+        try {
+            // Remove broken symlink/file if it exists
+            if (fs.existsSync(publicStorageLink) || fs.lstatSync(publicStorageLink).isSymbolicLink()) {
+                fs.unlinkSync(publicStorageLink);
+            }
+        } catch (e) { /* does not exist — fine */ }
+        try {
+            fs.symlinkSync(appPublicDir, publicStorageLink, 'junction');
+            console.log('[LEMS] Recreated public/storage symlink →', appPublicDir);
+        } catch (e) {
+            console.warn('[LEMS] Could not create public/storage symlink:', e.message);
+        }
+    }
+
     // Run migrations BEFORE starting artisan serve so the SQLite database
     // and all tables are ready before the first HTTP request comes in.
     if (app.isPackaged) {
-        const projectPath = path.join(process.resourcesPath, 'app');
         const phpExec = findPhpExecutable();
         const phpDir = path.dirname(phpExec);
-        const userStoragePath = path.join(app.getPath('userData'), 'laravel_storage');
-        const sqliteOverride = {
-            DB_CONNECTION: 'sqlite',
-            DB_DATABASE: path.join(app.getPath('userData'), 'lems.sqlite'),
-        };
-        const laravelSafeStoragePath = process.platform === 'win32' 
-            ? userStoragePath.replace(/^[a-zA-Z]:/, '') 
-            : userStoragePath;
-            
-        const env = {
-            ...process.env,
-            PATH: `${phpDir};${process.env.PATH}`,
-            LARAVEL_STORAGE_PATH: laravelSafeStoragePath,
-            APP_PACKAGES_CACHE: path.join(laravelSafeStoragePath, 'packages.php'),
-            APP_SERVICES_CACHE: path.join(laravelSafeStoragePath, 'services.php'),
-            VIEW_COMPILED_PATH: path.join(laravelSafeStoragePath, 'framework', 'views'),
-            ...sqliteOverride,
-        };
+        const env = buildLaravelEnv(phpDir, projectPath);
         await runMigrations(phpExec, projectPath, env);
     }
 

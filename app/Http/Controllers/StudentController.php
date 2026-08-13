@@ -15,11 +15,12 @@ class StudentController extends Controller
         // PERF-01 FIX: Use LEFT JOINs instead of orWhereHas() for department/program search.
         // orWhereHas() generates a correlated EXISTS subquery per matched row, which is O(n) slow.
         // A single JOIN lets the DB engine use indexes and scan once.
-        $query = Student::query()->withCount('violations')
+        $query = Student::query()
+            ->select('students.*') // prevent JOIN columns from shadowing student columns
+            ->withCount('violations')
             ->with(['violations.violationType', 'academicDepartment', 'academicProgram'])
             ->leftJoin('academic_departments', 'students.department_id', '=', 'academic_departments.id', 'left', false)
-            ->leftJoin('academic_programs',    'students.program_id',    '=', 'academic_programs.id', 'left', false)
-            ->select('students.*'); // prevent JOIN columns from shadowing student columns
+            ->leftJoin('academic_programs',    'students.program_id',    '=', 'academic_programs.id', 'left', false);
 
         // Search ID, Name, Department/Program, Patron Category
         if ($request->filled('search')) {
@@ -202,12 +203,16 @@ class StudentController extends Controller
                         });
                     }
                     
-                    if (!$dept && !in_array($deptName, $unmatchedDepts)) {
-                        $unmatchedDepts[] = $deptName;
+                    if (!$dept) {
+                        $dept = \App\Models\AcademicDepartment::create([
+                            'name' => $deptName,
+                            'level' => 'Tertiary',
+                        ]);
+                        $allDepts->push($dept);
                     }
                 }
 
-                // Smart Program Matching: exact → case-insensitive → fuzzy keyword
+                // Smart Program Matching: exact → case-insensitive → fuzzy keyword → auto-create
                 $prog = null;
                 if ($progName !== '') {
                     $progLower = mb_strtolower($progName);
@@ -256,8 +261,23 @@ class StudentController extends Controller
                         }
                     }
                     
-                    if (!$prog && !in_array($progName, $unmatchedProgs)) {
-                        $unmatchedProgs[] = $progName;
+                    // 6. Auto-create missing Academic Program if not found
+                    if (!$prog) {
+                        $words = explode(' ', str_replace(['-', '.', ',', '/', '&', '(', ')'], ' ', $progName));
+                        $code = '';
+                        $ignore = ['of', 'in', 'and', 'major', 'on', 'science', 'arts', 'bachelor', 'bachelors', 'bacheloe'];
+                        foreach ($words as $w) {
+                            $w = trim($w);
+                            if ($w !== '' && !in_array(strtolower($w), $ignore)) {
+                                $code .= strtoupper($w[0]);
+                            }
+                        }
+                        $prog = \App\Models\AcademicProgram::create([
+                            'department_id' => $dept?->id,
+                            'name'          => $progName,
+                            'code'          => substr($code, 0, 15) ?: null,
+                        ]);
+                        $allProgs->push($prog);
                     }
                 }
 
@@ -277,6 +297,11 @@ class StudentController extends Controller
                 $count++;
             }
         });
+
+        // Clear academic caches so UI reflects new entries immediately
+        \Illuminate\Support\Facades\Cache::forget('academic_departments_all');
+        \Illuminate\Support\Facades\Cache::forget('academic_programs_all');
+        \Illuminate\Support\Facades\Cache::forget('student_year_levels');
 
         $skipped = $totalDataRows - $count;
         $message = "Successfully imported {$count} patrons.";
