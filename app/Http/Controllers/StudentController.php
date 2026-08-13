@@ -15,10 +15,10 @@ class StudentController extends Controller
         // PERF-01 FIX: Use LEFT JOINs instead of orWhereHas() for department/program search.
         // orWhereHas() generates a correlated EXISTS subquery per matched row, which is O(n) slow.
         // A single JOIN lets the DB engine use indexes and scan once.
-        $query = Student::withCount('violations')
+        $query = Student::query()->withCount('violations')
             ->with(['violations.violationType', 'academicDepartment', 'academicProgram'])
-            ->leftJoin('academic_departments', 'students.department_id', '=', 'academic_departments.id')
-            ->leftJoin('academic_programs',    'students.program_id',    '=', 'academic_programs.id')
+            ->leftJoin('academic_departments', 'students.department_id', '=', 'academic_departments.id', 'left', false)
+            ->leftJoin('academic_programs',    'students.program_id',    '=', 'academic_programs.id', 'left', false)
             ->select('students.*'); // prevent JOIN columns from shadowing student columns
 
         // Search ID, Name, Department/Program, Patron Category
@@ -92,8 +92,10 @@ class StudentController extends Controller
         $yearLevelsList = \Illuminate\Support\Facades\Cache::remember('student_year_levels', 300, function () {
             return Student::query()->select('year_level')->whereNotNull('year_level')->where('year_level', '!=', '')->distinct()->pluck('year_level')->sort()->values();
         });
+        
+        $violationTypes = \App\Models\ViolationType::query()->orderBy('name', 'asc')->get();
 
-        return view('admin.students.index', compact('students', 'patronCategories', 'departmentsList', 'programsList', 'yearLevelsList'));
+        return view('admin.students.index', compact('students', 'patronCategories', 'departmentsList', 'programsList', 'yearLevelsList', 'violationTypes'));
     }
 
     public function store(Request $request)
@@ -115,13 +117,13 @@ class StudentController extends Controller
             'email'           => 'nullable|email|max:255',
         ]);
 
-        Student::create($validated);
+        Student::query()->create($validated);
         return back()->with('success', 'Patron created successfully.');
     }
 
     public function update(Request $request, string $id)
     {
-        $student = Student::findOrFail($id);
+        $student = Student::query()->findOrFail($id);
         $validated = $request->validate([
             'first_name'      => 'required|string|max:255',
             'last_name'       => 'required|string|max:255',
@@ -139,13 +141,13 @@ class StudentController extends Controller
 
     public function destroy(string $id)
     {
-        Student::findOrFail($id)->delete();
+        Student::query()->findOrFail($id)->delete(null);
         return back()->with('success', 'Patron deleted successfully.');
     }
 
     public function edit(string $id)
     {
-        $student = Student::findOrFail($id);
+        $student = Student::query()->findOrFail($id);
         $patronCategories = SystemSetting::get('patron_categories', ['Student', 'Employee', 'Post Graduate', 'Alumni', 'Visitor']);
         return view('admin.students.edit', compact('student', 'patronCategories'));
     }
@@ -176,20 +178,19 @@ class StudentController extends Controller
 
                 $dept = null;
                 if ($deptName !== '') {
-                    $dept = \App\Models\AcademicDepartment::firstOrCreate(
-                        ['name' => $deptName],
-                        ['level' => 'college']
-                    );
+                    $dept = \App\Models\AcademicDepartment::query()->where('name', $deptName)->first();
                 }
 
                 $prog = null;
                 if ($progName !== '') {
-                    $prog = \App\Models\AcademicProgram::firstOrCreate(
-                        ['name' => $progName, 'department_id' => $dept?->id]
-                    );
+                    $prog = \App\Models\AcademicProgram::query()->where('name', $progName)
+                        ->when($dept, function($q) use ($dept) {
+                            return $q->where('department_id', $dept->id);
+                        })
+                        ->first();
                 }
 
-                Student::updateOrCreate(
+                Student::query()->updateOrCreate(
                     ['id' => $id],
                     [
                         'last_name'       => $row[1] ?? '',
@@ -224,7 +225,7 @@ class StudentController extends Controller
         $sheet->fromArray($headers, null, 'A1');
 
         $row = 2;
-        Student::with(['academicDepartment', 'academicProgram'])->chunk(500, function ($students) use ($sheet, &$row) {
+        Student::query()->with(['academicDepartment', 'academicProgram'])->chunk(500, function ($students) use ($sheet, &$row) {
             foreach ($students as $student) {
                 $sheet->fromArray([
                     $student->id,

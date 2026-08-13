@@ -101,7 +101,7 @@ class SettingsController extends Controller
             \App\Models\AcademicTerm::query()->update(['is_active' => false]);
         }
         
-        \App\Models\AcademicTerm::create($data);
+        \App\Models\AcademicTerm::query()->create($data);
         \Illuminate\Support\Facades\Cache::forget('academic_terms_settings');
         \Illuminate\Support\Facades\Cache::forget('academic_terms_all');
         return redirect()->back()->with('success', 'Academic Term created successfully.');
@@ -125,7 +125,7 @@ class SettingsController extends Controller
             \App\Models\AcademicTerm::query()->where('id', '!=', $id)->update(['is_active' => false]);
         }
         
-        \App\Models\AcademicTerm::findOrFail($id)->update($data);
+        \App\Models\AcademicTerm::query()->findOrFail($id)->update($data);
         \Illuminate\Support\Facades\Cache::forget('academic_terms_settings');
         \Illuminate\Support\Facades\Cache::forget('academic_terms_all');
         return redirect()->back()->with('success', 'Academic Term updated successfully.');
@@ -133,7 +133,7 @@ class SettingsController extends Controller
 
     public function destroyTerm(int|string $id)
     {
-        \App\Models\AcademicTerm::findOrFail($id)->delete();
+        \App\Models\AcademicTerm::query()->findOrFail($id)->delete(null);
         \Illuminate\Support\Facades\Cache::forget('academic_terms_settings');
         \Illuminate\Support\Facades\Cache::forget('academic_terms_all');
         return redirect()->back()->with('success', 'Academic Term deleted successfully.');

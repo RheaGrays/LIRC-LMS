@@ -90,8 +90,8 @@ class ReportService
      */
     public function exportAuditPdf($date)
     {
-        $logs = AttendanceLog::with('student')
-            ->whereDate('logged_at', $date)
+        $logs = AttendanceLog::query()->with('student')
+            ->whereDate('logged_at', '=', $date, 'and')
             ->orderBy('logged_at', 'desc')
             ->get();
             

@@ -20,7 +20,7 @@ class AnalyticsController extends Controller
     public function index()
     {
         $terms = Cache::remember('academic_terms_all', 600, function () {
-            return AcademicTerm::orderBy('start_date', 'desc')->get();
+            return AcademicTerm::query()->orderBy('start_date', 'desc')->get();
         });
 
         $departments = AcademicDepartment::query()->orderBy('name', 'asc')->get();
@@ -74,7 +74,7 @@ class AnalyticsController extends Controller
             }
         } elseif ($schoolYear) {
             $yearNum = (int) preg_replace('/[^0-9]/', '', substr($schoolYear, 0, 8)) ?: now()->year;
-            $query->whereYear('logged_at', $yearNum);
+            $query->whereYear('logged_at', '=', $yearNum, 'and');
             $schoolYearLabel = "AY {$yearNum}-" . ($yearNum + 1);
         } else {
             $schoolYearLabel = "AY " . now()->format('Y') . "-" . (now()->year + 1);
@@ -90,7 +90,7 @@ class AnalyticsController extends Controller
             } else {
                 $monthNum = (int) $monthInput;
                 if ($monthNum >= 1 && $monthNum <= 12) {
-                    $query->whereMonth('logged_at', $monthNum);
+                    $query->whereMonth('logged_at', '=', $monthNum, 'and');
                     $monthLabel = Carbon::create()->month($monthNum)->format('F');
                 }
             }
@@ -120,23 +120,23 @@ class AnalyticsController extends Controller
         }
 
         // PERF-03 FIX: Use a fast COUNT query for the total log entries
-        $totalCount = (clone $query)->count();
+        $totalCount = (clone $query)->count('*');
 
         // Convert query to an aggregate summary by student
         $summaryQuery = clone $query;
         $summaryQuery->setEagerLoads([]); // Remove eager loads since we'll use joins
-        $summaryQuery->leftJoin('students', 'attendance_logs.student_id', '=', 'students.id')
-            ->leftJoin('academic_departments', 'students.department_id', '=', 'academic_departments.id')
-            ->leftJoin('academic_programs', 'students.program_id', '=', 'academic_programs.id')
+        $summaryQuery->leftJoin('students', 'attendance_logs.student_id', '=', 'students.id', 'left', false)
+            ->leftJoin('academic_departments', 'students.department_id', '=', 'academic_departments.id', 'left', false)
+            ->leftJoin('academic_programs', 'students.program_id', '=', 'academic_programs.id', 'left', false)
             ->selectRaw('
                 attendance_logs.student_id, 
-                COALESCE(CONCAT(students.first_name, " ", students.last_name), attendance_logs.student_id) as student_name, 
+                COALESCE((students.first_name || " " || students.last_name), attendance_logs.student_id) as student_name, 
                 COALESCE(students.patron_category, "Student") as category, 
                 COALESCE(academic_departments.name, "—") as department, 
                 COALESCE(academic_programs.name, "—") as program, 
                 COALESCE(students.year_level, "—") as year_level, 
                 COUNT(attendance_logs.id) as total_visits
-            ')
+            ', [])
             ->groupBy(
                 'attendance_logs.student_id', 
                 'students.id',
@@ -447,8 +447,8 @@ class AnalyticsController extends Controller
             }
         }
 
-        $deptData = $deptQuery->join('students', 'attendance_logs.student_id', '=', 'students.id')
-            ->leftJoin('academic_departments', 'students.department_id', '=', 'academic_departments.id')
+        $deptData = $deptQuery->join('students', 'attendance_logs.student_id', '=', 'students.id', 'inner', false)
+            ->leftJoin('academic_departments', 'students.department_id', '=', 'academic_departments.id', 'left', false)
             ->selectRaw("COALESCE(academic_departments.name, 'Unknown') as department, COUNT(*) as aggregate", [])
             ->groupBy('department')
             ->orderByDesc('aggregate')
@@ -482,8 +482,8 @@ class AnalyticsController extends Controller
 
         // Top Patron calculation
         $topPatronData = clone $query;
-        $topPatron = $topPatronData->join('students', 'attendance_logs.student_id', '=', 'students.id')
-            ->selectRaw('CONCAT(students.first_name, " ", students.last_name) as name, COUNT(*) as aggregate')
+        $topPatron = $topPatronData->join('students', 'attendance_logs.student_id', '=', 'students.id', 'inner', false)
+            ->selectRaw('(students.first_name || " " || students.last_name) as name, COUNT(*) as aggregate', [])
             ->groupBy('students.id', 'students.first_name', 'students.last_name')
             ->orderByDesc('aggregate')
             ->first();

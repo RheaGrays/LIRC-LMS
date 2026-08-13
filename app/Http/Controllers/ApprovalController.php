@@ -28,7 +28,7 @@ class ApprovalController extends Controller
     {
         if (!Auth::guard('admin')->user()->isSuperAdmin()) abort(403);
 
-        $approval = PendingAdminApproval::findOrFail($id);
+        $approval = PendingAdminApproval::query()->findOrFail($id);
 
         if ($approval->status !== 'pending') {
             return back()->with('error', 'This request has already been processed.');
@@ -40,7 +40,7 @@ class ApprovalController extends Controller
             ->take(2)
             ->implode('');
 
-        $admin = Admin::create([
+        $admin = Admin::query()->create([
             'email'           => $approval->email,
             'password'        => 'temporary', // will be overwritten
             'full_name'       => $approval->full_name,
@@ -66,7 +66,7 @@ class ApprovalController extends Controller
     {
         if (!Auth::guard('admin')->user()->isSuperAdmin()) abort(403);
 
-        $approval = PendingAdminApproval::findOrFail($id);
+        $approval = PendingAdminApproval::query()->findOrFail($id);
 
         if ($approval->status !== 'pending') {
             return back()->with('error', 'This request has already been processed.');

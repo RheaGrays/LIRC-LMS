@@ -23,7 +23,7 @@ class AdminAuthController extends Controller
             'password' => ['required'],
         ]);
 
-        $admin = \App\Models\Admin::where('email', $credentials['email'])->first();
+        $admin = \App\Models\Admin::query()->where('email', $credentials['email'])->first();
 
         if (!$admin || !$admin->is_active) {
             return back()->withErrors([

@@ -12,7 +12,7 @@ class StudentArchiveController extends Controller
     public function index(Request $request)
     {
         // Fetch all academic programs so we can map Department name -> Years
-        $programs = AcademicProgram::all()->keyBy('id');
+        $programs = AcademicProgram::query()->get()->keyBy('id');
         $currentYear = (int) date('Y');
         $filter = $request->query('filter', 'all');
         
@@ -35,7 +35,7 @@ class StudentArchiveController extends Controller
                     }
 
                     // Extract numeric year level (e.g. "1st Year" -> 1, "Grade 7" -> 7)
-                    preg_match('/\d+/', $student->year_level, $matches);
+                    preg_match('/\d+/', $student->year_level ?? '', $matches);
                     $numericYearLevel = !empty($matches) ? (int)$matches[0] : 1;
 
                     // Default program duration

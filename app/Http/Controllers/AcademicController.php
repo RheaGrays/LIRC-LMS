@@ -14,7 +14,7 @@ class AcademicController extends Controller
     // Web: View the Academic Setup page
     public function index()
     {
-        $departments = AcademicDepartment::with('programs')->get();
+        $departments = AcademicDepartment::query()->with('programs')->get();
         return view('admin.academics.index', compact('departments'));
     }
 
@@ -32,7 +32,7 @@ class AcademicController extends Controller
             'name.unique' => "Department \"{$name}\" already exists.",
         ]);
 
-        AcademicDepartment::create([
+        AcademicDepartment::query()->create([
             'level' => $request->level,
             'name'  => $name,
         ]);
@@ -46,7 +46,7 @@ class AcademicController extends Controller
     }
 
     // Web: Update Department
-    public function updateDepartment(Request $request, $id)
+    public function updateDepartment(Request $request, int|string $id)
     {
         $name = trim($request->name);
         $request->validate([
@@ -59,7 +59,7 @@ class AcademicController extends Controller
             'name.unique' => "Department \"{$name}\" already exists.",
         ]);
 
-        AcademicDepartment::findOrFail($id)->update([
+        AcademicDepartment::query()->findOrFail($id)->update([
             'level' => $request->level,
             'name'  => $name,
         ]);
@@ -71,9 +71,9 @@ class AcademicController extends Controller
     }
 
     // Web: Delete Department
-    public function destroyDepartment($id)
+    public function destroyDepartment(int|string $id)
     {
-        AcademicDepartment::findOrFail($id)->delete();
+        AcademicDepartment::query()->findOrFail($id)->delete(null);
 
         Cache::forget('academic_departments_all');
         Cache::forget('academic_programs_all');
@@ -97,7 +97,7 @@ class AcademicController extends Controller
             'name.unique' => "Program \"{$name}\" already exists.",
         ]);
 
-        AcademicProgram::create([
+        AcademicProgram::query()->create([
             'department_id' => $request->department_id,
             'name'          => $name,
             'code'          => $request->code,
@@ -111,7 +111,7 @@ class AcademicController extends Controller
     }
 
     // Web: Update Program
-    public function updateProgram(Request $request, $id)
+    public function updateProgram(Request $request, int|string $id)
     {
         $name = trim($request->name);
         $request->validate([
@@ -126,7 +126,7 @@ class AcademicController extends Controller
             'name.unique' => "Program \"{$name}\" already exists.",
         ]);
 
-        AcademicProgram::findOrFail($id)->update([
+        AcademicProgram::query()->findOrFail($id)->update([
             'department_id' => $request->department_id,
             'name'          => $name,
             'code'          => $request->code,
@@ -140,9 +140,9 @@ class AcademicController extends Controller
     }
 
     // Web: Delete Program
-    public function destroyProgram($id)
+    public function destroyProgram(int|string $id)
     {
-        AcademicProgram::findOrFail($id)->delete();
+        AcademicProgram::query()->findOrFail($id)->delete(null);
 
         Cache::forget('academic_departments_all');
         Cache::forget('academic_programs_all');

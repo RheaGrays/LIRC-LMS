@@ -46,7 +46,7 @@ class AnalyticsService
             case 'today':
                 $hourly = (clone $base)
                     ->where('logged_at', '>=', $now->copy()->startOfDay())
-                    ->selectRaw('HOUR(logged_at) as hour, COUNT(*) as cnt')
+                    ->selectRaw("CAST(strftime('%H', logged_at) AS INTEGER) as hour, COUNT(*) as cnt", [])
                     ->groupBy('hour')
                     ->pluck('cnt', 'hour');
 
@@ -60,7 +60,7 @@ class AnalyticsService
                 $startOfWeek = $now->copy()->startOfWeek();
                 $byDate = (clone $base)
                     ->where('logged_at', '>=', $startOfWeek)
-                    ->selectRaw('DATE(logged_at) as date, COUNT(*) as cnt')
+                    ->selectRaw("strftime('%Y-%m-%d', logged_at) as date, COUNT(*) as cnt", [])
                     ->groupBy('date')
                     ->pluck('cnt', 'date');
 
@@ -75,7 +75,7 @@ class AnalyticsService
                 $startOfMonth = $now->copy()->startOfMonth();
                 $byDate = (clone $base)
                     ->where('logged_at', '>=', $startOfMonth)
-                    ->selectRaw('DATE(logged_at) as date, COUNT(*) as cnt')
+                    ->selectRaw("strftime('%Y-%m-%d', logged_at) as date, COUNT(*) as cnt", [])
                     ->groupBy('date')
                     ->pluck('cnt', 'date');
 
@@ -90,7 +90,7 @@ class AnalyticsService
             case 'year':
                 $byMonth = (clone $base)
                     ->where('logged_at', '>=', $now->copy()->startOfYear())
-                    ->selectRaw('MONTH(logged_at) as month, COUNT(*) as cnt')
+                    ->selectRaw("CAST(strftime('%m', logged_at) AS INTEGER) as month, COUNT(*) as cnt", [])
                     ->groupBy('month')
                     ->pluck('cnt', 'month');
 
@@ -111,7 +111,7 @@ class AnalyticsService
         $now   = Carbon::now();
         $query = AttendanceLog::query()
             ->join('students', 'attendance_logs.student_id', '=', 'students.id', 'inner', false)
-            ->leftJoin('academic_departments', 'students.department_id', '=', 'academic_departments.id')
+            ->leftJoin('academic_departments', 'students.department_id', '=', 'academic_departments.id', 'left', false)
             ->where('attendance_logs.action', 'check_in');
 
         switch ($period) {
@@ -122,7 +122,7 @@ class AnalyticsService
         }
 
         $results = $query
-            ->selectRaw("COALESCE(academic_departments.name, 'Unknown') as department, COUNT(*) as aggregate")
+            ->selectRaw("COALESCE(academic_departments.name, 'Unknown') as department, COUNT(*) as aggregate", [])
             ->groupBy('department')
             ->orderByDesc('aggregate')
             ->get();

@@ -9,9 +9,9 @@ use Illuminate\Support\Facades\Auth;
 
 class ViolationController extends Controller
 {
-    public function store(Request $request, $studentId)
+    public function store(Request $request, int|string $studentId)
     {
-        $student = Student::findOrFail($studentId);
+        $student = Student::query()->findOrFail($studentId);
         $validated = $request->validate([
             'violation_type_id' => 'required|exists:violation_types,id',
             'notes' => 'nullable|string',
@@ -21,14 +21,14 @@ class ViolationController extends Controller
 
         $validated['student_id'] = $student->id;
 
-        Violation::create($validated);
+        Violation::query()->create($validated);
 
         return back()->with('success', 'Violation recorded successfully.');
     }
 
-    public function destroy($vid)
+    public function destroy(int|string $vid)
     {
-        Violation::findOrFail($vid)->delete();
+        Violation::query()->findOrFail($vid)->delete(null);
 
         \Illuminate\Support\Facades\Log::info('Violation Deleted', [
             'admin_id' => \Illuminate\Support\Facades\Auth::guard('admin')->id(),
@@ -38,17 +38,17 @@ class ViolationController extends Controller
         return back()->with('success', 'Violation removed successfully.');
     }
 
-    public function index($studentId)
+    public function index(int|string $studentId)
     {
-        $student = Student::with('violations.violationType')->findOrFail($studentId);
+        $student = Student::query()->with('violations.violationType')->findOrFail($studentId);
         $admin = Auth::guard('admin')->user();
-        $violationTypes = \App\Models\ViolationType::all();
+        $violationTypes = \App\Models\ViolationType::query()->get();
         return view('admin.violations.index', compact('student', 'admin', 'violationTypes'));
     }
 
-    public function update(Request $request, $vid)
+    public function update(Request $request, int|string $vid)
     {
-        $violation = Violation::findOrFail($vid);
+        $violation = Violation::query()->findOrFail($vid);
         $validated = $request->validate([
             'violation_type_id' => 'required|exists:violation_types,id',
             'notes' => 'nullable|string',

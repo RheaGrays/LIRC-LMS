@@ -21,11 +21,11 @@ class DashboardController extends Controller
             return AttendanceLog::query()
                 ->where('action', 'check_in')
                 ->where('logged_at', '>=', $today)
-                ->count();
+                ->count('*');
         });
 
         $totalStudents = Cache::remember('dashboard_total_active_students', 300, function () {
-            return Student::query()->where('status', 'active')->count();
+            return Student::query()->where('status', 'active')->count('*');
         });
 
         $occupancy = \App\Services\OccupancyService::today();

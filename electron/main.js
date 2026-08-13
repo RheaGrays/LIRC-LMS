@@ -154,13 +154,20 @@ function startPhpServer() {
             DB_DATABASE: path.join(app.getPath('userData'), 'lems.sqlite'),
         } : {};
 
+        // Laravel's path normalization thinks Windows absolute paths (e.g., C:\) are relative 
+        // because they don't start with '/' or '\', causing it to prepend the basePath!
+        // We strip the drive letter so the path starts with '\', which Laravel correctly sees as absolute.
+        const laravelSafeStoragePath = process.platform === 'win32' 
+            ? userStoragePath.replace(/^[a-zA-Z]:/, '') 
+            : userStoragePath;
+
         const env = { 
             ...process.env, 
             PATH: `${phpDir};${process.env.PATH}`,
-            LARAVEL_STORAGE_PATH: userStoragePath,
-            APP_PACKAGES_CACHE: path.relative(projectPath, path.join(userStoragePath, 'packages.php')),
-            APP_SERVICES_CACHE: path.relative(projectPath, path.join(userStoragePath, 'services.php')),
-            VIEW_COMPILED_PATH: path.join(userStoragePath, 'framework', 'views'),
+            LARAVEL_STORAGE_PATH: laravelSafeStoragePath,
+            APP_PACKAGES_CACHE: path.join(laravelSafeStoragePath, 'packages.php'),
+            APP_SERVICES_CACHE: path.join(laravelSafeStoragePath, 'services.php'),
+            VIEW_COMPILED_PATH: path.join(laravelSafeStoragePath, 'framework', 'views'),
             ...sqliteOverride,
         };
 
@@ -387,8 +394,8 @@ app.whenReady().then(async () => {
             ...process.env,
             PATH: `${phpDir};${process.env.PATH}`,
             LARAVEL_STORAGE_PATH: userStoragePath,
-            APP_PACKAGES_CACHE: path.relative(projectPath, path.join(userStoragePath, 'packages.php')),
-            APP_SERVICES_CACHE: path.relative(projectPath, path.join(userStoragePath, 'services.php')),
+            APP_PACKAGES_CACHE: path.join(userStoragePath, 'packages.php'),
+            APP_SERVICES_CACHE: path.join(userStoragePath, 'services.php'),
             VIEW_COMPILED_PATH: path.join(userStoragePath, 'framework', 'views'),
             ...sqliteOverride,
         };
