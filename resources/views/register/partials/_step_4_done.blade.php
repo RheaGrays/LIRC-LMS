@@ -14,22 +14,22 @@
                     <div class="bg-[var(--bg-cream-2)] border border-[var(--border-warm)] rounded-[var(--radius-md)] px-5 py-2.5 mt-1">
                         <span class="font-['JetBrains_Mono'] text-lg font-bold text-[var(--cjc-navy)] tracking-[0.05em]" x-text="registeredId || form.studentId"></span>
                     </div>
-                    <div class="mt-4 flex flex-col sm:flex-row items-center justify-center gap-2.5 w-full max-w-lg">
+                    <div class="mt-4 flex flex-col sm:flex-row items-center justify-center gap-3 w-full max-w-md">
                         <button type="button"
                                 @click="resetForm()"
-                                class="w-full sm:w-auto px-4.5 py-2.5 bg-[var(--cjc-navy)] hover:bg-[#1a385c] text-white rounded-lg text-xs md:text-sm font-semibold font-['Inter'] whitespace-nowrap cursor-pointer flex items-center justify-center gap-2 transition-all shadow-sm hover:shadow">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                class="flex-1 w-full sm:w-auto px-5 py-2.5 bg-[var(--cjc-navy)] hover:bg-[#1a385c] text-white rounded-lg text-xs md:text-sm font-semibold font-['Inter'] whitespace-nowrap cursor-pointer inline-flex items-center justify-center gap-2 transition-all shadow-sm hover:shadow">
+                            <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M12 5v14M5 12h14"/>
                             </svg>
-                            <span>Add Another Registration</span>
+                            <span>Register Another</span>
                         </button>
 
                         <a href="{{ route('kiosk.index') }}"
-                           class="w-full sm:w-auto px-4.5 py-2.5 bg-[var(--cjc-red)] hover:bg-red-700 text-white rounded-lg text-xs md:text-sm font-semibold font-['Inter'] whitespace-nowrap cursor-pointer flex items-center justify-center gap-2 transition-all shadow-sm hover:shadow">
-                            <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
+                           class="flex-1 w-full sm:w-auto px-5 py-2.5 bg-[var(--cjc-red)] hover:bg-red-700 text-white rounded-lg text-xs md:text-sm font-semibold font-['Inter'] whitespace-nowrap cursor-pointer inline-flex items-center justify-center gap-2 transition-all shadow-sm hover:shadow">
+                            <svg class="w-4 h-4 shrink-0" viewBox="0 0 15 15" fill="none">
                                 <path d="M7 2l5.5 5.5L7 13M12.5 7.5H1" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
                             </svg>
-                            <span>Go to Check-In Kiosk</span>
+                            <span>Go to Kiosk</span>
                         </a>
                     </div>
                 </div>
