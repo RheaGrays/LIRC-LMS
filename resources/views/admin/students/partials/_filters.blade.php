@@ -1,12 +1,41 @@
             <!-- Filter & Search Controls Bar -->
-            <form method="GET" action="{{ route('admin.students.index') }}" class="mb-6 space-y-3 bg-gray-50/80 p-4 rounded-xl border border-gray-200">
+            <form method="GET" 
+                  action="{{ route('admin.students.index') }}" 
+                  x-data="{ 
+                      timer: null,
+                      submitDebounced() {
+                          clearTimeout(this.timer);
+                          this.timer = setTimeout(() => {
+                              $el.submit();
+                          }, 350);
+                      }
+                  }"
+                  class="mb-6 space-y-3 bg-gray-50/80 p-4 rounded-xl border border-gray-200">
                 <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                     
                     <!-- Search Input -->
                     <div>
                         <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Search</label>
-                        <input type="text" name="search" value="{{ request('search') }}" placeholder="Search ID, Name, Dept..." 
-                               class="w-full p-2 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-[var(--cjc-navy)]">
+                        <div class="relative">
+                            <input type="text" 
+                                   name="search" 
+                                   value="{{ request('search') }}" 
+                                   @input="submitDebounced()"
+                                   placeholder="Search ID, Name, Dept..." 
+                                   class="w-full pl-8 pr-8 p-2 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-[var(--cjc-navy)] focus:ring-1 focus:ring-[var(--cjc-navy)]">
+                            <svg class="w-4 h-4 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0" />
+                            </svg>
+                            @if(request('search'))
+                                <a href="{{ request()->fullUrlWithQuery(['search' => null]) }}" 
+                                   title="Clear Search"
+                                   class="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </a>
+                            @endif
+                        </div>
                     </div>
 
 @php

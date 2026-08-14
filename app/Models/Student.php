@@ -109,17 +109,32 @@ class Student extends Model
 
     public function scopeSearch($query, $term)
     {
-        // BUG-A04 FIX: Replace orWhereHas() correlated subquery with a LEFT JOIN.
-        // orWhereHas() generates an EXISTS subquery per row — O(n) at scale.
-        // A single LEFT JOIN lets MySQL use indexes and scan once.
+        $term = trim($term);
+        $driver = \Illuminate\Support\Facades\DB::connection()->getDriverName();
+        $fullNameExpr = $driver === 'sqlite' 
+            ? "students.first_name || ' ' || COALESCE(students.middle_name, '') || ' ' || students.last_name"
+            : "CONCAT(students.first_name, ' ', COALESCE(students.middle_name, ''), ' ', students.last_name)";
+
+        $reversedNameExpr = $driver === 'sqlite'
+            ? "students.last_name || ' ' || students.first_name"
+            : "CONCAT(students.last_name, ' ', students.first_name)";
+
         return $query
             ->leftJoin('academic_departments', 'students.department_id', '=', 'academic_departments.id')
-            ->where(function ($q) use ($term) {
-                $q->where('students.id',         'LIKE', "%{$term}%")
-                  ->orWhere('students.last_name',  'LIKE', "%{$term}%")
-                  ->orWhere('students.first_name',  'LIKE', "%{$term}%")
-                  ->orWhere('academic_departments.name', 'LIKE', "%{$term}%");
+            ->leftJoin('academic_programs',    'students.program_id',    '=', 'academic_programs.id')
+            ->where(function ($q) use ($term, $fullNameExpr, $reversedNameExpr) {
+                $q->where('students.id',               'LIKE', "%{$term}%")
+                  ->orWhere('students.last_name',       'LIKE', "%{$term}%")
+                  ->orWhere('students.first_name',      'LIKE', "%{$term}%")
+                  ->orWhere('students.middle_name',     'LIKE', "%{$term}%")
+                  ->orWhere('students.patron_category', 'LIKE', "%{$term}%")
+                  ->orWhere('students.year_level',      'LIKE', "%{$term}%")
+                  ->orWhere('academic_departments.name','LIKE', "%{$term}%")
+                  ->orWhere('academic_programs.name',   'LIKE', "%{$term}%")
+                  ->orWhere('academic_programs.code',   'LIKE', "%{$term}%")
+                  ->orWhereRaw("{$fullNameExpr} LIKE ?", ["%{$term}%"])
+                  ->orWhereRaw("{$reversedNameExpr} LIKE ?", ["%{$term}%"]);
             })
-            ->select('students.*'); // prevent JOIN columns from shadowing student columns
+            ->select('students.*');
     }
 }

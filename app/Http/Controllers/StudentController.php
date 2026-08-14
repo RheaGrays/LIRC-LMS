@@ -22,18 +22,31 @@ class StudentController extends Controller
             ->leftJoin('academic_departments', 'students.department_id', '=', 'academic_departments.id', 'left', false)
             ->leftJoin('academic_programs',    'students.program_id',    '=', 'academic_programs.id', 'left', false);
 
-        // Search ID, Name, Department/Program, Patron Category
+        // Search ID, Name, Department/Program, Patron Category, Year Level
         if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('students.id',        'like', "%{$search}%")
-                  ->orWhere('students.last_name',  'like', "%{$search}%")
-                  ->orWhere('students.first_name',  'like', "%{$search}%")
+            $search = trim($request->search);
+            $driver = \Illuminate\Support\Facades\DB::connection()->getDriverName();
+            
+            $fullNameExpr = $driver === 'sqlite' 
+                ? "students.first_name || ' ' || COALESCE(students.middle_name, '') || ' ' || students.last_name"
+                : "CONCAT(students.first_name, ' ', COALESCE(students.middle_name, ''), ' ', students.last_name)";
+
+            $reversedNameExpr = $driver === 'sqlite'
+                ? "students.last_name || ' ' || students.first_name"
+                : "CONCAT(students.last_name, ' ', students.first_name)";
+
+            $query->where(function($q) use ($search, $fullNameExpr, $reversedNameExpr) {
+                $q->where('students.id',               'like', "%{$search}%")
+                  ->orWhere('students.last_name',       'like', "%{$search}%")
+                  ->orWhere('students.first_name',      'like', "%{$search}%")
+                  ->orWhere('students.middle_name',     'like', "%{$search}%")
                   ->orWhere('students.patron_category', 'like', "%{$search}%")
-                  // PERF-01 FIX: Direct column references on already-joined tables
-                  ->orWhere('academic_departments.name', 'like', "%{$search}%")
-                  ->orWhere('academic_programs.name',    'like', "%{$search}%")
-                  ->orWhere('academic_programs.code',    'like', "%{$search}%");
+                  ->orWhere('students.year_level',      'like', "%{$search}%")
+                  ->orWhere('academic_departments.name','like', "%{$search}%")
+                  ->orWhere('academic_programs.name',   'like', "%{$search}%")
+                  ->orWhere('academic_programs.code',   'like', "%{$search}%")
+                  ->orWhereRaw("{$fullNameExpr} LIKE ?", ["%{$search}%"])
+                  ->orWhereRaw("{$reversedNameExpr} LIKE ?", ["%{$search}%"]);
             });
         }
 
