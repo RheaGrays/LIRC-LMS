@@ -39,22 +39,22 @@ class StudentController extends Controller
 
         // Filter by Patron Category
         if ($request->filled('category')) {
-            $query->where('patron_category', $request->category);
+            $query->where('students.patron_category', $request->category);
         }
 
         // Filter by Department
         if ($request->filled('department_id')) {
-            $query->where('department_id', $request->department_id);
+            $query->where('students.department_id', $request->department_id);
         }
 
         // Filter by Program
         if ($request->filled('program_id')) {
-            $query->where('program_id', $request->program_id);
+            $query->where('students.program_id', $request->program_id);
         }
 
         // Filter by Year Level
         if ($request->filled('year_level')) {
-            $query->where('year_level', $request->year_level);
+            $query->where('students.year_level', $request->year_level);
         }
 
         // Sorting
@@ -62,12 +62,12 @@ class StudentController extends Controller
         $sortDir = strtolower($request->input('sort_dir', 'asc')) === 'desc' ? 'desc' : 'asc';
 
         $sortFieldsMap = [
-            'name'            => ['last_name', 'first_name'],
-            'last_name'       => ['last_name', 'first_name'],
-            'id'              => ['id'],
-            'department_id'   => ['department_id', 'last_name'],
-            'year_level'      => ['year_level', 'last_name'],
-            'patron_category' => ['patron_category', 'last_name'],
+            'name'            => ['students.last_name', 'students.first_name'],
+            'last_name'       => ['students.last_name', 'students.first_name'],
+            'id'              => ['students.id'],
+            'department_id'   => ['students.department_id', 'students.last_name'],
+            'year_level'      => ['students.year_level', 'students.last_name'],
+            'patron_category' => ['students.patron_category', 'students.last_name'],
             'violations_count'=> ['violations_count'],
         ];
 
@@ -76,7 +76,7 @@ class StudentController extends Controller
                 $query->orderBy($col, $sortDir);
             }
         } else {
-            $query->orderBy('last_name', 'asc')->orderBy('first_name', 'asc');
+            $query->orderBy('students.last_name', 'asc')->orderBy('students.first_name', 'asc');
         }
 
         $students = $query->paginate(20)->withQueryString();

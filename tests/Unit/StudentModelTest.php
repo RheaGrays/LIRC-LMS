@@ -24,7 +24,7 @@ class StudentModelTest extends TestCase
 
     public function test_scope_search_finds_students_by_name_and_id()
     {
-        AcademicDepartment::create(['id' => 1, 'name' => 'Computer Science', 'code' => 'CS']);
+        AcademicDepartment::create(['id' => 1, 'name' => 'Computer Science', 'code' => 'CS', 'level' => 'college']);
         
         Student::create(['id' => '2024-001', 'first_name' => 'Alice', 'last_name' => 'Smith', 'department_id' => 1]);
         Student::create(['id' => '2024-002', 'first_name' => 'Bob', 'last_name' => 'Jones']);

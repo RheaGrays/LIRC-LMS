@@ -26,7 +26,8 @@ class MobilePhotoSyncTest extends TestCase
     public function it_uploads_and_checks_photo_for_session()
     {
         $createRes = $this->postJson('/api/register/photo-session/create');
-        $sessionId = $createRes->json('session_id');
+        $sessionId  = $createRes->json('session_id');
+        $ownerToken = $createRes->json('owner_token');
 
         $samplePhoto = 'data:image/jpeg;base64,' . base64_encode('fake_image_bytes');
 
@@ -42,8 +43,19 @@ class MobilePhotoSyncTest extends TestCase
 
         $checkRes->assertStatus(200)
             ->assertJson([
+                'status' => 'completed',
+            ]);
+
+        $consumeRes = $this->postJson('/api/register/photo-session/consume', [
+            'session_id'  => $sessionId,
+            'owner_token' => $ownerToken,
+        ]);
+
+        $consumeRes->assertStatus(200)
+            ->assertJson([
                 'status'       => 'completed',
                 'photoDataUrl' => $samplePhoto,
-            ]);
+        ]);
     }
+
 }
