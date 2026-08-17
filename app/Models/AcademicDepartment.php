@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class AcademicDepartment extends Model
 {
     //
-    protected $fillable = ['level', 'name'];
+    protected $fillable = ['level', 'name', 'code'];
 
     public function programs()
     {

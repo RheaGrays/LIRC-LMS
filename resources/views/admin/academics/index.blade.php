@@ -68,6 +68,10 @@
                         <span class="badge-moderate shrink-0">Basic Education</span>
                     @endif
 
+                    @if($dept->code)
+                        <span class="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-md text-xs font-mono font-bold shrink-0">{{ $dept->code }}</span>
+                    @endif
+
                     <h4 class="font-bold text-base text-[var(--cjc-navy)] truncate">{{ $dept->name }}</h4>
 
                     <span class="px-2.5 py-0.5 bg-gray-100 text-gray-600 border border-gray-200 rounded-full text-xs font-semibold shrink-0">
@@ -89,7 +93,7 @@
                     <div class="w-px h-4 bg-gray-200"></div>
 
                     <button type="button" 
-                            onclick="openEditDept({{ $dept->id }}, '{{ addslashes($dept->name) }}', '{{ $dept->level }}')" 
+                            onclick="openEditDept({{ $dept->id }}, '{{ addslashes($dept->name) }}', '{{ $dept->level }}', '{{ addslashes($dept->code ?? '') }}')" 
                             class="text-blue-600 hover:text-blue-800 font-medium text-xs">
                         Edit
                     </button>
@@ -209,6 +213,9 @@
 {{-- ══════════════════════════════════════════════════════════
      ADD DEPARTMENT MODAL
 ══════════════════════════════════════════════════════════ --}}
+{{-- ══════════════════════════════════════════════════════════
+     ADD DEPARTMENT MODAL
+══════════════════════════════════════════════════════════ --}}
 <div id="add-dept-modal" class="fixed inset-0 z-50 hidden">
     <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="document.getElementById('add-dept-modal').classList.add('hidden')"></div>
     <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-xl shadow-2xl p-6">
@@ -220,12 +227,18 @@
         </div>
         <form id="add-dept-form" action="{{ route('admin.academics.departments.store') }}" method="POST" class="space-y-4">
             @csrf
-            <div>
-                <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Level</label>
-                <select name="level" id="add-dept-level" class="input no-tomselect" required>
-                    <option value="college" {{ old('level') === 'college' ? 'selected' : '' }}>College</option>
-                    <option value="basic_ed" {{ old('level') === 'basic_ed' ? 'selected' : '' }}>Basic Education</option>
-                </select>
+            <div class="flex gap-4">
+                <div class="flex-1">
+                    <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Level</label>
+                    <select name="level" id="add-dept-level" class="input no-tomselect" required>
+                        <option value="college" {{ old('level') === 'college' ? 'selected' : '' }}>College</option>
+                        <option value="basic_ed" {{ old('level') === 'basic_ed' ? 'selected' : '' }}>Basic Education</option>
+                    </select>
+                </div>
+                <div class="w-36">
+                    <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Code (Optional)</label>
+                    <input type="text" name="code" id="add-dept-code" value="{{ old('code') }}" class="input" placeholder="e.g. CCIS">
+                </div>
             </div>
             <div>
                 <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Department Name</label>
@@ -303,12 +316,18 @@
         </div>
         <form id="edit-dept-form" method="POST" class="space-y-4">
             @csrf @method('PUT')
-            <div>
-                <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Level</label>
-                <select name="level" id="edit-dept-level" class="input no-tomselect" required>
-                    <option value="college">College</option>
-                    <option value="basic_ed">Basic Education</option>
-                </select>
+            <div class="flex gap-4">
+                <div class="flex-1">
+                    <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Level</label>
+                    <select name="level" id="edit-dept-level" class="input no-tomselect" required>
+                        <option value="college">College</option>
+                        <option value="basic_ed">Basic Education</option>
+                    </select>
+                </div>
+                <div class="w-36">
+                    <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Code (Optional)</label>
+                    <input type="text" name="code" id="edit-dept-code" class="input" placeholder="e.g. CCIS">
+                </div>
             </div>
             <div>
                 <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Department Name</label>
@@ -404,10 +423,11 @@
         document.getElementById('add-prog-modal').classList.remove('hidden');
     }
 
-    function openEditDept(id, name, level) {
+    function openEditDept(id, name, level, code = '') {
         document.getElementById('edit-dept-form').action = `/admin/academics/departments/${id}`;
         document.getElementById('edit-dept-name').value = name;
         document.getElementById('edit-dept-level').value = level;
+        document.getElementById('edit-dept-code').value = code || '';
         document.getElementById('edit-dept-modal').classList.remove('hidden');
     }
 

@@ -22,8 +22,8 @@ class StudentModelTest extends TestCase
         $this->assertEquals('1', $activeStudents->first()->id);
     }
 
-    public function test_scope_search_finds_students_by_name_and_id()
-    {
+    public function test_search_scope_finds_students_by_various_criteria()
+    {       
         AcademicDepartment::create(['id' => 1, 'name' => 'Computer Science', 'code' => 'CS', 'level' => 'college']);
         
         Student::create(['id' => '2024-001', 'first_name' => 'Alice', 'last_name' => 'Smith', 'department_id' => 1]);

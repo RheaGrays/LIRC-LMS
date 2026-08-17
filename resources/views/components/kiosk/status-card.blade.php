@@ -4,8 +4,84 @@
          'border-orange-500': result?.status === 'offline'
      }">
 
-    <!-- Error & Cooldown State -->
-    <template x-if="result?.status === 'error' || result?.status === 'cooldown'">
+    <!-- Unregistered Student State -->
+    <template x-if="result?.status === 'error' && result?.action === 'unregistered'">
+        <div class="p-8 pb-10 text-center flex-1 flex flex-col items-center justify-center relative w-full overflow-hidden">
+            
+            <!-- Floating Sparkles (Background) -->
+            <div class="absolute inset-0 pointer-events-none z-0">
+                <div class="absolute top-[15%] left-[25%] w-2 h-2 bg-blue-600 transform rotate-45 opacity-60 rounded-sm"></div>
+                <div class="absolute top-[22%] left-[28%] w-2 h-2 border border-blue-300 transform rotate-45 opacity-60"></div>
+                <div class="absolute top-[35%] left-[22%] text-blue-600 font-bold opacity-60 rotate-[15deg] text-xl leading-none">+</div>
+                
+                <div class="absolute top-[18%] right-[25%] w-2 h-2 bg-blue-600 transform rotate-45 opacity-60 rounded-sm"></div>
+                <div class="absolute top-[26%] right-[28%] w-2 h-2 border border-blue-300 transform rotate-45 opacity-60"></div>
+                <div class="absolute top-[32%] right-[20%] w-2.5 h-2.5 border-[1.5px] border-blue-600 transform rotate-45 opacity-60 rounded-sm"></div>
+            </div>
+
+            <!-- Info / Registration Icon -->
+            <div class="relative z-10 mb-4 mt-2">
+                <div class="w-32 h-32 rounded-full bg-blue-50/70 flex items-center justify-center mx-auto relative before:absolute before:inset-2 before:rounded-full before:bg-blue-50 before:shadow-[0_0_30px_rgba(37,99,235,0.15)]">
+                    <div class="w-[85px] h-[85px] rounded-full bg-white border-[3px] border-blue-100 flex items-center justify-center shadow-md relative z-10">
+                        <svg class="w-[45px] h-[45px] text-[#0f2744]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Text Content -->
+            <h3 class="text-[34px] font-extrabold text-[#08152c] mb-1 relative z-10 tracking-tight">Registration Required</h3>
+            
+            <!-- Decorative Line -->
+            <div class="flex items-center justify-center gap-2 mb-3 relative z-10">
+                <div class="h-[1.5px] w-8 bg-blue-400"></div>
+                <div class="w-1.5 h-1.5 rounded-full bg-blue-600"></div>
+                <div class="h-[1.5px] w-8 bg-blue-400"></div>
+            </div>
+
+            <p class="text-[16px] text-gray-600 font-medium relative z-10 max-w-[500px]" x-text="result?.message"></p>
+
+            <!-- ID Display Box -->
+            <div class="mt-6 mb-6 w-full max-w-[550px] bg-blue-50/50 border border-blue-100 rounded-[16px] p-4 flex items-center justify-between shadow-[0_4px_20px_rgba(0,0,0,0.02)] relative z-10 text-left mx-auto">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-blue-100/70 text-[#0f2744] flex items-center justify-center font-bold">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="7" width="18" height="12" rx="2" />
+                            <circle cx="8" cy="12" r="2" />
+                            <path d="M5 16c0-1.5 1.5-3 3-3s3 1.5 3 3" />
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Scanned ID Number</div>
+                        <div class="text-[16px] font-bold text-[#08152c] font-['JetBrains_Mono']" x-text="result?.student?.id"></div>
+                    </div>
+                </div>
+                <span class="px-3 py-1 bg-amber-100 text-amber-800 text-xs font-bold rounded-full uppercase tracking-wider">Unregistered</span>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-col gap-3 w-full max-w-[550px] mx-auto relative z-10">
+                <a :href="'/register?student_id=' + encodeURIComponent(result?.student?.id || '')" 
+                   class="w-full p-[18px] bg-gradient-to-b from-[#0f2744] to-[#0a192f] text-white rounded-[14px] flex items-center justify-center gap-3 shadow-[0_8px_20px_rgba(15,39,68,0.25)] hover:shadow-[0_8px_25px_rgba(15,39,68,0.35)] hover:from-[#163a66] hover:to-[#0f2744] transition-all no-underline">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    <span class="text-[17px] font-bold tracking-wide">Register This Student ID</span>
+                </a>
+                
+                <button @click="resetScan()" class="w-full p-[14px] bg-white border border-gray-200 text-gray-700 rounded-[14px] flex items-center justify-center gap-2 hover:bg-gray-50 transition-all text-[15px] font-bold tracking-wide shadow-sm">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 8V6a2 2 0 012-2h3M5 16v2a2 2 0 002 2h3M19 8V6a2 2 0 00-2-2h-3M19 16v2a2 2 0 01-2 2h-3" />
+                    </svg>
+                    Scan Another ID
+                </button>
+            </div>
+        </div>
+    </template>
+
+    <!-- Error & Cooldown State (Excludes Unregistered) -->
+    <template x-if="(result?.status === 'error' && result?.action !== 'unregistered') || result?.status === 'cooldown'">
         <div class="p-8 pb-10 text-center flex-1 flex flex-col items-center justify-center relative w-full overflow-hidden">
             
             <!-- Floating Sparkles (Background) -->
@@ -50,7 +126,7 @@
 
             <p class="text-[17px] text-[#e31818] font-medium relative z-10" x-text="result?.message"></p>
 
-            <!-- Info Box (Only for Access Denied) -->
+            <!-- Info Box (Only for Access Denied / Inactive) -->
             <template x-if="result?.status === 'error'">
                 <div class="mt-8 mb-6 w-full max-w-[550px] bg-white border border-gray-100 rounded-[16px] p-5 flex items-center gap-5 shadow-[0_4px_20px_rgba(0,0,0,0.03)] relative z-10 text-left mx-auto">
                     <div class="w-[52px] h-[52px] rounded-[14px] bg-red-50 flex items-center justify-center shrink-0">
@@ -64,8 +140,8 @@
                     </div>
                     <div class="h-10 w-px bg-gray-200 shrink-0"></div>
                     <div>
-                        <h4 class="text-[#08152c] font-bold text-[15px] mb-0.5">Unregistered Student?</h4>
-                        <p class="text-gray-500 text-[13px] m-0">Check if the ID is correct, or register the student in the system first.</p>
+                        <h4 class="text-[#08152c] font-bold text-[15px] mb-0.5" x-text="result?.action === 'inactive' ? 'Inactive Account' : 'Access Restricted'"></h4>
+                        <p class="text-gray-500 text-[13px] m-0" x-text="result?.action === 'inactive' ? 'This patron account is marked inactive. Please consult the librarian.' : 'Please verify with the library administrator.'"></p>
                     </div>
                 </div>
             </template>

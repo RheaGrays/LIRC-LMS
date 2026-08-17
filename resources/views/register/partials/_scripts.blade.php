@@ -125,6 +125,16 @@
                     this.patronCategories = ['Student','Employee','Post Graduate','Alumni','Visitor'];
                 }
                 this.patronCategoriesLoaded = true;
+
+                // Pre-fill student ID and category from URL query parameters (e.g. from kiosk redirect)
+                const urlParams = new URLSearchParams(window.location.search);
+                const prefilledId = urlParams.get('student_id') || urlParams.get('prefill_id') || urlParams.get('id');
+                if (prefilledId) {
+                    this.form.studentId = prefilledId.trim();
+                    if (!this.form.patronCategory) {
+                        this.form.patronCategory = 'Student';
+                    }
+                }
             },
 
             updateTime() {

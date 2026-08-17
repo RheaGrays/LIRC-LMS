@@ -117,14 +117,32 @@ class StudentRegistrationController extends Controller
         $student->patron_category = $validated['patronCategory'];
 
         if ($isStudent) {
-            // Look up the department by name
-            $dept = \App\Models\AcademicDepartment::query()->where('name', '=', $validated['college'])->first();
+            // Look up the department by name or code
+            $deptNameOrCode = trim($validated['college']);
+            $dept = \App\Models\AcademicDepartment::query()
+                ->where('name', '=', $deptNameOrCode)
+                ->orWhere(function ($q) use ($deptNameOrCode) {
+                    $q->whereNotNull('code')->where('code', '=', $deptNameOrCode);
+                })
+                ->first();
             $student->department_id = $dept?->id;
 
-            // Look up the program by name (for college level)
+            // Look up the program by name or code (for college level, scoped to department when available)
             if ($validated['level'] === 'college' && !empty($validated['department'])) {
-                $prog = \App\Models\AcademicProgram::query()->where('name', '=', $validated['department'])->first();
+                $progNameOrCode = trim($validated['department']);
+                $progQuery = \App\Models\AcademicProgram::query();
+                if ($dept) {
+                    $progQuery->where('department_id', $dept->id);
+                }
+                $prog = (clone $progQuery)->where('name', '=', $progNameOrCode)->first()
+                     ?: (clone $progQuery)->whereNotNull('code')->where('code', '=', $progNameOrCode)->first()
+                     ?: \App\Models\AcademicProgram::query()->where('name', '=', $progNameOrCode)->first()
+                     ?: \App\Models\AcademicProgram::query()->whereNotNull('code')->where('code', '=', $progNameOrCode)->first();
+
                 $student->program_id = $prog?->id;
+                if ($prog && $prog->department_id && !$student->department_id) {
+                    $student->department_id = $prog->department_id;
+                }
             }
 
             $student->year_level = $validated['yearLevel'];

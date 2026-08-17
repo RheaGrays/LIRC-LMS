@@ -36,3 +36,5 @@ lems.host.json
 !/storage/framework/sessions/.gitignore
 !/storage/framework/views/.gitignore
 !/storage/logs/.gitignore
+*.sqlite
+

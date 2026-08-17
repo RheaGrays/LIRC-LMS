@@ -385,9 +385,17 @@ function createWindow() {
                 <div class="card">
                     <h2>${heading}</h2>
                     <p>${message}</p>
-                    <p><strong>${serverError ? 'How to debug:' : 'To resolve this on the Host PC:'}</strong></p>
-                    <span class="code">${hint}</span>
                     <button onclick="window.location.reload()">Retry Connection</button>
+                    <p style="color:#64748b; font-size:12px; margin-top:14px;" id="auto-retry-msg">Auto-retrying in <span id="countdown" style="font-weight:bold; color:#38bdf8;">10</span>s...</p>
+                    <script>
+                        let c = 10;
+                        const el = document.getElementById('countdown');
+                        setInterval(() => {
+                            c--;
+                            if (el) el.textContent = c;
+                            if (c <= 0) window.location.reload();
+                        }, 1000);
+                    </script>
                 </div>
             </body>
             </html>

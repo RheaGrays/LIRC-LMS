@@ -130,6 +130,7 @@ class Student extends Model
                   ->orWhere('students.patron_category', 'LIKE', "%{$term}%")
                   ->orWhere('students.year_level',      'LIKE', "%{$term}%")
                   ->orWhere('academic_departments.name','LIKE', "%{$term}%")
+                  ->orWhere('academic_departments.code','LIKE', "%{$term}%")
                   ->orWhere('academic_programs.name',   'LIKE', "%{$term}%")
                   ->orWhere('academic_programs.code',   'LIKE', "%{$term}%")
                   ->orWhereRaw("{$fullNameExpr} LIKE ?", ["%{$term}%"])

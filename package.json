@@ -63,7 +63,7 @@
         "axios": "^1.7.4",
         "concurrently": "^9.0.1",
         "electron": "^43.2.0",
-        "electron-builder": "^25.1.8",
+        "electron-builder": "^26.15.3",
         "laravel-vite-plugin": "^1.2.0",
         "postcss": "^8.4.31",
         "sharp": "^0.35.3",

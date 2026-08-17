@@ -28,6 +28,7 @@ class AcademicController extends Controller
                 'required', 'string', 'max:255',
                 Rule::unique('academic_departments', 'name'),
             ],
+            'code'  => 'nullable|string|max:50',
         ], [
             'name.unique' => "Department \"{$name}\" already exists.",
         ]);
@@ -35,6 +36,7 @@ class AcademicController extends Controller
         AcademicDepartment::query()->create([
             'level' => $request->level,
             'name'  => $name,
+            'code'  => $request->filled('code') ? strtoupper(trim($request->code)) : null,
         ]);
 
         // BUG-A05 FIX: Bust StudentController's cached departments list so the
@@ -55,6 +57,7 @@ class AcademicController extends Controller
                 'required', 'string', 'max:255',
                 Rule::unique('academic_departments', 'name')->ignore($id),
             ],
+            'code'  => 'nullable|string|max:50',
         ], [
             'name.unique' => "Department \"{$name}\" already exists.",
         ]);
@@ -62,6 +65,7 @@ class AcademicController extends Controller
         AcademicDepartment::query()->findOrFail($id)->update([
             'level' => $request->level,
             'name'  => $name,
+            'code'  => $request->filled('code') ? strtoupper(trim($request->code)) : null,
         ]);
 
         Cache::forget('academic_departments_all');
@@ -161,7 +165,7 @@ class AcademicController extends Controller
         return response()->json(
             AcademicDepartment::query()
                 ->with(['programs:id,department_id,name,code,years'])
-                ->get(['id', 'name', 'level'])
+                ->get(['id', 'name', 'level', 'code'])
         );
     }
 }

@@ -32,6 +32,11 @@ document.addEventListener('alpine:init', () => {
         init() {
             window.addEventListener('online', () => this.isOnline = true);
             window.addEventListener('offline', () => this.isOnline = false);
+            window.addEventListener('network-status-changed', (e) => {
+                if (e.detail && typeof e.detail.isOnline === 'boolean') {
+                    this.isOnline = e.detail.isOnline;
+                }
+            });
             
             // Listen for custom events from the offline queue JS
             window.addEventListener('queue-updated', (e) => {

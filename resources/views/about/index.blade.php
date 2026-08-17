@@ -579,7 +579,7 @@
                         </div>
                         <div>
                             <h3 class="font-extrabold text-sm text-[var(--cjc-navy)]">Rhea Grace Balatero</h3>
-                            <p class="font-bold text-[var(--cjc-red)] uppercase tracking-wider mt-1" style="font-size: 10px;">UI/UX Designer</p>
+                            <p class="font-bold text-[var(--cjc-red)] uppercase tracking-wider mt-1" style="font-size: 10px;">Data Analyst / UI/UX Designer</p>
                             <span class="inline-block mt-2 px-2.5 py-1 rounded-full text-[9px] font-extrabold bg-blue-50 text-blue-700 border border-blue-100 uppercase tracking-tight">Frontend & Kiosk UI</span>
                         </div>
                     </div>

@@ -43,6 +43,7 @@ class StudentController extends Controller
                   ->orWhere('students.patron_category', 'like', "%{$search}%")
                   ->orWhere('students.year_level',      'like', "%{$search}%")
                   ->orWhere('academic_departments.name','like', "%{$search}%")
+                  ->orWhere('academic_departments.code','like', "%{$search}%")
                   ->orWhere('academic_programs.name',   'like', "%{$search}%")
                   ->orWhere('academic_programs.code',   'like', "%{$search}%")
                   ->orWhereRaw("{$fullNameExpr} LIKE ?", ["%{$search}%"])

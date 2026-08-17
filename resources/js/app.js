@@ -3,6 +3,19 @@ import './bootstrap';
 import Alpine from 'alpinejs';
 window.Alpine = Alpine;
 
+// Global error boundary — catch uncaught exceptions and trigger fallback if Alpine fails
+window.addEventListener('error', (event) => {
+    console.error('[LEMS] Uncaught error:', event.error || event.message);
+    if (!window.Alpine || !document.querySelector('[x-data]')) {
+        const fallback = document.getElementById('js-crash-fallback');
+        if (fallback) fallback.style.display = 'flex';
+    }
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+    console.error('[LEMS] Unhandled promise rejection:', event.reason);
+});
+
 import QRCode from 'qrcode';
 window.QRCode = QRCode;
 
@@ -21,4 +34,10 @@ import webcamApp from './register/webcam';
 
 Alpine.data('webcamApp', webcamApp);
 
-Alpine.start();
+try {
+    Alpine.start();
+} catch (e) {
+    console.error('[LEMS] Failed to start Alpine.js:', e);
+    const fallback = document.getElementById('js-crash-fallback');
+    if (fallback) fallback.style.display = 'flex';
+}

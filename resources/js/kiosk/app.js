@@ -49,6 +49,11 @@ const registerApp = () => {
         lastLogId: window.kioskLastLogId || 0,
         pollingInterval: null,
 
+        // Network & Connectivity State
+        isOffline: !navigator.onLine,
+        consecutiveFailures: 0,
+        networkHealthTimer: null,
+
         init() {
             // Target hints to scan only relevant formats (Code 128, Code 39, EAN 13, QR Code, UPC)
             // Eliminates 12 unused decoders per frame, freeing 85% CPU for 60 FPS smooth video
@@ -79,6 +84,12 @@ const registerApp = () => {
             QueueManager.startSyncTimer();
             this.startSlideshow();
             this.startRealtimePolling();
+
+            // Network health monitoring & online/offline listeners
+            window.addEventListener('online', () => this.handleNetworkEvent(true));
+            window.addEventListener('offline', () => this.handleNetworkEvent(false));
+            this.checkNetworkHealth();
+            this.networkHealthTimer = setInterval(() => this.checkNetworkHealth(), 15000);
 
             // CSRF Token Keepalive (Refreshes token every 4 mins to prevent 419 Page Expired)
             setInterval(async () => {
@@ -497,9 +508,49 @@ const registerApp = () => {
             return 'check_in'; // safe default
         },
         
+        setOnlineStatus(online) {
+            const changed = this.isOffline !== !online;
+            this.isOffline = !online;
+            if (online) {
+                this.consecutiveFailures = 0;
+            }
+            if (changed) {
+                window.dispatchEvent(new CustomEvent('network-status-changed', { detail: { isOnline: online } }));
+                if (online) {
+                    QueueManager.sync().catch(() => {});
+                }
+            }
+        },
+
+        handleNetworkEvent(online) {
+            if (online) {
+                this.checkNetworkHealth();
+            } else {
+                this.setOnlineStatus(false);
+            }
+        },
+
+        async checkNetworkHealth() {
+            try {
+                const res = await fetch('/csrf-token', {
+                    headers: { 'Accept': 'application/json' },
+                    signal: AbortSignal.timeout(4000)
+                });
+                if (res.ok) {
+                    this.setOnlineStatus(true);
+                } else {
+                    this.consecutiveFailures++;
+                    if (this.consecutiveFailures >= 2) this.setOnlineStatus(false);
+                }
+            } catch (e) {
+                this.consecutiveFailures++;
+                if (this.consecutiveFailures >= 2) this.setOnlineStatus(false);
+            }
+        },
+
         async performOnlineCheckin(id) {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 20000); // Increased to 20s for slow school networks
+            const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout to prevent locking kiosk line
             
             try {
                 const processRes = await fetch('/kiosk/process', {
@@ -514,26 +565,42 @@ const registerApp = () => {
                 });
                 clearTimeout(timeoutId);
                 
+                if (processRes.status === 503) {
+                    this.consecutiveFailures++;
+                    return { status: 'error', code: 503, message: 'Server is currently busy.' };
+                }
+
+                if (!processRes.ok && processRes.status >= 500) {
+                    this.consecutiveFailures++;
+                    if (this.consecutiveFailures >= 2) this.setOnlineStatus(false);
+                    throw new Error(`Server returned HTTP ${processRes.status}`);
+                }
+
+                this.setOnlineStatus(true);
                 const processData = await processRes.json();
                 if (processData.status === 'error') {
-                    return { status: 'error', message: processData.message, student: processData.student };
+                    return { 
+                        status: 'error', 
+                        action: processData.action || 'error',
+                        message: processData.message, 
+                        student: processData.student 
+                    };
                 }
                 return processData;
             } catch (e) {
                 clearTimeout(timeoutId);
-                if (e.name === 'AbortError') {
-                    return { status: 'error', message: 'Database query timed out. Please try again.' };
-                }
-                return { status: 'error', message: 'A system error occurred. Please try again.' };
+                this.consecutiveFailures++;
+                if (this.consecutiveFailures >= 2) this.setOnlineStatus(false);
+                throw e;
             }
         },
         
         async fetchOccupancy() {
-            // Removed navigator.onLine check to allow localhost fallback
             try {
-                const res = await fetch('/kiosk/occupancy');
+                const res = await fetch('/kiosk/occupancy', { signal: AbortSignal.timeout(5000) });
                 if (res.ok) {
                     this.occupancy = await res.json();
+                    this.setOnlineStatus(true);
                 } else {
                     console.warn('[LEMS Kiosk] Occupancy fetch returned status:', res.status);
                 }
@@ -554,14 +621,14 @@ const registerApp = () => {
         },
         
         async pollRealtime() {
-            // Removed navigator.onLine check to allow localhost fallback
             try {
-                const res = await fetch(`/kiosk/latest-scan?after_id=${this.lastLogId}`);
+                const res = await fetch(`/kiosk/latest-scan?after_id=${this.lastLogId}`, { signal: AbortSignal.timeout(4000) });
                 if (!res.ok) return;
                 
                 const data = await res.json();
                 if (!data) return;
 
+                this.setOnlineStatus(true);
                 const events = Array.isArray(data) ? data : [data];
                 let newEvents = events.filter(e => e && e.seq_id > this.lastLogId);
 
@@ -575,7 +642,7 @@ const registerApp = () => {
                     this.processRemoteQueue();
                 }
             } catch (e) {
-                console.warn('[LEMS Kiosk] Realtime polling network error:', e.message);
+                // Ignore transient polling errors
             }
         },
         

@@ -8,6 +8,10 @@
                           this.timer = setTimeout(() => {
                               $el.submit();
                           }, 350);
+                      },
+                      submitImmediate() {
+                          clearTimeout(this.timer);
+                          $el.submit();
                       }
                   }"
                   class="mb-6 space-y-3 bg-gray-50/80 p-4 rounded-xl border border-gray-200">
@@ -21,6 +25,7 @@
                                    name="search" 
                                    value="{{ request('search') }}" 
                                    @input="submitDebounced()"
+                                   @keydown.enter.prevent="submitImmediate()"
                                    placeholder="Search ID, Name, Dept..." 
                                    class="w-full pl-8 pr-8 p-2 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-[var(--cjc-navy)] focus:ring-1 focus:ring-[var(--cjc-navy)]">
                             <svg class="w-4 h-4 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
