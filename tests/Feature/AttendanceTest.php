@@ -149,4 +149,34 @@ class AttendanceTest extends TestCase
                      'max' => 150
                  ]);
     }
+
+    public function test_push_scan_event_maintains_monotonic_sequence_and_buffer()
+    {
+        Student::create([
+            'id' => '2024-00005',
+            'first_name' => 'Alice',
+            'last_name' => 'Wonder',
+            'status' => 'active'
+        ]);
+
+        $res1 = $this->withoutMiddleware()->postJson('/kiosk/process', ['student_id' => '2024-00005']);
+        $res1->assertStatus(200);
+        $seq1 = $res1->json('seq_id');
+
+        $this->assertNotNull($seq1);
+
+        $queue = Cache::get('kiosk_scan_events_queue', []);
+        $this->assertNotEmpty($queue);
+        $this->assertEquals($seq1, end($queue)['seq_id']);
+    }
+
+    public function test_kiosk_log_returns_404_for_unknown_student_allowing_offline_queue_discard()
+    {
+        $response = $this->withoutMiddleware()->postJson('/kiosk/log', [
+            'student_id' => 'INVALID-NONEXISTENT-ID',
+            'action' => 'check_in'
+        ]);
+
+        $response->assertStatus(404);
+    }
 }

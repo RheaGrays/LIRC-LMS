@@ -120,9 +120,10 @@ Route::prefix('admin')->name('admin.')->middleware('auth.admin')->group(function
     Route::get('/audit', [AuditController::class, 'index'])->name('audit.index');
 
     // Sections / Section Counter (all roles)
-    Route::get('/sections',        [SectionController::class, 'index'])->name('sections.index');
-    Route::get('/statistics',      [SectionController::class, 'statistics'])->name('statistics.index');
-    Route::get('/sections/latest', [SectionController::class, 'latest'])->name('sections.latest');
+    Route::get('/sections',                 [SectionController::class, 'index'])->name('sections.index');
+    Route::get('/statistics',               [SectionController::class, 'statistics'])->name('statistics.index');
+    Route::get('/statistics/export-hourly', [SectionController::class, 'exportHourly'])->name('statistics.export-hourly');
+    Route::get('/sections/latest',          [SectionController::class, 'latest'])->name('sections.latest');
     Route::post('/sections/upsert',[SectionController::class, 'upsert'])->name('sections.upsert');
     Route::post('/sections/upload-image', [SectionController::class, 'uploadImage'])->name('sections.upload-image');
 

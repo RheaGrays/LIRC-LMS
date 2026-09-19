@@ -37,9 +37,13 @@ return [
             'database' => env('DB_DATABASE', database_path('database.sqlite')),
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
-            'busy_timeout' => null,
-            'journal_mode' => null,
-            'synchronous' => null,
+            // WAL mode allows concurrent reads + one writer simultaneously, which is
+            // critical for LEMS: kiosk scan writes must not block admin panel reads.
+            // busy_timeout gives SQLite up to 5 seconds to wait for a lock before
+            // throwing an error — prevents silent scan failures under concurrent load.
+            'busy_timeout' => env('DB_BUSY_TIMEOUT', 5000),
+            'journal_mode' => env('DB_JOURNAL_MODE', 'WAL'),
+            'synchronous' => env('DB_SYNCHRONOUS', 'NORMAL'),
         ],
 
         'mysql' => [

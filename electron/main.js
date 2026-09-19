@@ -239,14 +239,73 @@ function startPhpServer() {
 }
 
 /**
+ * SEC-01-FIX: Ensure the Laravel APP_KEY is set in .env.
+ *
+ * A blank APP_KEY causes all sessions, encrypted cookies, and signed URLs
+ * to fail silently. This function detects a missing key and auto-generates
+ * one via `artisan key:generate` so the app is secure on first launch without
+ * requiring any manual setup step from the user.
+ */
+function ensureAppKey(projectPath) {
+    const envPath = path.join(projectPath, '.env');
+
+    // If .env doesn't exist yet, key:generate will fail — skip gracefully.
+    // The migrate step will also fail, so the user will see an error anyway.
+    if (!fs.existsSync(envPath)) {
+        console.warn('[LEMS] .env not found — skipping APP_KEY check.');
+        return Promise.resolve();
+    }
+
+    try {
+        const envContents = fs.readFileSync(envPath, 'utf8');
+        // Match APP_KEY= with nothing after it, or APP_KEY= followed only by whitespace
+        const keyMissing = /^APP_KEY=\s*$/m.test(envContents);
+        if (!keyMissing) {
+            return Promise.resolve(); // key already set
+        }
+    } catch (e) {
+        console.warn('[LEMS] Could not read .env for APP_KEY check:', e.message);
+        return Promise.resolve();
+    }
+
+    console.log('[LEMS] APP_KEY is missing — generating application key...');
+    const phpExec = findPhpExecutable();
+    const phpDir = path.dirname(phpExec);
+
+    return new Promise((resolve) => {
+        const keygen = spawn(phpExec, ['artisan', 'key:generate', '--force'], {
+            cwd: projectPath,
+            detached: false,
+            stdio: 'ignore',
+            env: { ...process.env, PATH: `${phpDir};${process.env.PATH}` },
+        });
+        keygen.on('close', (code) => {
+            if (code === 0) {
+                console.log('[LEMS] APP_KEY generated successfully.');
+            } else {
+                console.error(`[LEMS] key:generate exited with code ${code} — app may not function correctly.`);
+            }
+            resolve();
+        });
+        keygen.on('error', (err) => {
+            console.error('[LEMS] key:generate error:', err);
+            resolve();
+        });
+    });
+}
+
+/**
  * Run Laravel migrations automatically on every launch.
  * Safe to run repeatedly — Laravel skips already-applied migrations.
  * Ensures the SQLite database and all tables exist before artisan serve starts.
+ *
+ * NOTE: --seed is intentionally NOT passed here. Seeding is handled separately
+ * by runSeedersOnce() to avoid overwriting live data on every restart.
  */
 function runMigrations(phpExec, projectPath, env) {
     return new Promise((resolve) => {
         console.log('[LEMS] Running database migrations...');
-        const migrate = spawn(phpExec, ['artisan', 'migrate', '--force', '--seed'], {
+        const migrate = spawn(phpExec, ['artisan', 'migrate', '--force'], {
             cwd: projectPath,
             detached: false,
             stdio: 'ignore',
@@ -259,6 +318,53 @@ function runMigrations(phpExec, projectPath, env) {
         migrate.on('error', (err) => {
             console.error('[LEMS] Migration error:', err);
             resolve(); // still continue — serve may work with existing DB
+        });
+    });
+}
+
+/**
+ * Run database seeders exactly once per installation.
+ *
+ * A flag file ('lems_seeded') in the userData directory marks that seeding
+ * has been completed. On subsequent launches the seeders are skipped entirely,
+ * preventing live data (admin accounts, system settings, patron categories)
+ * from being reset to defaults every time the app restarts.
+ *
+ * To force a re-seed (e.g. after a fresh install), delete the flag file:
+ *   %APPDATA%\LEMS\lems_seeded
+ */
+function runSeedersOnce(phpExec, projectPath, env) {
+    const seedFlagPath = path.join(app.getPath('userData'), 'lems_seeded');
+
+    if (fs.existsSync(seedFlagPath)) {
+        console.log('[LEMS] Seeders already run — skipping.');
+        return Promise.resolve();
+    }
+
+    return new Promise((resolve) => {
+        console.log('[LEMS] First launch detected — running database seeders...');
+        const seed = spawn(phpExec, ['artisan', 'db:seed', '--force'], {
+            cwd: projectPath,
+            detached: false,
+            stdio: 'ignore',
+            env: env,
+        });
+        seed.on('close', (code) => {
+            console.log(`[LEMS] Seeding finished (exit ${code})`);
+            if (code === 0) {
+                // Write the flag file only on success so a failed seed is retried next launch
+                try {
+                    fs.writeFileSync(seedFlagPath, new Date().toISOString(), 'utf8');
+                    console.log('[LEMS] Seed flag written to', seedFlagPath);
+                } catch (e) {
+                    console.warn('[LEMS] Could not write seed flag:', e.message);
+                }
+            }
+            resolve();
+        });
+        seed.on('error', (err) => {
+            console.error('[LEMS] Seeder error:', err);
+            resolve(); // still continue
         });
     });
 }
@@ -440,6 +546,12 @@ app.whenReady().then(async () => {
         ? path.join(process.resourcesPath, 'app')
         : path.join(__dirname, '..');
 
+    // SEC-01-FIX: Ensure APP_KEY is set before anything else.
+    // A blank APP_KEY means all sessions and encrypted cookies are broken.
+    // This auto-generates the key if it's missing, so the app works correctly
+    // on the first run without requiring manual artisan key:generate.
+    await ensureAppKey(projectPath);
+
     // BUG-05-FIX: Delete leftover public/hot file.
     // If this file exists, Laravel's @vite() directive loads assets from
     // http://localhost:5173 (dev server) instead of the compiled build/ dir,
@@ -473,11 +585,13 @@ app.whenReady().then(async () => {
 
     // Run migrations BEFORE starting artisan serve so the SQLite database
     // and all tables are ready before the first HTTP request comes in.
+    // Seeders run only on first launch (guarded by a flag file in userData).
     if (app.isPackaged) {
         const phpExec = findPhpExecutable();
         const phpDir = path.dirname(phpExec);
         const env = buildLaravelEnv(phpDir, projectPath);
         await runMigrations(phpExec, projectPath, env);
+        await runSeedersOnce(phpExec, projectPath, env);
     }
 
     startPhpServer();

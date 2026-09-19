@@ -7,6 +7,7 @@ use App\Models\Student;
 use App\Models\AcademicDepartment;
 use App\Models\AcademicProgram;
 use App\Models\AcademicTerm;
+use App\Services\AnalyticsService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -23,23 +24,22 @@ class AnalyticsController extends Controller
             return AcademicTerm::query()->orderBy('start_date', 'desc')->get();
         });
 
-        $departments = AcademicDepartment::query()->orderBy('name', 'asc')->get();
-        $programs    = AcademicProgram::query()->orderBy('name', 'asc')->get();
+        $departments = Cache::remember('academic_departments_all', 600, function () {
+            return AcademicDepartment::query()->orderBy('name', 'asc')->get();
+        });
+        $programs = Cache::remember('academic_programs_all', 600, function () {
+            return AcademicProgram::query()->orderBy('name', 'asc')->get();
+        });
 
         return view('admin.analytics.index', compact('terms', 'departments', 'programs'));
     }
 
-    public function data(Request $request): JsonResponse
+    public function data(Request $request, AnalyticsService $analyticsService): JsonResponse
     {
         $period = $request->input('period', 'today');
         $termId = $request->input('term_id');
 
-        $cacheKey = "analytics_data_{$period}_" . ($termId ?? 'none');
-
-        // Cache analytics data for 5 seconds for instant real-time chart updates
-        $data = Cache::remember($cacheKey, 5, function () use ($period, $termId) {
-            return $this->buildAnalyticsData($period, $termId);
-        });
+        $data = $analyticsService->getAnalyticsData($period, $termId);
 
         return response()->json($data);
     }
@@ -50,81 +50,127 @@ class AnalyticsController extends Controller
      */
     public function exportMonthlyReport(Request $request)
     {
-        $termId     = $request->input('term_id');
-        $schoolYear = $request->input('school_year');
-        $monthInput = $request->input('month');
-        $programId  = $request->input('program_id');
-        $deptId     = $request->input('department_id');
-        $patronId   = $request->input('patron_id');
-        $format     = strtolower($request->input('format', 'excel'));
+        $termId         = $request->input('term_id');
+        $schoolYear     = $request->input('school_year');
+        $monthInput     = $request->input('month');
+        $dateMode       = $request->input('date_mode', 'month');
+        $startDateInput = $request->input('start_date');
+        $endDateInput   = $request->input('end_date');
+        $startTime      = $request->input('start_time');
+        $endTime        = $request->input('end_time');
+        $reportType     = $request->input('report_type', 'college_programs');
+        $programId      = $request->input('program_id');
+        $deptId         = $request->input('department_id');
+        $patronId       = $request->input('patron_id');
+        $format         = strtolower($request->input('format', 'excel'));
 
-        // PERF-03 FIX: Build the query once and reuse it for both COUNT and lazy iteration.
-        // This avoids loading the entire result set into a PHP Collection in memory.
-        $query = AttendanceLog::with(['student.academicDepartment', 'student.academicProgram']);
+        $query = AttendanceLog::query()->where('attendance_logs.action', 'check_in');
 
         $schoolYearLabel = 'All School Years';
-        $monthLabel      = 'All Months';
+        $monthLabel      = 'All Dates';
 
-        // 1. Filter by School Year / Academic Term
-        if ($termId) {
+        // 1. Date Filtering
+        if ($dateMode === 'custom' && $startDateInput && $endDateInput) {
+            $sDate = Carbon::parse($startDateInput)->startOfDay();
+            $eDate = Carbon::parse($endDateInput)->endOfDay();
+            $query->whereBetween('attendance_logs.logged_at', [$sDate, $eDate]);
+            $monthLabel = $sDate->format('M d, Y') . ' — ' . $eDate->format('M d, Y');
+            $schoolYearLabel = 'Custom Range';
+        } elseif ($termId) {
             $term = AcademicTerm::query()->find($termId);
             if ($term) {
-                $query->whereBetween('logged_at', [$term->start_date->startOfDay(), $term->end_date->endOfDay()]);
+                $query->whereBetween('attendance_logs.logged_at', [$term->start_date->startOfDay(), $term->end_date->endOfDay()]);
                 $schoolYearLabel = $term->name;
+                $monthLabel = $term->start_date->format('M Y') . ' — ' . $term->end_date->format('M Y');
+            }
+        } elseif (!empty($monthInput)) {
+            if (strlen($monthInput) === 7) {
+                $startDate = Carbon::parse($monthInput)->startOfMonth();
+                $endDate   = Carbon::parse($monthInput)->endOfMonth();
+                $query->whereBetween('attendance_logs.logged_at', [$startDate, $endDate]);
+                $monthLabel = $startDate->format('F Y');
+            } else {
+                $monthNum = (int) $monthInput;
+                if ($monthNum >= 1 && $monthNum <= 12) {
+                    $query->whereMonth('attendance_logs.logged_at', '=', $monthNum);
+                    $monthLabel = Carbon::create()->month($monthNum)->format('F');
+                }
             }
         } elseif ($schoolYear) {
             $yearNum = (int) preg_replace('/[^0-9]/', '', substr($schoolYear, 0, 8)) ?: now()->year;
-            $query->whereYear('logged_at', '=', $yearNum, 'and');
+            $query->whereYear('attendance_logs.logged_at', '=', $yearNum);
             $schoolYearLabel = "AY {$yearNum}-" . ($yearNum + 1);
         } else {
             $schoolYearLabel = "AY " . now()->format('Y') . "-" . (now()->year + 1);
         }
 
-        // 2. Filter by Month
-        if (!empty($monthInput)) {
-            if (strlen($monthInput) === 7) {
-                $startDate = Carbon::parse($monthInput)->startOfMonth();
-                $endDate   = Carbon::parse($monthInput)->endOfMonth();
-                $query->whereBetween('logged_at', [$startDate, $endDate]);
-                $monthLabel = $startDate->format('F Y');
+        // 2. Time Window Filtering (07:00 to 19:00, etc.)
+        $timeLabel = 'All Hours';
+        if (!empty($startTime) && !empty($endTime)) {
+            $driver = \Illuminate\Support\Facades\DB::connection()->getDriverName();
+            if ($driver === 'sqlite') {
+                $query->whereRaw("strftime('%H:%M', attendance_logs.logged_at) BETWEEN ? AND ?", [$startTime, $endTime]);
             } else {
-                $monthNum = (int) $monthInput;
-                if ($monthNum >= 1 && $monthNum <= 12) {
-                    $query->whereMonth('logged_at', '=', $monthNum, 'and');
-                    $monthLabel = Carbon::create()->month($monthNum)->format('F');
-                }
+                $query->whereRaw("TIME(attendance_logs.logged_at) BETWEEN ? AND ?", [$startTime . ':00', $endTime . ':59']);
             }
+            $timeLabel = Carbon::parse($startTime)->format('g:i A') . ' — ' . Carbon::parse($endTime)->format('g:i A');
         }
 
-        // 3. Filter by Program
+        // 3. Program, Department & Patron Filters
         if ($programId) {
             $query->whereHas('student', function ($q) use ($programId) {
                 $q->where('program_id', $programId);
             });
         }
 
-        // 4. Filter by Department
         if ($deptId) {
             $query->whereHas('student', function ($q) use ($deptId) {
                 $q->where('department_id', $deptId);
             });
         }
 
+        if ($patronId) {
+            $query->where('student_id', $patronId);
+        }
+
         $programName = $programId ? (AcademicProgram::query()->find($programId)?->name ?? 'All Programs') : 'All Programs';
         $deptName    = $deptId ? (AcademicDepartment::query()->find($deptId)?->name ?? 'All Departments') : 'All Departments';
 
-        // 5. Filter by Patron
-        if ($patronId) {
-            $query->where('student_id', $patronId);
-            $programName .= " | Patron: {$patronId}";
-        }
-
-        // PERF-03 FIX: Use a fast COUNT query for the total log entries
         $totalCount = (clone $query)->count('*');
 
-        // Convert query to an aggregate summary by student
+        // ── REPORT TYPE 1: College & Programs Ranking Report ──
+        if ($reportType === 'college_programs') {
+            $rankingQuery = clone $query;
+            $rankingQuery->setEagerLoads([]);
+            $rankingQuery->join('students', 'attendance_logs.student_id', '=', 'students.id', 'inner', false)
+                ->leftJoin('academic_departments', 'students.department_id', '=', 'academic_departments.id', 'left', false)
+                ->leftJoin('academic_programs', 'students.program_id', '=', 'academic_programs.id', 'left', false)
+                ->selectRaw("
+                    COALESCE(NULLIF(academic_departments.code, ''), academic_departments.name, 'Unassigned') as college,
+                    COALESCE(NULLIF(academic_programs.code, ''), academic_programs.name, 'Unassigned') as program,
+                    COUNT(attendance_logs.id) as attendance
+                ", [])
+                ->groupBy('college', 'program')
+                ->orderByDesc('attendance')
+                ->orderBy('college')
+                ->orderBy('program');
+
+            $rows = $rankingQuery->get();
+
+            if ($format === 'word' || $format === 'doc') {
+                return $this->exportCollegeProgramsWord($rows, $totalCount, $schoolYearLabel, $monthLabel, $timeLabel, $programName, $deptName);
+            }
+
+            if ($format === 'pdf') {
+                return $this->exportCollegeProgramsPdf($rows, $totalCount, $schoolYearLabel, $monthLabel, $timeLabel, $programName, $deptName);
+            }
+
+            return $this->exportCollegeProgramsExcel($rows, $totalCount, $schoolYearLabel, $monthLabel, $timeLabel, $programName, $deptName);
+        }
+
+        // ── REPORT TYPE 2: Detailed Patron Attendance Summary ──
         $summaryQuery = clone $query;
-        $summaryQuery->setEagerLoads([]); // Remove eager loads since we'll use joins
+        $summaryQuery->setEagerLoads([]);
         $summaryQuery->leftJoin('students', 'attendance_logs.student_id', '=', 'students.id', 'left', false)
             ->leftJoin('academic_departments', 'students.department_id', '=', 'academic_departments.id', 'left', false)
             ->leftJoin('academic_programs', 'students.program_id', '=', 'academic_programs.id', 'left', false)
@@ -211,9 +257,13 @@ class AnalyticsController extends Controller
         $filename = 'Attendance_Report_' . str_replace(' ', '_', $schoolYearLabel) . '_' . str_replace(' ', '_', $monthLabel) . '.xlsx';
         $writer   = IOFactory::createWriter($spreadsheet, 'Xlsx');
 
-        return response()->streamDownload(function() use ($writer) {
+        return response()->streamDownload(function() use ($writer, $spreadsheet) {
             $writer->save('php://output');
-        }, $filename);
+            $spreadsheet->disconnectWorksheets();
+            unset($spreadsheet);
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
     }
 
     private function exportWordReport(iterable $logs, int $totalCount, string $schoolYearLabel, string $monthLabel, string $programName, string $deptName)
@@ -223,6 +273,7 @@ class AnalyticsController extends Controller
         $rowsHtml = '';
         $counter  = 1;
         foreach ($logs as $log) {
+            $studentId = htmlspecialchars($log->student_id);
             $name = htmlspecialchars($log->student_name);
             $dept = htmlspecialchars($log->department);
             $prog = htmlspecialchars($log->program);
@@ -230,7 +281,7 @@ class AnalyticsController extends Controller
             $rowsHtml .= "
                 <tr>
                     <td style='padding:6px;border:1px solid #cbd5e1;text-align:center;'>{$counter}</td>
-                    <td style='padding:6px;border:1px solid #cbd5e1;'>{$log->student_id}</td>
+                    <td style='padding:6px;border:1px solid #cbd5e1;'>{$studentId}</td>
                     <td style='padding:6px;border:1px solid #cbd5e1;'>{$name}</td>
                     <td style='padding:6px;border:1px solid #cbd5e1;'>{$dept}</td>
                     <td style='padding:6px;border:1px solid #cbd5e1;'>{$prog}</td>
@@ -340,7 +391,8 @@ class AnalyticsController extends Controller
                             Back
                         </a>
                         <button onclick='window.print()' style='background: #c41e3a; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(196,30,58,0.2);'>
-                            🖨️ Print / Save as PDF
+                            <svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 6 2 18 2 18 9'></polyline><path d='M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2'></path><rect x='6' y='14' width='12' height='8'></rect></svg>
+                            Print / Save as PDF
                         </button>
                     </div>
                     <span style='color: #64748b; font-size: 13px;'>Press Ctrl + P to save as PDF</span>
@@ -382,140 +434,243 @@ class AnalyticsController extends Controller
     }
 
     /**
-     * Database-agnostic analytics query logic.
+     * Export College & Programs Ranking Report to Excel (.xlsx)
+     * Format matches user reference: # | College | Programs | Attendance
      */
-    private function buildAnalyticsData(string $period, ?string $termId): array
+    private function exportCollegeProgramsExcel(iterable $rows, int $totalCount, string $schoolYearLabel, string $monthLabel, string $timeLabel, string $programName, string $deptName)
     {
-        $query = AttendanceLog::query()->where('action', 'check_in');
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Programs Attendance');
 
-        // Apply Date Filters
-        if ($termId) {
-            $term = AcademicTerm::find($termId, ['*']);
-            if ($term) {
-                $query->whereBetween('logged_at', [
-                    $term->start_date->startOfDay(), 
-                    $term->end_date->endOfDay()
-                ]);
+        // Document Title
+        $sheet->setCellValue('A1', 'COR JESU COLLEGE — LIBRARY & INFORMATION RESOURCE CENTER');
+        $sheet->setCellValue('A2', 'OFFICIAL ATTENDANCE REPORT — COLLEGE & PROGRAMS RANKING');
+        $sheet->setCellValue('A3', "Period: {$monthLabel}  |  Time: {$timeLabel}  |  Generated: " . now()->format('M d, Y h:i A'));
+
+        $sheet->getStyle('A1:A2')->getFont()->setBold(true);
+        $sheet->getStyle('A1')->getFont()->setSize(14)->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('0F2744'));
+        $sheet->getStyle('A2')->getFont()->setSize(12)->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('C41E2A'));
+        $sheet->getStyle('A3')->getFont()->setSize(10)->setItalic(true)->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('64748B'));
+
+        // Table Header (Row 5)
+        $headers = ['#', 'College', 'Programs', 'Attendance'];
+        $sheet->fromArray($headers, null, 'A5');
+        $sheet->getStyle('A5:D5')->getFont()->setBold(true)->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('FFFFFF'));
+        $sheet->getStyle('A5:D5')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('FF0F2744');
+        $sheet->getStyle('A5:C5')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT);
+        $sheet->getStyle('D5')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
+        $sheet->getRowDimension(5)->setRowHeight(24);
+
+        $rowNum  = 6;
+        $counter = 1;
+        foreach ($rows as $row) {
+            $sheet->setCellValue('A' . $rowNum, $counter++);
+            $sheet->setCellValue('B' . $rowNum, $row->college);
+            $sheet->setCellValue('C' . $rowNum, $row->program);
+            $sheet->setCellValue('D' . $rowNum, (int) $row->attendance);
+
+            $sheet->getStyle('A' . $rowNum)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('D' . $rowNum)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
+
+            if ($rowNum % 2 === 0) {
+                $sheet->getStyle("A{$rowNum}:D{$rowNum}")->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('FFF8FAFC');
             }
-        } else {
-            $now = now();
-            if ($period === 'today') {
-                $query->where('logged_at', '>=', $now->copy()->startOfDay());
-            } elseif ($period === 'week') {
-                $query->where('logged_at', '>=', $now->copy()->startOfWeek());
-            } elseif ($period === 'month') {
-                $query->where('logged_at', '>=', $now->copy()->startOfMonth());
-            } elseif ($period === 'year') {
-                $query->where('logged_at', '>=', $now->copy()->startOfYear());
-            }
+            $rowNum++;
         }
 
-        $deptQuery = clone $query;
+        // Summary row
+        $sheet->setCellValue('A' . $rowNum, 'TOTAL ATTENDANCE');
+        $sheet->setCellValue('D' . $rowNum, $totalCount);
+        $sheet->getStyle("A{$rowNum}:D{$rowNum}")->getFont()->setBold(true);
+        $sheet->getStyle("A{$rowNum}:D{$rowNum}")->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('FFE2E8F0');
+        $sheet->getStyle('D' . $rowNum)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
 
-        // PERF-FIX: Push all groupBy/count into SQL — no longer loads every log row into PHP.
-        // Previously: $query->get() loaded ALL matching rows, then grouped in a PHP Collection (O(n) memory).
-        // Now: SELECT period_key, COUNT(*) GROUP BY period_key — DB does the work, returns only summary rows.
-        $driver = \Illuminate\Support\Facades\DB::connection()->getDriverName();
+        $fullRange = "A5:D{$rowNum}";
+        $sheet->getStyle($fullRange)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN)->getColor()->setARGB('CBD5E1');
 
-        $trafficLabels = [];
-        $trafficValues = [];
+        $sheet->getColumnDimension('A')->setWidth(8);
+        $sheet->getColumnDimension('B')->setWidth(20);
+        $sheet->getColumnDimension('C')->setWidth(30);
+        $sheet->getColumnDimension('D')->setWidth(18);
 
-        if ($termId || $period === 'year') {
-            $groupExpr = $driver === 'sqlite' ? "strftime('%Y-%m', logged_at)" : "DATE_FORMAT(logged_at, '%Y-%m')";
-            $grouped = (clone $query)
-                ->selectRaw("{$groupExpr} as period_key, COUNT(*) as cnt", [])
-                ->groupBy('period_key')
-                ->orderBy('period_key')
-                ->pluck('cnt', 'period_key');
+        $safePeriod = preg_replace('/[^a-zA-Z0-9_-]/', '_', $monthLabel);
+        $filename   = "College_Programs_Attendance_{$safePeriod}.xlsx";
+        $writer     = IOFactory::createWriter($spreadsheet, 'Xlsx');
 
-            foreach ($grouped as $yearMonth => $count) {
-                $trafficLabels[] = Carbon::createFromFormat('Y-m', $yearMonth)->format('M Y');
-                $trafficValues[] = (int) $count;
-            }
-        } elseif ($period === 'month' || $period === 'week') {
-            $groupExpr = $driver === 'sqlite' ? "strftime('%Y-%m-%d', logged_at)" : "DATE(logged_at)";
-            $grouped = (clone $query)
-                ->selectRaw("{$groupExpr} as period_key, COUNT(*) as cnt", [])
-                ->groupBy('period_key')
-                ->orderBy('period_key')
-                ->pluck('cnt', 'period_key');
+        return response()->streamDownload(function () use ($writer, $spreadsheet) {
+            $writer->save('php://output');
+            $spreadsheet->disconnectWorksheets();
+            unset($spreadsheet);
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
 
-            foreach ($grouped as $dateStr => $count) {
-                $trafficLabels[] = Carbon::parse($dateStr)->format('M d (D)');
-                $trafficValues[] = (int) $count;
-            }
-        } else {
-            $groupExpr = $driver === 'sqlite' ? "CAST(strftime('%H', logged_at) AS INTEGER)" : "HOUR(logged_at)";
-            $hourlyCounts = (clone $query)
-                ->selectRaw("{$groupExpr} as period_key, COUNT(*) as cnt", [])
-                ->groupBy('period_key')
-                ->pluck('cnt', 'period_key');
+    /**
+     * Export College & Programs Ranking Report to Word (.doc)
+     */
+    private function exportCollegeProgramsWord(iterable $rows, int $totalCount, string $schoolYearLabel, string $monthLabel, string $timeLabel, string $programName, string $deptName)
+    {
+        $safePeriod = preg_replace('/[^a-zA-Z0-9_-]/', '_', $monthLabel);
+        $filename   = "College_Programs_Attendance_{$safePeriod}.doc";
 
-            for ($h = 6; $h <= 22; $h++) {
-                $label = $h < 12 ? "{$h}AM" : ($h === 12 ? "12PM" : ($h - 12) . "PM");
-                $trafficLabels[] = $label;
-                $trafficValues[] = (int) ($hourlyCounts[$h] ?? 0);
-            }
+        $rowsHtml = '';
+        $counter  = 1;
+        foreach ($rows as $row) {
+            $college = htmlspecialchars($row->college);
+            $program = htmlspecialchars($row->program);
+            $rowsHtml .= "
+                <tr>
+                    <td style='padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:center;'>{$counter}</td>
+                    <td style='padding:6px 12px;border-bottom:1px solid #e2e8f0;font-weight:600;'>{$college}</td>
+                    <td style='padding:6px 12px;border-bottom:1px solid #e2e8f0;'>{$program}</td>
+                    <td style='padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:bold;color:#0f2744;'>{$row->attendance}</td>
+                </tr>
+            ";
+            $counter++;
         }
 
-        $deptData = $deptQuery->join('students', 'attendance_logs.student_id', '=', 'students.id', 'inner', false)
-            ->leftJoin('academic_departments', 'students.department_id', '=', 'academic_departments.id', 'left', false)
-            ->selectRaw("COALESCE(academic_departments.name, 'Unknown') as department, COUNT(*) as aggregate", [])
-            ->groupBy('department')
-            ->orderByDesc('aggregate')
-            ->get();
+        $html = "
+            <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+            <head>
+                <meta charset='utf-8'>
+                <title>College & Programs Attendance Report</title>
+                <style>
+                    body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; color: #0f172a; }
+                    h1 { font-size: 16pt; color: #0f2744; margin-bottom: 4px; }
+                    h2 { font-size: 12pt; color: #c41e3a; margin-top: 0; margin-bottom: 12px; }
+                    .meta { font-size: 10pt; color: #475569; margin-bottom: 16px; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 10.5pt; }
+                    th { border-top: 1.5pt solid #0f2744; border-bottom: 1.5pt solid #0f2744; padding: 8px 12px; text-align: left; font-weight: bold; color: #0f2744; }
+                    th.text-right { text-align: right; }
+                    th.text-center { text-align: center; }
+                    .summary { margin-top: 20px; font-weight: bold; font-size: 11pt; color: #0f2744; border-top: 1.5pt solid #0f2744; padding-top: 8px; }
+                </style>
+            </head>
+            <body>
+                <h1>COR JESU COLLEGE</h1>
+                <h2>Official College & Programs Attendance Report</h2>
+                <div class='meta'>
+                    <strong>Period:</strong> {$monthLabel}<br>
+                    <strong>Time Range:</strong> {$timeLabel}<br>
+                    <strong>Generated Date:</strong> " . now()->format('F d, Y h:i A') . "
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th class='text-center' style='width: 40px;'>#</th>
+                            <th style='width: 140px;'>College</th>
+                            <th>Programs</th>
+                            <th class='text-right' style='width: 110px;'>Attendance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {$rowsHtml}
+                    </tbody>
+                </table>
+                <div class='summary'>Total Attendance: {$totalCount}</div>
+            </body>
+            </html>
+        ";
 
-        $deptLabels = [];
-        $deptValues = [];
-        foreach ($deptData as $row) {
-            $deptLabels[] = $row->department;
-            $deptValues[] = (int) $row->aggregate;
+        return response($html)
+            ->header('Content-Type', 'application/msword')
+            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+    }
+
+    /**
+     * Export College & Programs Ranking Report to Printable PDF/HTML view
+     */
+    private function exportCollegeProgramsPdf(iterable $rows, int $totalCount, string $schoolYearLabel, string $monthLabel, string $timeLabel, string $programName, string $deptName)
+    {
+        $counter  = 1;
+        $rowsHtml = '';
+        foreach ($rows as $row) {
+            $college = htmlspecialchars($row->college);
+            $program = htmlspecialchars($row->program);
+            $rowsHtml .= "
+                <tr>
+                    <td style='padding:8px 14px;border-bottom:1px solid #e2e8f0;text-align:center;color:#64748b;'>{$counter}</td>
+                    <td style='padding:8px 14px;border-bottom:1px solid #e2e8f0;font-weight:700;color:#0f2744;'>{$college}</td>
+                    <td style='padding:8px 14px;border-bottom:1px solid #e2e8f0;font-weight:500;'>{$program}</td>
+                    <td style='padding:8px 14px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:700;color:#0f2744;'>{$row->attendance}</td>
+                </tr>
+            ";
+            $counter++;
         }
 
-        // Fallback to active student department ratio if no attendance logs match current filter
-        if (empty($deptLabels)) {
-            $studentDepts = Student::query()
-                ->leftJoin('academic_departments', 'students.department_id', '=', 'academic_departments.id')
-                ->selectRaw("COALESCE(academic_departments.name, 'College of Computing Studies') as department, COUNT(*) as aggregate", [])
-                ->groupBy('department')
-                ->get();
+        $html = "
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset='utf-8'>
+                <title>College & Programs Attendance Report - {$monthLabel}</title>
+                <style>
+                    body { font-family: system-ui, -apple-system, sans-serif; background: #f8fafc; color: #0f172a; margin: 0; padding: 24px; }
+                    .container { max-width: 820px; margin: 0 auto; }
+                    .header { background: #ffffff; padding: 24px; border-radius: 16px; border: 1px solid #e2e8f0; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+                    .brand { color: #c41e3a; font-weight: 800; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; }
+                    h1 { color: #0f2744; margin: 6px 0 12px 0; font-size: 22px; font-weight: 900; }
+                    .meta-grid { display: flex; gap: 24px; font-size: 13px; color: #475569; border-top: 1px solid #f1f5f9; padding-top: 12px; }
+                    table { width: 100%; border-collapse: collapse; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; font-size: 13.5px; }
+                    th { border-bottom: 2px solid #0f2744; padding: 12px 14px; text-align: left; font-weight: 800; color: #0f2744; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+                    th.text-right { text-align: right; }
+                    th.text-center { text-align: center; }
+                    .summary-card { background: #0f2744; color: #ffffff; padding: 16px 24px; border-radius: 12px; margin-top: 24px; display: flex; justify-content: space-between; align-items: center; }
+                    @media print {
+                        body { background: white; padding: 0; }
+                        .no-print { display: none; }
+                        .container { max-width: 100%; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class='container'>
+                    <div class='no-print' style='margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;'>
+                        <div style='display: flex; gap: 12px; align-items: center;'>
+                            <a href='javascript:history.back()' style='background: #ffffff; color: #475569; border: 1px solid #e2e8f0; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; text-decoration: none; display: flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'>
+                                <svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M19 12H5M12 19l-7-7 7-7'/></svg>
+                                Back
+                            </a>
+                            <button onclick='window.print()' style='background: #c41e3a; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(196,30,58,0.2);'>
+                                <svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 6 2 18 2 18 9'></polyline><path d='M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2'></path><rect x='6' y='14' width='12' height='8'></rect></svg>
+                                Print / Save as PDF
+                            </button>
+                        </div>
+                        <span style='color: #64748b; font-size: 13px;'>Press Ctrl + P to save as PDF</span>
+                    </div>
+                    <div class='header'>
+                        <div class='brand'>Cor Jesu College — Library & Information Resource Center</div>
+                        <h1>Official College & Programs Attendance Report</h1>
+                        <div class='meta-grid'>
+                            <div><strong>Period:</strong> {$monthLabel}</div>
+                            <div><strong>Time Range:</strong> {$timeLabel}</div>
+                            <div><strong>Total Attendance:</strong> {$totalCount}</div>
+                        </div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class='text-center' style='width: 50px;'>#</th>
+                                <th style='width: 160px;'>College</th>
+                                <th>Programs</th>
+                                <th class='text-right' style='width: 140px;'>Attendance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {$rowsHtml}
+                        </tbody>
+                    </table>
+                    <div class='summary-card'>
+                        <span>Cor Jesu College Library System</span>
+                        <span>Total Attendance Entries: <strong>{$totalCount}</strong></span>
+                    </div>
+                </div>
+            </body>
+            </html>
+        ";
 
-            foreach ($studentDepts as $row) {
-                $deptLabels[] = $row->department;
-                $deptValues[] = (int) $row->aggregate;
-            }
-        }
-
-        $totalPatrons = Student::query()->count('*');
-        $todayTraffic = AttendanceLog::query()->where('action', 'check_in')->whereDate('logged_at', '=', now()->toDateString(), 'and')->count('*');
-        $monthTraffic = AttendanceLog::query()->where('action', 'check_in')->whereMonth('logged_at', '=', now()->month, 'and')->whereYear('logged_at', '=', now()->year, 'and')->count('*');
-        $mostActiveDept = !empty($deptLabels) ? $deptLabels[0] : 'N/A';
-
-        // Top Patron calculation
-        $topPatronData = clone $query;
-        $topPatron = $topPatronData->join('students', 'attendance_logs.student_id', '=', 'students.id', 'inner', false)
-            ->selectRaw('(students.first_name || " " || students.last_name) as name, COUNT(*) as aggregate', [])
-            ->groupBy('students.id', 'students.first_name', 'students.last_name')
-            ->orderByDesc('aggregate')
-            ->first();
-        $topPatronName = $topPatron ? $topPatron->name : 'N/A';
-
-        return [
-            'summary' => [
-                'total_patrons' => $totalPatrons,
-                'today_traffic' => $todayTraffic,
-                'month_traffic' => $monthTraffic,
-                'active_dept' => $mostActiveDept,
-                'top_patron' => $topPatronName
-            ],
-            'traffic' => [
-                'labels' => $trafficLabels,
-                'values' => $trafficValues
-            ],
-            'departments' => [
-                'labels' => $deptLabels,
-                'values' => $deptValues
-            ]
-        ];
+        return response($html)->header('Content-Type', 'text/html');
     }
 }

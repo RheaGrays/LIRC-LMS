@@ -8,11 +8,18 @@ use Illuminate\Http\Request;
 /**
  * Kiosk Token Authentication Middleware.
  *
- * Protects kiosk API endpoints from unauthorized remote internet access.
- * Requests from localhost (127.0.0.1, ::1) and local LAN networks (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
- * are permitted to support local kiosk devices and mobile scanners on the same Wi-Fi network.
+ * Protects kiosk API endpoints from unauthorized access.
  *
- * External remote access requires a valid KIOSK_API_TOKEN header or parameter.
+ * Only requests from the local machine itself (127.0.0.1, ::1) are permitted
+ * without a token — this covers the Electron desktop app and artisan serve.
+ *
+ * ALL other requests (including devices on the same LAN / school Wi-Fi) MUST
+ * supply a valid KIOSK_API_TOKEN via the X-Kiosk-Token header or kiosk_token
+ * query parameter. This prevents students on campus Wi-Fi from forging scans.
+ *
+ * To configure token-authenticated kiosk clients (e.g. a second kiosk PC):
+ *   1. Set KIOSK_API_TOKEN=<secret> in the server's .env
+ *   2. Configure the client to send X-Kiosk-Token: <secret> with each request
  */
 class KioskTokenAuth
 {
@@ -20,18 +27,21 @@ class KioskTokenAuth
     {
         $ip = $request->ip();
 
-        // Always allow requests from localhost and local LAN networks (same Wi-Fi/subnet)
-        if ($this->isLocalNetwork($ip)) {
+        // Only allow unauthenticated access from the local machine itself.
+        // This permits the Electron window (localhost) without a token while
+        // requiring all LAN clients — including phones and other kiosk PCs —
+        // to present a valid token.
+        if ($this->isLocalhost($ip)) {
             return $next($request);
         }
 
-        // For external remote IPs outside the local network, check for kiosk API token
+        // All non-localhost requests (LAN, remote) require a valid kiosk token.
         $configuredToken = config('app.kiosk_api_token');
 
         if (!$configuredToken) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Kiosk API token not configured. External remote access denied.',
+                'message' => 'Kiosk API token not configured. Access denied.',
             ], 403);
         }
 
@@ -49,19 +59,12 @@ class KioskTokenAuth
     }
 
     /**
-     * Check if an IP address belongs to localhost or a private local network (LAN).
+     * Check if an IP address is the local machine itself (loopback only).
+     * This intentionally does NOT include private LAN ranges (192.168.x.x etc.)
+     * because school students share the same LAN and must not bypass auth.
      */
-    private function isLocalNetwork(string $ip): bool
+    private function isLocalhost(string $ip): bool
     {
-        if (in_array($ip, ['127.0.0.1', '::1'], true)) {
-            return true;
-        }
-
-        // Returns true if IP is in private range (192.168.x.x, 10.x.x.x, 172.16.x.x - 172.31.x.x)
-        return filter_var(
-            $ip,
-            FILTER_VALIDATE_IP,
-            FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
-        ) === false;
+        return in_array($ip, ['127.0.0.1', '::1'], true);
     }
 }

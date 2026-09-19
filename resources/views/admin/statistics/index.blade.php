@@ -23,9 +23,9 @@
                     <button @click="viewMode = 'overview'" :class="viewMode === 'overview' ? 'bg-[var(--cjc-red)] text-white shadow-md' : 'text-gray-500 hover:text-gray-800'" class="px-5 py-2 rounded-lg text-xs font-bold transition-all">Overview</button>
                     <button @click="viewMode = 'seatmap'" :class="viewMode === 'seatmap' ? 'bg-[var(--cjc-red)] text-white shadow-md' : 'text-gray-500 hover:text-gray-800'" class="px-5 py-2 rounded-lg text-xs font-bold transition-all">Seat Map</button>
                 </div>
-                <button @click="alert('Hourly report generation will be sent to your email.')" class="px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 text-xs font-bold transition-all shadow-sm flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    Hourly Report
+                <button @click="isHourlyModalOpen = true" class="px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 text-xs font-bold transition-all shadow-sm flex items-center gap-2">
+                    <svg class="w-4 h-4 text-[var(--cjc-red)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Hourly Report (.xlsx)
                 </button>
                 <button @click="openAddModal()" class="px-5 py-2.5 rounded-xl bg-[var(--cjc-red)] hover:bg-red-800 text-white text-xs font-bold transition-all shadow-sm shadow-red-900/20 flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
@@ -371,6 +371,83 @@
             </div>
         </div>
 
+        <!-- Hourly Seating Report Modal -->
+        <div x-show="isHourlyModalOpen" 
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+             style="display: none;">
+            <div @click.outside="isHourlyModalOpen = false" 
+                 class="bg-white rounded-[24px] max-w-lg w-full p-7 shadow-2xl border border-gray-100">
+                <div class="flex justify-between items-center mb-5 pb-3 border-b border-gray-100">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-9 h-9 rounded-xl bg-red-50 text-[var(--cjc-red)] flex items-center justify-center font-bold">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold text-[var(--cjc-navy)]">Hourly Seating Report (.xlsx)</h2>
+                            <p class="text-xs text-gray-500">Days in rows &bull; 7:00 AM – 7:00 PM (1-hr slots) in columns</p>
+                        </div>
+                    </div>
+                    <button @click="isHourlyModalOpen = false" class="text-gray-400 hover:text-gray-600 p-1 rounded-lg">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                
+                <form @submit.prevent="downloadHourlyReport()">
+                    <!-- Section Selection -->
+                    <div class="mb-4">
+                        <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">Section Scope</label>
+                        <select x-model="reportSection" class="w-full rounded-xl border border-gray-200 shadow-sm focus:border-[var(--cjc-navy)] focus:ring-[var(--cjc-navy)] px-3 py-2.5 text-sm font-medium">
+                            <option value="all">All Library Sections (Total Seating)</option>
+                            <template x-for="s in sections" :key="s.id">
+                                <option :value="s.id" x-text="`${s.name} (${s.id})`"></option>
+                            </template>
+                        </select>
+                    </div>
+
+                    <!-- Date Selection Mode -->
+                    <div class="mb-3">
+                        <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">Period Filter Mode</label>
+                        <div class="grid grid-cols-2 gap-2 bg-gray-100 p-1 rounded-xl">
+                            <button type="button" @click="reportDateMode = 'month'" :class="reportDateMode === 'month' ? 'bg-white font-bold text-[var(--cjc-navy)] shadow-sm' : 'text-gray-500 font-medium'" class="py-1.5 text-xs rounded-lg transition-all">By Month</button>
+                            <button type="button" @click="reportDateMode = 'custom'" :class="reportDateMode === 'custom' ? 'bg-white font-bold text-[var(--cjc-navy)] shadow-sm' : 'text-gray-500 font-medium'" class="py-1.5 text-xs rounded-lg transition-all">Custom Range</button>
+                        </div>
+                    </div>
+
+                    <!-- Month Selector -->
+                    <div class="mb-6" x-show="reportDateMode === 'month'">
+                        <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">Target Month</label>
+                        <input type="month" x-model="reportMonth" class="w-full rounded-xl border border-gray-200 shadow-sm focus:border-[var(--cjc-navy)] focus:ring-[var(--cjc-navy)] px-3 py-2.5 text-sm font-medium">
+                    </div>
+
+                    <!-- Custom Date Range -->
+                    <div class="mb-6 grid grid-cols-2 gap-3" x-show="reportDateMode === 'custom'">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">Start Date</label>
+                            <input type="date" x-model="reportStartDate" class="w-full rounded-xl border border-gray-200 shadow-sm focus:border-[var(--cjc-navy)] focus:ring-[var(--cjc-navy)] px-3 py-2.5 text-sm font-medium">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">End Date</label>
+                            <input type="date" x-model="reportEndDate" class="w-full rounded-xl border border-gray-200 shadow-sm focus:border-[var(--cjc-navy)] focus:ring-[var(--cjc-navy)] px-3 py-2.5 text-sm font-medium">
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end gap-2.5 pt-2 border-t border-gray-100">
+                        <button type="button" @click="isHourlyModalOpen = false" class="px-4 py-2 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">Cancel</button>
+                        <button type="submit" class="px-5 py-2.5 text-xs font-bold text-white bg-[var(--cjc-red)] hover:bg-red-800 rounded-xl transition-all shadow-sm shadow-red-900/20 flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            Download Excel (.xlsx)
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
     </div>
 
 </div>
@@ -390,6 +467,26 @@ function sectionCounter() {
 
         isEditModalOpen: false,
         editSectionData: { id: '', name: '', total: 50, occupied: 0, reserved: 0 },
+
+        isHourlyModalOpen: false,
+        reportMonth: '{{ date('Y-m') }}',
+        reportSection: 'all',
+        reportDateMode: 'month',
+        reportStartDate: '{{ date('Y-m-01') }}',
+        reportEndDate: '{{ date('Y-m-t') }}',
+
+        downloadHourlyReport() {
+            let params = new URLSearchParams();
+            params.append('section_code', this.reportSection);
+            if (this.reportDateMode === 'custom') {
+                params.append('start_date', this.reportStartDate);
+                params.append('end_date', this.reportEndDate);
+            } else {
+                params.append('month', this.reportMonth);
+            }
+            window.location.href = '{{ route('admin.statistics.export-hourly') }}?' + params.toString();
+            this.isHourlyModalOpen = false;
+        },
         
         clockHm: '--:--',
         clockSec: '--',

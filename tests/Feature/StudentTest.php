@@ -107,4 +107,40 @@ class StudentTest extends TestCase
 
         @unlink($tempPath);
     }
+
+    #[Test]
+    public function it_updates_existing_students_on_import_via_upsert()
+    {
+        Student::create([
+            'id' => '2026-999',
+            'first_name' => 'OldFirst',
+            'last_name' => 'OldLast',
+            'patron_category' => 'Student',
+            'status' => 'active',
+        ]);
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->fromArray(['ID', 'Last Name', 'First Name', 'Middle Name', 'Category', 'Department', 'Program', 'Year', 'Email'], null, 'A1');
+        $sheet->fromArray(['2026-999', 'NewLast', 'NewFirst', 'M', 'Employee', '', '', 'N/A', 'updated@cjc.edu.ph'], null, 'A2');
+
+        $tempPath = tempnam(sys_get_temp_dir(), 'import_upsert_test') . '.xlsx';
+        $writer = new Xlsx($spreadsheet);
+        $writer->save($tempPath);
+
+        $file = new UploadedFile($tempPath, 'students.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', null, true);
+
+        $response = $this->actingAs($this->admin, 'admin')
+            ->post('/admin/students/import', ['file' => $file]);
+
+        $response->assertRedirect();
+        $this->assertEquals(1, Student::count('*'));
+
+        $updated = Student::find('2026-999', ['*']);
+        $this->assertEquals('NewFirst', $updated->first_name);
+        $this->assertEquals('NewLast', $updated->last_name);
+        $this->assertEquals('Employee', $updated->patron_category);
+
+        @unlink($tempPath);
+    }
 }

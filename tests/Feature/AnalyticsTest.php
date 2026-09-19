@@ -80,4 +80,88 @@ class AnalyticsTest extends TestCase
 
         $this->assertEquals($response1->json(), $response2->json());
     }
+
+    #[Test]
+    public function it_exports_college_programs_ranking_report_to_excel()
+    {
+        $dept = AcademicDepartment::first();
+        $dept->update(['code' => 'CCIS']);
+
+        $prog = \App\Models\AcademicProgram::create([
+            'department_id' => $dept->id,
+            'name' => 'Bachelor of Science in Information Technology',
+            'code' => 'BSIT',
+        ]);
+
+        Student::where('id', '2026-1001')->update(['program_id' => $prog->id]);
+
+        $response = $this->actingAs($this->admin, 'admin')
+            ->get('/admin/analytics/export-monthly-report?report_type=college_programs&format=excel&month=' . now()->format('Y-m'));
+
+        $response->assertStatus(200);
+        $this->assertStringContainsString('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', $response->headers->get('content-type'));
+    }
+
+    #[Test]
+    public function it_exports_college_programs_ranking_report_to_word()
+    {
+        $response = $this->actingAs($this->admin, 'admin')
+            ->get('/admin/analytics/export-monthly-report?report_type=college_programs&format=word&month=' . now()->format('Y-m'));
+
+        $response->assertStatus(200);
+        $this->assertStringContainsString('application/msword', $response->headers->get('content-type'));
+        $this->assertStringContainsString('Official College & Programs Attendance Report', $response->getContent());
+    }
+
+    #[Test]
+    public function it_exports_college_programs_ranking_report_to_pdf()
+    {
+        $response = $this->actingAs($this->admin, 'admin')
+            ->get('/admin/analytics/export-monthly-report?report_type=college_programs&format=pdf&month=' . now()->format('Y-m'));
+
+        $response->assertStatus(200);
+        $this->assertStringContainsString('text/html', $response->headers->get('content-type'));
+        $this->assertStringContainsString('Official College & Programs Attendance Report', $response->getContent());
+        $this->assertStringContainsString('Print / Save as PDF', $response->getContent());
+    }
+
+    #[Test]
+    public function it_filters_attendance_by_custom_date_range_and_time_window()
+    {
+        $student = Student::first();
+
+        // Create log outside time window (e.g. 05:00 AM)
+        AttendanceLog::create([
+            'student_id' => $student->id,
+            'action' => 'check_in',
+            'logged_at' => now()->startOfDay()->addHours(5),
+        ]);
+
+        // Create log inside time window (e.g. 10:00 AM)
+        AttendanceLog::create([
+            'student_id' => $student->id,
+            'action' => 'check_in',
+            'logged_at' => now()->startOfDay()->addHours(10),
+        ]);
+
+        // Query with 07:00 to 19:00 custom range
+        $today = now()->format('Y-m-d');
+        $response = $this->actingAs($this->admin, 'admin')
+            ->get("/admin/analytics/export-monthly-report?report_type=college_programs&date_mode=custom&start_date={$today}&end_date={$today}&start_time=07:00&end_time=19:00&format=word");
+
+        $response->assertStatus(200);
+        $content = $response->getContent();
+        // Total Attendance should reflect the log within window, not the 5:00 AM log
+        $this->assertStringContainsString('7:00 AM — 7:00 PM', $content);
+    }
+
+    #[Test]
+    public function it_exports_patron_attendance_details_to_excel()
+    {
+        $response = $this->actingAs($this->admin, 'admin')
+            ->get('/admin/analytics/export-monthly-report?report_type=patrons&format=excel&month=' . now()->format('Y-m'));
+
+        $response->assertStatus(200);
+        $this->assertStringContainsString('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', $response->headers->get('content-type'));
+    }
 }

@@ -174,11 +174,15 @@ class StudentController extends Controller
         ]);
 
         $file = $request->file('file');
-        $spreadsheet = IOFactory::load($file->getPathname());
+        $reader = IOFactory::createReaderForFile($file->getPathname());
+        if (method_exists($reader, 'setReadDataOnly')) {
+            $reader->setReadDataOnly(true);
+        }
+        $spreadsheet = $reader->load($file->getPathname());
         $worksheet = $spreadsheet->getActiveSheet();
-        $rows = $worksheet->toArray();
         
-        $totalDataRows = count($rows) - 1; // Exclude header row
+        $highestRow = $worksheet->getHighestRow();
+        $totalDataRows = max(0, $highestRow - 1); // Exclude header row
         $count = 0;
         $unmatchedDepts = [];
         $unmatchedProgs = [];
@@ -187,14 +191,37 @@ class StudentController extends Controller
         $allDepts = \App\Models\AcademicDepartment::query()->get();
         $allProgs = \App\Models\AcademicProgram::query()->get();
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($rows, &$count, &$unmatchedDepts, &$unmatchedProgs, $allDepts, $allProgs) {
-            // Process ALL data rows (skip header row at index 0).
-            foreach (array_slice($rows, 1) as $row) {
-                $id = $row[0] ?? null;
-                if (!$id) continue;
+        $batch = [];
+        $batchSize = 200;
+        $now = now();
 
-                $deptName = trim($row[5] ?? '');
-                $progName = trim($row[6] ?? '');
+        \Illuminate\Support\Facades\DB::transaction(function () use (
+            $worksheet, &$count, &$unmatchedDepts, &$unmatchedProgs,
+            $allDepts, $allProgs, $batchSize, &$batch, $now
+        ) {
+            foreach ($worksheet->getRowIterator() as $row) {
+                if ($row->getRowIndex() === 1) {
+                    continue; // Skip header row
+                }
+
+                $cellIterator = $row->getCellIterator();
+                $cellIterator->setIterateOnlyExistingCells(false);
+
+                $rowData = [];
+                foreach ($cellIterator as $cell) {
+                    $rowData[] = $cell->getValue();
+                    if (count($rowData) >= 9) {
+                        break;
+                    }
+                }
+
+                $id = trim((string)($rowData[0] ?? ''));
+                if ($id === '') continue;
+
+                $id = str_replace('/', '-', $id);
+
+                $deptName = trim((string)($rowData[5] ?? ''));
+                $progName = trim((string)($rowData[6] ?? ''));
 
                 // Department Matching (SSOT Reference - No Auto-Creation)
                 $dept = null;
@@ -289,22 +316,44 @@ class StudentController extends Controller
                     }
                 }
 
-                Student::query()->updateOrCreate(
-                    ['id' => $id],
-                    [
-                        'last_name'       => $row[1] ?? '',
-                        'first_name'      => $row[2] ?? '',
-                        'middle_name'     => $row[3] ?? null,
-                        'patron_category' => $row[4] ?? 'Student',
-                        'department_id'   => $dept?->id,
-                        'program_id'      => $prog?->id,
-                        'year_level'      => $row[7] ?? '',
-                        'email'           => $row[8] ?? null,
-                    ]
-                );
+                $batch[$id] = [
+                    'id'              => $id,
+                    'last_name'       => trim((string)($rowData[1] ?? '')),
+                    'first_name'      => trim((string)($rowData[2] ?? '')),
+                    'middle_name'     => ($val = trim((string)($rowData[3] ?? ''))) !== '' ? $val : null,
+                    'patron_category' => ($cat = trim((string)($rowData[4] ?? ''))) !== '' ? $cat : 'Student',
+                    'department_id'   => $dept?->id,
+                    'program_id'      => $prog?->id,
+                    'year_level'      => ($yr = trim((string)($rowData[7] ?? ''))) !== '' ? $yr : null,
+                    'email'           => ($em = trim((string)($rowData[8] ?? ''))) !== '' ? $em : null,
+                    'status'          => 'active',
+                    'created_at'      => $now,
+                    'updated_at'      => $now,
+                ];
                 $count++;
+
+                if (count($batch) >= $batchSize) {
+                    Student::query()->upsert(
+                        array_values($batch),
+                        ['id'],
+                        ['last_name', 'first_name', 'middle_name', 'patron_category', 'department_id', 'program_id', 'year_level', 'email', 'updated_at']
+                    );
+                    $batch = [];
+                }
+            }
+
+            if (!empty($batch)) {
+                Student::query()->upsert(
+                    array_values($batch),
+                    ['id'],
+                    ['last_name', 'first_name', 'middle_name', 'patron_category', 'department_id', 'program_id', 'year_level', 'email', 'updated_at']
+                );
+                $batch = [];
             }
         });
+
+        $spreadsheet->disconnectWorksheets();
+        unset($spreadsheet, $worksheet);
 
         // Clear academic caches so UI reflects updated records immediately
         \Illuminate\Support\Facades\Cache::forget('academic_departments_all');

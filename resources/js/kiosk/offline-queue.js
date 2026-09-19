@@ -57,6 +57,7 @@ export const QueueManager = {
 
         this.syncing = true;
         let successfulIds = [];
+        let discardedIds = [];
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
 
         // Process sequentially to maintain order and logic
@@ -81,10 +82,18 @@ export const QueueManager = {
 
                 if (logRes.ok) {
                     successfulIds.push(item.id);
-                } else {
+                } else if (logRes.status >= 400 && logRes.status < 500 && logRes.status !== 429 && logRes.status !== 419) {
+                    // REL-03 FIX: Permanent client/data validation errors (400 Bad Request, 404 Not Found, 422 Unprocessable Entity).
+                    // The student ID does not exist, is invalid, or failed validation.
+                    // Discard this item so it does NOT permanently block all valid offline scans queued behind it!
                     const errorText = await logRes.text();
-                    console.warn(`[LEMS QueueManager] Kiosk sync HTTP ${logRes.status} for item ${item.id}:`, errorText);
-                    // Non-ok response (e.g. 422 or 500) -> halt sync loop to avoid discarding failed items
+                    console.warn(`[LEMS QueueManager] Discarding unprocessable queued scan ${item.id} (Student ID: "${item.student_id}") due to HTTP ${logRes.status}:`, errorText);
+                    discardedIds.push(item.id);
+                } else {
+                    // Temporary errors (5xx server error, 429 rate limit, 419 CSRF timeout):
+                    // Stop syncing to preserve order and retry on the next interval when server recovers.
+                    const errorText = await logRes.text();
+                    console.warn(`[LEMS QueueManager] Temporary server error HTTP ${logRes.status} for item ${item.id} — pausing sync:`, errorText);
                     break;
                 }
             } catch (err) {
@@ -94,10 +103,11 @@ export const QueueManager = {
             }
         }
 
-        // Remove successful items from queue
-        if (successfulIds.length > 0) {
+        // Remove successful and discarded items from queue
+        const idsToRemove = [...successfulIds, ...discardedIds];
+        if (idsToRemove.length > 0) {
             const currentQueue = this.getQueue();
-            const newQueue = currentQueue.filter(item => !successfulIds.includes(item.id));
+            const newQueue = currentQueue.filter(item => !idsToRemove.includes(item.id));
             this.saveQueue(newQueue);
         }
 

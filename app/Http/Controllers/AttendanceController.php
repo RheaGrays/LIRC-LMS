@@ -340,24 +340,36 @@ class AttendanceController extends Controller
 
     /**
      * Push a scan event onto the global sequential event queue with a monotonic sequence ID.
+     * REL-02 FIX: Wrap queue read-modify-write in an atomic lock to eliminate race conditions
+     * when multiple kiosks scan at the exact same millisecond.
      */
     private function pushScanEvent(array $event): array
     {
-        $seqId = Cache::increment('kiosk_global_event_seq');
-        $event['seq_id'] = $seqId;
-        $event['id']     = $seqId;
+        try {
+            return Cache::lock('kiosk_scan_events_queue_lock', 5)->block(2, function () use ($event) {
+                $seqId = Cache::increment('kiosk_global_event_seq');
+                $event['seq_id'] = $seqId;
+                $event['id']     = $seqId;
 
-        $queue = Cache::get('kiosk_scan_events_queue', []);
-        $queue[] = $event;
+                $queue = Cache::get('kiosk_scan_events_queue', []);
+                $queue[] = $event;
 
-        // Keep last 50 events in buffer
-        if (count($queue) > 50) {
-            $queue = array_slice($queue, -50);
+                // Keep last 50 events in buffer
+                if (count($queue) > 50) {
+                    $queue = array_slice($queue, -50);
+                }
+
+                Cache::put('kiosk_scan_events_queue', $queue, 300);
+
+                return $event;
+            });
+        } catch (\Illuminate\Contracts\Cache\LockTimeoutException $e) {
+            // Fallback if lock stalls: still assign monotonic sequence ID
+            $seqId = Cache::increment('kiosk_global_event_seq');
+            $event['seq_id'] = $seqId;
+            $event['id']     = $seqId;
+            return $event;
         }
-
-        Cache::put('kiosk_scan_events_queue', $queue, 300);
-
-        return $event;
     }
 
     private function resolveStudent(string $term): Student|string|null

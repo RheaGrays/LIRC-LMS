@@ -27,6 +27,17 @@ class SectionController extends Controller
         return view('admin.statistics.index', compact('admin', 'logs', 'settings'));
     }
 
+    /** Export Seating Headcount Hourly Matrix to Excel */
+    public function exportHourly(Request $request, \App\Services\SeatingReportService $reportService)
+    {
+        $month       = $request->input('month');
+        $startDate   = $request->input('start_date');
+        $endDate     = $request->input('end_date');
+        $sectionCode = $request->input('section_code', 'all');
+
+        return $reportService->exportHourlyMatrix($month, $startDate, $endDate, $sectionCode);
+    }
+
     /** GET /admin/sections/latest — JSON for Alpine.js */
     public function latest(): JsonResponse
     {

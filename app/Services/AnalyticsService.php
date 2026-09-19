@@ -2,134 +2,177 @@
 
 namespace App\Services;
 
+use App\Models\AcademicTerm;
 use App\Models\AttendanceLog;
+use App\Models\Student;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 /**
- * AnalyticsService — available for use by AnalyticsController.
+ * AnalyticsService — Single Source of Truth for Library Attendance Analytics.
  *
- * CQ-A01 NOTE: This service is currently not wired into AnalyticsController
- * (the controller does its own data building inline). This service is kept
- * as a clean, testable alternative with the SQL-level optimisations applied.
- * To activate it, inject AnalyticsService in AnalyticsController and call
- * getAnalyticsData($period) instead of buildAnalyticsData().
+ * Database-agnostic (SQLite & MySQL compatible) with SQL-level aggregation,
+ * intelligent multi-tier caching, and term/period filtering.
  */
 class AnalyticsService
 {
-    public function getAnalyticsData(string $period): array
+    /**
+     * Get analytics data (traffic, departments, summary) with intelligent TTL caching.
+     */
+    public function getAnalyticsData(string $period = 'today', ?string $termId = null): array
     {
-        return Cache::remember("analytics_service_{$period}", 300, function () use ($period) {
-            return [
-                'traffic'     => $this->getTrafficData($period),
-                'departments' => $this->getDepartmentData($period),
-            ];
+        $cacheKey = "analytics_data_{$period}_" . ($termId ?? 'none');
+
+        // Real-time 60s cache for today; 300s (5 min) for historical periods or specific terms.
+        $ttl = ($period === 'today' && !$termId) ? 60 : 300;
+
+        return Cache::remember($cacheKey, $ttl, function () use ($period, $termId) {
+            return $this->buildAnalyticsData($period, $termId);
         });
     }
 
     /**
-     * PERF-A01 FIX: Push all groupBy/count operations into SQL.
-     * Previously: loaded ALL matching rows into PHP with ->get(['id', 'logged_at'])
-     *             then did ->groupBy() in a PHP Collection — O(n) memory.
-     * Now: SELECT HOUR/DATE/MONTH(...), COUNT(*) GROUP BY — O(1) memory,
-     *      DB engine does the work and returns only the summary rows.
+     * Core aggregation logic using SQL GROUP BY instead of in-memory collections.
      */
-    private function getTrafficData(string $period): array
+    public function buildAnalyticsData(string $period, ?string $termId = null): array
     {
-        $now    = Carbon::now();
-        $labels = [];
-        $values = [];
+        $query = AttendanceLog::query()->where('action', 'check_in');
 
-        $base = AttendanceLog::query()->where('action', 'check_in');
-
-        switch ($period) {
-            case 'today':
-                $hourly = (clone $base)
-                    ->where('logged_at', '>=', $now->copy()->startOfDay())
-                    ->selectRaw("CAST(strftime('%H', logged_at) AS INTEGER) as hour, COUNT(*) as cnt", [])
-                    ->groupBy('hour')
-                    ->pluck('cnt', 'hour');
-
-                for ($i = 7; $i <= 19; $i++) {
-                    $labels[] = Carbon::createFromTime($i, 0, 0)->format('g A');
-                    $values[] = (int) ($hourly[$i] ?? 0);
-                }
-                break;
-
-            case 'week':
-                $startOfWeek = $now->copy()->startOfWeek();
-                $byDate = (clone $base)
-                    ->where('logged_at', '>=', $startOfWeek)
-                    ->selectRaw("strftime('%Y-%m-%d', logged_at) as date, COUNT(*) as cnt", [])
-                    ->groupBy('date')
-                    ->pluck('cnt', 'date');
-
-                for ($i = 0; $i < 7; $i++) {
-                    $date    = $startOfWeek->copy()->addDays($i);
-                    $labels[] = $date->format('D');
-                    $values[] = (int) ($byDate[$date->format('Y-m-d')] ?? 0);
-                }
-                break;
-
-            case 'month':
-                $startOfMonth = $now->copy()->startOfMonth();
-                $byDate = (clone $base)
-                    ->where('logged_at', '>=', $startOfMonth)
-                    ->selectRaw("strftime('%Y-%m-%d', logged_at) as date, COUNT(*) as cnt", [])
-                    ->groupBy('date')
-                    ->pluck('cnt', 'date');
-
-                $daysInMonth = $now->daysInMonth;
-                for ($i = 1; $i <= $daysInMonth; $i++) {
-                    $date    = $startOfMonth->copy()->addDays($i - 1);
-                    $labels[] = ($i % 3 == 0 || $i == 1 || $i == $daysInMonth) ? $i : '';
-                    $values[] = (int) ($byDate[$date->format('Y-m-d')] ?? 0);
-                }
-                break;
-
-            case 'year':
-                $byMonth = (clone $base)
-                    ->where('logged_at', '>=', $now->copy()->startOfYear())
-                    ->selectRaw("CAST(strftime('%m', logged_at) AS INTEGER) as month, COUNT(*) as cnt", [])
-                    ->groupBy('month')
-                    ->pluck('cnt', 'month');
-
-                for ($i = 1; $i <= 12; $i++) {
-                    $labels[] = Carbon::createFromDate(null, $i, 1)->format('M');
-                    $values[] = (int) ($byMonth[$i] ?? 0);
-                }
-                break;
+        // 1. Date Filtering
+        if ($termId) {
+            $term = AcademicTerm::find($termId, ['*']);
+            if ($term) {
+                $query->whereBetween('logged_at', [
+                    $term->start_date->startOfDay(),
+                    $term->end_date->endOfDay()
+                ]);
+            }
+        } else {
+            $now = now();
+            if ($period === 'today') {
+                $query->where('logged_at', '>=', $now->copy()->startOfDay());
+            } elseif ($period === 'week') {
+                $query->where('logged_at', '>=', $now->copy()->startOfWeek());
+            } elseif ($period === 'month') {
+                $query->where('logged_at', '>=', $now->copy()->startOfMonth());
+            } elseif ($period === 'year') {
+                $query->where('logged_at', '>=', $now->copy()->startOfYear());
+            }
         }
 
-        return ['labels' => $labels, 'values' => $values];
-    }
+        $deptQuery = clone $query;
+        $driver = DB::connection()->getDriverName();
 
-    private function getDepartmentData(string $period): array
-    {
-        // Intelephense stubs require all 6 join() args explicitly.
-        // 'inner' and false are the defaults at runtime — this changes nothing functionally.
-        $now   = Carbon::now();
-        $query = AttendanceLog::query()
-            ->join('students', 'attendance_logs.student_id', '=', 'students.id', 'inner', false)
+        // 2. Traffic Series Calculation
+        $trafficLabels = [];
+        $trafficValues = [];
+
+        if ($termId || $period === 'year') {
+            $groupExpr = $driver === 'sqlite' ? "strftime('%Y-%m', logged_at)" : "DATE_FORMAT(logged_at, '%Y-%m')";
+            $grouped = (clone $query)
+                ->selectRaw("{$groupExpr} as period_key, COUNT(*) as cnt", [])
+                ->groupBy('period_key')
+                ->orderBy('period_key')
+                ->pluck('cnt', 'period_key');
+
+            foreach ($grouped as $yearMonth => $count) {
+                $trafficLabels[] = Carbon::createFromFormat('Y-m', $yearMonth)->format('M Y');
+                $trafficValues[] = (int) $count;
+            }
+        } elseif ($period === 'month' || $period === 'week') {
+            $groupExpr = $driver === 'sqlite' ? "strftime('%Y-%m-%d', logged_at)" : "DATE(logged_at)";
+            $grouped = (clone $query)
+                ->selectRaw("{$groupExpr} as period_key, COUNT(*) as cnt", [])
+                ->groupBy('period_key')
+                ->orderBy('period_key')
+                ->pluck('cnt', 'period_key');
+
+            foreach ($grouped as $dateStr => $count) {
+                $trafficLabels[] = Carbon::parse($dateStr)->format('M d (D)');
+                $trafficValues[] = (int) $count;
+            }
+        } else {
+            $groupExpr = $driver === 'sqlite' ? "CAST(strftime('%H', logged_at) AS INTEGER)" : "HOUR(logged_at)";
+            $hourlyCounts = (clone $query)
+                ->selectRaw("{$groupExpr} as period_key, COUNT(*) as cnt", [])
+                ->groupBy('period_key')
+                ->pluck('cnt', 'period_key');
+
+            for ($h = 6; $h <= 22; $h++) {
+                $label = $h < 12 ? "{$h}AM" : ($h === 12 ? "12PM" : ($h - 12) . "PM");
+                $trafficLabels[] = $label;
+                $trafficValues[] = (int) ($hourlyCounts[$h] ?? 0);
+            }
+        }
+
+        // 3. Department Breakdown
+        $deptData = $deptQuery->join('students', 'attendance_logs.student_id', '=', 'students.id', 'inner', false)
             ->leftJoin('academic_departments', 'students.department_id', '=', 'academic_departments.id', 'left', false)
-            ->where('attendance_logs.action', 'check_in');
-
-        switch ($period) {
-            case 'today':  $query->where('attendance_logs.logged_at', '>=', $now->copy()->startOfDay());   break;
-            case 'week':   $query->where('attendance_logs.logged_at', '>=', $now->copy()->startOfWeek());  break;
-            case 'month':  $query->where('attendance_logs.logged_at', '>=', $now->copy()->startOfMonth()); break;
-            case 'year':   $query->where('attendance_logs.logged_at', '>=', $now->copy()->startOfYear());  break;
-        }
-
-        $results = $query
-            ->selectRaw("COALESCE(academic_departments.name, 'Unknown') as department, COUNT(*) as aggregate", [])
+            ->selectRaw("COALESCE(NULLIF(academic_departments.code, ''), academic_departments.name, 'Unknown') as department, COUNT(*) as aggregate", [])
             ->groupBy('department')
             ->orderByDesc('aggregate')
             ->get();
 
+        $deptLabels = [];
+        $deptValues = [];
+        foreach ($deptData as $row) {
+            $deptLabels[] = $row->department;
+            $deptValues[] = (int) $row->aggregate;
+        }
+
+        // 4. Cached Global Summary Counters
+        $totalPatrons = Cache::remember('analytics_summary_total_patrons', 300, function () {
+            return Student::query()->count('*');
+        });
+
+        $todayTraffic = Cache::remember('analytics_summary_today_traffic', 60, function () {
+            return AttendanceLog::query()
+                ->where('action', 'check_in')
+                ->whereDate('logged_at', now()->toDateString())
+                ->count('*');
+        });
+
+        $monthTraffic = Cache::remember('analytics_summary_month_traffic', 300, function () {
+            return AttendanceLog::query()
+                ->where('action', 'check_in')
+                ->whereMonth('logged_at', now()->month)
+                ->whereYear('logged_at', now()->year)
+                ->count('*');
+        });
+
+        $mostActiveDept = !empty($deptLabels) ? $deptLabels[0] : 'N/A';
+
+        // 5. Top Patron for Filtered Scope
+        $nameExpr = $driver === 'sqlite'
+            ? "(students.first_name || ' ' || students.last_name)"
+            : "CONCAT(students.first_name, ' ', students.last_name)";
+
+        $topPatron = (clone $query)
+            ->join('students', 'attendance_logs.student_id', '=', 'students.id', 'inner', false)
+            ->selectRaw("{$nameExpr} as name, COUNT(*) as aggregate", [])
+            ->groupBy('students.id', 'students.first_name', 'students.last_name')
+            ->orderByDesc('aggregate')
+            ->first();
+
+        $topPatronName = $topPatron ? $topPatron->name : 'N/A';
+
         return [
-            'labels' => $results->pluck('department')->toArray(),
-            'values' => $results->pluck('aggregate')->map(fn($v) => (int) $v)->toArray(),
+            'summary' => [
+                'total_patrons' => $totalPatrons,
+                'today_traffic' => $todayTraffic,
+                'month_traffic' => $monthTraffic,
+                'active_dept'   => $mostActiveDept,
+                'top_patron'    => $topPatronName,
+            ],
+            'traffic' => [
+                'labels' => $trafficLabels,
+                'values' => $trafficValues,
+            ],
+            'departments' => [
+                'labels' => $deptLabels,
+                'values' => $deptValues,
+            ],
         ];
     }
 }

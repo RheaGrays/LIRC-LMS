@@ -120,7 +120,14 @@ export default function App() {
           await axios.post(targetUrl, { student_id: id }, { timeout: 12000 });
           newQueue.splice(newQueue.indexOf(id), 1); // Remove if successful
         } catch (err) {
-          // Keep in queue on error (no network, timeout, or 500)
+          // REL-03 FIX: If the server responded with 4xx client/validation error (e.g. 400, 404, 422),
+          // discard the unprocessable ID so it doesn't block the rest of the offline queue.
+          if (err.response && err.response.status >= 400 && err.response.status < 500 && err.response.status !== 429) {
+            newQueue.splice(newQueue.indexOf(id), 1);
+          } else {
+            // Transient network failure or 5xx server error: stop syncing and retry on next interval
+            break;
+          }
         }
       }
       await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(newQueue));
