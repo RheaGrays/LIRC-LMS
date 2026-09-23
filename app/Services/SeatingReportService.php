@@ -17,6 +17,7 @@ class SeatingReportService
      * Generate and stream an Excel report matrix containing:
      * - Rows: Days of the period (e.g. Day 1 to Day 31)
      * - Columns: 1-hour intervals from 7:00 AM - 8:00 AM through 6:00 PM - 7:00 PM
+     * - Multiple sheets: Overall summary ("All Sections") plus one sheet per section.
      *
      * @param string|null $month Month in 'Y-m' format (e.g. '2026-09')
      * @param string|null $startDate 'Y-m-d'
@@ -40,13 +41,6 @@ class SeatingReportService
             $filePeriod  = $start->format('Y_m');
         }
 
-        // Section label
-        $sectionName = 'All Library Sections (Total Seating)';
-        if ($sectionCode && $sectionCode !== 'all') {
-            $foundSection = SectionLog::query()->where('section_code', '=', $sectionCode, 'and')->first();
-            $sectionName  = $foundSection ? "{$foundSection->section_name} ({$sectionCode})" : $sectionCode;
-        }
-
         // 2. Define the 12 one-hour time slots (7 AM - 7 PM)
         $hours = [];
         for ($h = 7; $h <= 18; $h++) {
@@ -55,7 +49,10 @@ class SeatingReportService
             $hours[$h] = "{$hStart} - {$hEnd}";
         }
 
-        // 3. Query section logs for the date range
+        // 3. Resolve sections
+        $allSections = $this->getAllSections();
+
+        // 4. Query logs for the date range
         $query = SectionLog::query()
             ->whereBetween('date', [$start->toDateString(), $end->toDateString()], 'and', false)
             ->whereBetween('hour', [7, 18], 'and', false);
@@ -64,27 +61,120 @@ class SeatingReportService
             $query->where('section_code', '=', $sectionCode, 'and');
         }
 
-        // Aggregate by date and hour
-        $logs = $query->selectRaw('date, hour, SUM(occupied) as total_occupied, SUM(total_capacity) as total_cap', [])
-            ->groupBy('date', 'hour')
-            ->get();
+        $logs = $query->get(['section_code', 'section_name', 'date', 'hour', 'occupied']);
 
-        // Organize into lookup: [$dateStr][$hour] = occupied
-        $matrix = [];
+        // Organize matrices: total and per-section
+        $totalMatrix = [];
+        $sectionMatrices = [];
+
         foreach ($logs as $log) {
             $d = Carbon::parse($log->date)->toDateString();
-            $matrix[$d][$log->hour] = (int) $log->total_occupied;
+            $h = (int) $log->hour;
+            $occ = (int) $log->occupied;
+            $sec = $log->section_code;
+
+            $totalMatrix[$d][$h] = ($totalMatrix[$d][$h] ?? 0) + $occ;
+            $sectionMatrices[$sec][$d][$h] = ($sectionMatrices[$sec][$d][$h] ?? 0) + $occ;
+
+            if (!isset($allSections[$sec]) && !empty($log->section_name)) {
+                $allSections[$sec] = $log->section_name;
+            }
         }
 
-        // 4. Build Spreadsheet
+        // 5. Build Spreadsheet
         $spreadsheet = new Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('Seating Headcounts');
+        $existingSheetTitles = [];
 
+        if ($sectionCode && $sectionCode !== 'all') {
+            // Single section export
+            $secName = $allSections[$sectionCode] ?? $sectionCode;
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheetTitle = $this->sanitizeSheetTitle($secName, $existingSheetTitles);
+            $sheet->setTitle($sheetTitle);
+
+            $sectionLabel = "{$secName} ({$sectionCode})";
+            $matrix = $sectionMatrices[$sectionCode] ?? [];
+
+            $this->populateSheet($sheet, $sectionLabel, $matrix, $start, $end, $hours, $periodLabel);
+        } else {
+            // Multi-sheet export: Overall Total + Sheet per section
+            // Sheet 1: All Sections
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheetTitle = $this->sanitizeSheetTitle('All Sections', $existingSheetTitles);
+            $sheet->setTitle($sheetTitle);
+
+            $this->populateSheet(
+                $sheet,
+                'All Library Sections (Total Seating)',
+                $totalMatrix,
+                $start,
+                $end,
+                $hours,
+                $periodLabel
+            );
+
+            // Subsequent sheets: One sheet per section
+            foreach ($allSections as $secCode => $secName) {
+                $sheet = $spreadsheet->createSheet();
+                $sheetTitle = $this->sanitizeSheetTitle($secName, $existingSheetTitles);
+                $sheet->setTitle($sheetTitle);
+
+                $sectionLabel = "{$secName} ({$secCode})";
+                $matrix = $sectionMatrices[$secCode] ?? [];
+
+                $this->populateSheet(
+                    $sheet,
+                    $sectionLabel,
+                    $matrix,
+                    $start,
+                    $end,
+                    $hours,
+                    $periodLabel
+                );
+            }
+
+            // Default focus to the first sheet
+            $spreadsheet->setActiveSheetIndex(0);
+        }
+
+        // Output streaming
+        $safeSection = preg_replace('/[^a-zA-Z0-9_-]/', '_', $sectionCode ?? 'all');
+        $filename = "Seating_Report_{$safeSection}_{$filePeriod}.xlsx";
+        $writer   = new Xlsx($spreadsheet);
+
+        return response()->streamDownload(function () use ($writer, $spreadsheet) {
+            $writer->save('php://output');
+            $spreadsheet->disconnectWorksheets();
+            unset($spreadsheet);
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+
+    /**
+     * Populate a worksheet with the standard CJC hourly seating report layout.
+     *
+     * @param \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet
+     * @param string $sectionLabel
+     * @param array $matrix [$dateStr][$hour] = count
+     * @param Carbon $start
+     * @param Carbon $end
+     * @param array $hours [$hour => '7:00 AM - 8:00 AM']
+     * @param string $periodLabel
+     */
+    protected function populateSheet(
+        \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet,
+        string $sectionLabel,
+        array $matrix,
+        Carbon $start,
+        Carbon $end,
+        array $hours,
+        string $periodLabel
+    ): void {
         // Document Title & Metadata Header
         $sheet->setCellValue('A1', 'COR JESU COLLEGE — LIBRARY & INFORMATION RESOURCE CENTER');
         $sheet->setCellValue('A2', 'HOURLY SEATING HEADCOUNT REPORT MATRIX');
-        $sheet->setCellValue('A3', "Section: {$sectionName}  |  Period: {$periodLabel}  |  Generated: " . now()->format('M d, Y h:i A'));
+        $sheet->setCellValue('A3', "Section: {$sectionLabel}  |  Period: {$periodLabel}  |  Generated: " . now()->format('M d, Y h:i A'));
 
         $sheet->getStyle('A1:A2')->getFont()->setBold(true);
         $sheet->getStyle('A1')->getFont()->setSize(14)->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('0F2744'));
@@ -111,7 +201,7 @@ class SeatingReportService
         $sheet->getStyle($headerRange)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
         $sheet->getRowDimension($headerRow)->setRowHeight(28);
 
-        // 5. Fill Data Rows (One row per day in range)
+        // Fill Data Rows (One row per day in range)
         $currentRow = 6;
         $curr = $start->copy();
 
@@ -160,7 +250,7 @@ class SeatingReportService
             $curr->addDay();
         }
 
-        // 6. Summary Rows: Total and Average
+        // Summary Rows: Total and Average
         // Total Row
         $sheet->setCellValue("A{$currentRow}", 'TOTAL');
         $sheet->setCellValue("B{$currentRow}", "{$dayCount} days");
@@ -209,18 +299,90 @@ class SeatingReportService
             $colLetter++;
         }
         $sheet->getColumnDimension($lastCol)->setWidth(15);
+    }
 
-        // Output streaming
-        $safeSection = preg_replace('/[^a-zA-Z0-9_-]/', '_', $sectionCode ?? 'all');
-        $filename = "Seating_Report_{$safeSection}_{$filePeriod}.xlsx";
-        $writer   = new Xlsx($spreadsheet);
+    /**
+     * Retrieve all available library sections from the database and settings.
+     *
+     * @return array<string, string> Array mapping section_code => section_name
+     */
+    public function getAllSections(): array
+    {
+        $sections = [];
 
-        return response()->streamDownload(function () use ($writer, $spreadsheet) {
-            $writer->save('php://output');
-            $spreadsheet->disconnectWorksheets();
-            unset($spreadsheet);
-        }, $filename, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        // 1. From SectionLog: get latest recorded section_name for each section_code
+        $latestIds = SectionLog::query()
+            ->selectRaw('MAX(id) as id', [])
+            ->groupBy('section_code')
+            ->pluck('id');
+
+        if ($latestIds->isNotEmpty()) {
+            $rows = SectionLog::query()
+                ->whereIn('id', $latestIds, 'and', false)
+                ->orderBy('section_code')
+                ->get();
+
+            foreach ($rows as $r) {
+                $code = trim($r->section_code);
+                $name = trim($r->section_name);
+                if ($code !== '') {
+                    $sections[$code] = $name ?: $code;
+                }
+            }
+        }
+
+        // 2. From SystemSetting library_sections (fallback/supplement)
+        $configured = \App\Models\SystemSetting::get('library_sections', [
+            'General Reading', 'Discussion Room', 'Internet Section', 'Periodicals'
         ]);
+
+        if (is_array($configured)) {
+            foreach ($configured as $name) {
+                $name = trim($name);
+                if ($name === '') {
+                    continue;
+                }
+                $code = strtoupper(substr($name, 0, 3));
+                if (!isset($sections[$code])) {
+                    $sections[$code] = $name;
+                }
+            }
+        }
+
+        return $sections;
+    }
+
+    /**
+     * Sanitize a sheet title to conform to Excel constraints:
+     * - Must not exceed 31 characters
+     * - Must not contain characters: \ / ? * : [ ]
+     * - Must not be blank
+     * - Must be unique within the workbook (case-insensitive)
+     *
+     * @param string $title
+     * @param array $existingTitles Lowercase list of already assigned sheet titles
+     * @return string
+     */
+    protected function sanitizeSheetTitle(string $title, array &$existingTitles): string
+    {
+        $clean = preg_replace('/[\\\\\/:\*\?\[\]]/', ' ', $title);
+        $clean = trim(preg_replace('/\s+/', ' ', $clean));
+        if ($clean === '') {
+            $clean = 'Section';
+        }
+
+        $base = mb_substr($clean, 0, 31);
+        $finalTitle = $base;
+        $counter = 2;
+
+        while (in_array(mb_strtolower($finalTitle), $existingTitles, true)) {
+            $suffix = " ({$counter})";
+            $maxBaseLen = 31 - mb_strlen($suffix);
+            $finalTitle = mb_substr($base, 0, $maxBaseLen) . $suffix;
+            $counter++;
+        }
+
+        $existingTitles[] = mb_strtolower($finalTitle);
+        return $finalTitle;
     }
 }

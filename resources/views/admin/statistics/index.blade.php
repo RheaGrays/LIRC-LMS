@@ -390,7 +390,7 @@
                         </div>
                         <div>
                             <h2 class="text-lg font-bold text-[var(--cjc-navy)]">Hourly Seating Report (.xlsx)</h2>
-                            <p class="text-xs text-gray-500">Days in rows &bull; 7:00 AM – 7:00 PM (1-hr slots) in columns</p>
+                            <p class="text-xs text-gray-500">Days in rows &bull; 7:00 AM – 7:00 PM (1-hr slots) &bull; Multi-sheet per section</p>
                         </div>
                     </div>
                     <button @click="isHourlyModalOpen = false" class="text-gray-400 hover:text-gray-600 p-1 rounded-lg">
@@ -403,7 +403,7 @@
                     <div class="mb-4">
                         <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">Section Scope</label>
                         <select x-model="reportSection" class="w-full rounded-xl border border-gray-200 shadow-sm focus:border-[var(--cjc-navy)] focus:ring-[var(--cjc-navy)] px-3 py-2.5 text-sm font-medium">
-                            <option value="all">All Library Sections (Total Seating)</option>
+                            <option value="all">All Library Sections (Multi-Sheet: Total + Per Section)</option>
                             <template x-for="s in sections" :key="s.id">
                                 <option :value="s.id" x-text="`${s.name} (${s.id})`"></option>
                             </template>
