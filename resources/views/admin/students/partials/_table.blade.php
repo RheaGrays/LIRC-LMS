@@ -1,15 +1,17 @@
             @php
-                function sortLink($col, $label) {
-                    $currentSort = request('sort_by', 'last_name');
-                    $currentDir = request('sort_dir', 'asc');
-                    $newDir = ($currentSort === $col && $currentDir === 'asc') ? 'desc' : 'asc';
-                    $params = array_merge(request()->except(['sort_by', 'sort_dir']), ['sort_by' => $col, 'sort_dir' => $newDir]);
-                    $url = route('admin.students.index', $params);
-                    $icon = '';
-                    if ($currentSort === $col) {
-                        $icon = $currentDir === 'asc' ? ' ▲' : ' ▼';
+                if (!function_exists('sortLink')) {
+                    function sortLink($col, $label) {
+                        $currentSort = request('sort_by', 'last_name');
+                        $currentDir = request('sort_dir', 'asc');
+                        $newDir = ($currentSort === $col && $currentDir === 'asc') ? 'desc' : 'asc';
+                        $params = array_merge(request()->except(['sort_by', 'sort_dir']), ['sort_by' => $col, 'sort_dir' => $newDir]);
+                        $url = route('admin.students.index', $params);
+                        $icon = '';
+                        if ($currentSort === $col) {
+                            $icon = $currentDir === 'asc' ? ' ▲' : ' ▼';
+                        }
+                        return '<a href="' . e($url) . '" class="inline-flex items-center gap-1 hover:text-[var(--cjc-navy)] font-bold">' . e($label) . '<span class="text-xs text-[var(--cjc-red)]">' . $icon . '</span></a>';
                     }
-                    return '<a href="' . e($url) . '" class="inline-flex items-center gap-1 hover:text-[var(--cjc-navy)] font-bold">' . e($label) . '<span class="text-xs text-[var(--cjc-red)]">' . $icon . '</span></a>';
                 }
             @endphp
 
@@ -62,7 +64,7 @@
                                     @endif
                                 </td>
                                 <td class="p-4 text-right whitespace-nowrap">
-                                    <button @click="openEditModal({{ json_encode($student) }})" class="text-xs font-semibold px-3 py-1.5 rounded bg-blue-100 hover:bg-blue-200 text-blue-700 transition-colors mr-1">
+                                    <button type="button" @click="openEditModal({{ json_encode($student) }})" class="text-xs font-semibold px-3 py-1.5 rounded bg-blue-100 hover:bg-blue-200 text-blue-700 transition-colors mr-1">
                                         Edit
                                     </button>
                                     @if(auth('admin')->user()->isSuperAdmin())
@@ -70,7 +72,7 @@
                                         Delete
                                     </button>
                                     @endif
-                                    <button @click="openViolationModal({{ json_encode($student) }})" class="text-xs font-semibold px-3 py-1.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors">
+                                    <button type="button" @click="openViolationModal({{ json_encode($student) }})" class="text-xs font-semibold px-3 py-1.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors">
                                         Manage Violations
                                     </button>
                                 </td>

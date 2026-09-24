@@ -38,7 +38,7 @@
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Department</label>
-                            <select name="department_id" x-model="editStudentData.department_id" class="w-full p-2 border border-gray-300 rounded focus:border-[var(--cjc-navy)] outline-none text-sm bg-white">
+                            <select name="department_id" x-model="editStudentData.department_id" @change="editStudentData.program_id = ''" class="w-full p-2 border border-gray-300 rounded focus:border-[var(--cjc-navy)] outline-none text-sm bg-white">
                                 <option value="">None</option>
                                 @foreach($departmentsList as $dept)
                                     <option value="{{ $dept->id }}">{{ $dept->name }}</option>
@@ -49,9 +49,9 @@
                             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Program</label>
                             <select name="program_id" x-model="editStudentData.program_id" class="w-full p-2 border border-gray-300 rounded focus:border-[var(--cjc-navy)] outline-none text-sm bg-white">
                                 <option value="">None</option>
-                                @foreach($programsList as $prog)
-                                    <option value="{{ $prog->id }}">{{ $prog->name }}</option>
-                                @endforeach
+                                <template x-for="prog in editFilteredPrograms" :key="prog.id">
+                                    <option :value="prog.id" x-text="prog.name" :selected="String(prog.id) === String(editStudentData.program_id)"></option>
+                                </template>
                             </select>
                         </div>
                         <div>

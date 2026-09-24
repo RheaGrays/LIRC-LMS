@@ -8,7 +8,18 @@
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                 </div>
-                <form action="{{ route('admin.students.store') }}" method="POST" class="p-6">
+                <form action="{{ route('admin.students.store') }}" 
+                      method="POST" 
+                      x-data="{
+                          selectedDept: '',
+                          selectedProg: '',
+                          allPrograms: @js($programsList),
+                          get filteredPrograms() {
+                              if (!this.selectedDept) return this.allPrograms;
+                              return this.allPrograms.filter(p => String(p.department_id) === String(this.selectedDept));
+                          }
+                      }"
+                      class="p-6">
                     @csrf
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                         <div class="col-span-2">
@@ -37,7 +48,7 @@
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Department</label>
-                            <select name="department_id" class="w-full p-2 border border-gray-300 rounded focus:border-[var(--cjc-navy)] outline-none text-sm bg-white">
+                            <select name="department_id" x-model="selectedDept" @change="selectedProg = ''" class="w-full p-2 border border-gray-300 rounded focus:border-[var(--cjc-navy)] outline-none text-sm bg-white">
                                 <option value="">None</option>
                                 @foreach($departmentsList as $dept)
                                     <option value="{{ $dept->id }}">{{ $dept->name }}</option>
@@ -46,11 +57,11 @@
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Program</label>
-                            <select name="program_id" class="w-full p-2 border border-gray-300 rounded focus:border-[var(--cjc-navy)] outline-none text-sm bg-white">
+                            <select name="program_id" x-model="selectedProg" class="w-full p-2 border border-gray-300 rounded focus:border-[var(--cjc-navy)] outline-none text-sm bg-white">
                                 <option value="">None</option>
-                                @foreach($programsList as $prog)
-                                    <option value="{{ $prog->id }}">{{ $prog->name }}</option>
-                                @endforeach
+                                <template x-for="prog in filteredPrograms" :key="prog.id">
+                                    <option :value="prog.id" x-text="prog.name"></option>
+                                </template>
                             </select>
                         </div>
                         <div>

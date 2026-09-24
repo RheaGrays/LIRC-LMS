@@ -143,4 +143,54 @@ class StudentTest extends TestCase
 
         @unlink($tempPath);
     }
+
+    #[Test]
+    public function it_returns_full_page_for_standard_index_request()
+    {
+        Student::create([
+            'id' => '2026-0001',
+            'first_name' => 'Juan',
+            'last_name' => 'Dela Cruz',
+            'patron_category' => 'Student',
+            'status' => 'active',
+        ]);
+
+        $response = $this->actingAs($this->admin, 'admin')->get('/admin/students');
+
+        $response->assertOk();
+        $response->assertViewIs('admin.students.index');
+        $response->assertSee('Patron Directory &amp; Violations', false);
+        $response->assertSee('Juan Dela Cruz');
+    }
+
+    #[Test]
+    public function it_returns_table_partial_for_live_ajax_search_request()
+    {
+        Student::create([
+            'id' => '2026-0001',
+            'first_name' => 'Juan',
+            'last_name' => 'Dela Cruz',
+            'patron_category' => 'Student',
+            'status' => 'active',
+        ]);
+
+        Student::create([
+            'id' => '2026-0002',
+            'first_name' => 'Maria',
+            'last_name' => 'Clara',
+            'patron_category' => 'Student',
+            'status' => 'active',
+        ]);
+
+        // AJAX search for Juan
+        $response = $this->actingAs($this->admin, 'admin')
+            ->withHeaders(['X-LEMS-Table-Only' => '1'])
+            ->get('/admin/students?search=Juan');
+
+        $response->assertOk();
+        $response->assertViewIs('admin.students.partials._table');
+        $response->assertSee('Juan Dela Cruz');
+        $response->assertDontSee('Maria Clara');
+    }
 }
+

@@ -16,6 +16,11 @@
     confirmButtonText: 'Confirm',
     selectedStudent: null,
     editStudentData: {},
+    allPrograms: @js($programsList),
+    get editFilteredPrograms() {
+        if (!this.editStudentData?.department_id) return this.allPrograms;
+        return this.allPrograms.filter(p => String(p.department_id) === String(this.editStudentData.department_id));
+    },
     
     openViolationModal(student) {
         this.selectedStudent = student;
@@ -51,7 +56,25 @@
 
 @include('admin.students.partials._filters')
 
+<div id="students-table-container" 
+     class="relative"
+     @click="
+         const link = $event.target.closest('a');
+         if (link && link.href && !link.hasAttribute('download') && !link.target) {
+             const url = new URL(link.href, window.location.origin);
+             if (url.pathname.includes('/admin/students')) {
+                 $event.preventDefault();
+                 const form = document.getElementById('patron-filter-form');
+                 if (form && typeof form.__liveSearch === 'function') {
+                     form.__liveSearch(link.href);
+                 } else {
+                     window.location.href = link.href;
+                 }
+             }
+         }
+     ">
 @include('admin.students.partials._table')
+</div>
 
         </div>
     </div>

@@ -120,10 +120,8 @@ class StudentRegistrationController extends Controller
             // Look up the department by name or code
             $deptNameOrCode = trim($validated['college']);
             $dept = \App\Models\AcademicDepartment::query()
-                ->where('name', '=', $deptNameOrCode)
-                ->orWhere(function ($q) use ($deptNameOrCode) {
-                    $q->whereNotNull('code')->where('code', '=', $deptNameOrCode);
-                })
+                ->where('name', $deptNameOrCode)
+                ->orWhere('code', $deptNameOrCode)
                 ->first();
             $student->department_id = $dept?->id;
 
@@ -134,10 +132,10 @@ class StudentRegistrationController extends Controller
                 if ($dept) {
                     $progQuery->where('department_id', $dept->id);
                 }
-                $prog = (clone $progQuery)->where('name', '=', $progNameOrCode)->first()
-                     ?: (clone $progQuery)->whereNotNull('code')->where('code', '=', $progNameOrCode)->first()
-                     ?: \App\Models\AcademicProgram::query()->where('name', '=', $progNameOrCode)->first()
-                     ?: \App\Models\AcademicProgram::query()->whereNotNull('code')->where('code', '=', $progNameOrCode)->first();
+                $prog = (clone $progQuery)->where('name', $progNameOrCode)->first()
+                     ?: (clone $progQuery)->where('code', $progNameOrCode)->first()
+                     ?: \App\Models\AcademicProgram::query()->where('name', $progNameOrCode)->first()
+                     ?: \App\Models\AcademicProgram::query()->where('code', $progNameOrCode)->first();
 
                 $student->program_id = $prog?->id;
                 if ($prog && $prog->department_id && !$student->department_id) {

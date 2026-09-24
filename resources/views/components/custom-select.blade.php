@@ -4,13 +4,24 @@
     'options' => [],
     'placeholder' => 'Select Option',
     'onChangeSubmit' => true,
-    'searchable' => true
+    'searchable' => true,
+    'dispatchEvent' => null,
+    'dependsOn' => null,
+    'filterKey' => null,
+    'filterVal' => null,
 ])
 
 @php
     $formattedOptions = collect($options)->map(function($opt) {
         if (is_array($opt)) {
-            return ['value' => (string)($opt['value'] ?? ''), 'label' => (string)($opt['label'] ?? '')];
+            $item = [
+                'value' => (string)($opt['value'] ?? ''), 
+                'label' => (string)($opt['label'] ?? '')
+            ];
+            if (isset($opt['department_id'])) {
+                $item['department_id'] = (string)$opt['department_id'];
+            }
+            return $item;
         }
         return ['value' => (string)$opt, 'label' => (string)$opt];
     })->values()->all();
@@ -22,20 +33,48 @@
         selectedVal: @js((string)$value),
         selectedLabel: @js($placeholder),
         optionsList: @js($formattedOptions),
+        currentFilterVal: @js((string)($filterVal ?? '')),
+        filterKey: @js($filterKey),
+
         get filteredOptions() {
-            if (!this.search || !this.search.trim()) return this.optionsList;
+            let list = this.optionsList;
+            if (this.filterKey && this.currentFilterVal) {
+                list = list.filter(o => !o.value || String(o[this.filterKey]) === String(this.currentFilterVal));
+            }
+            if (!this.search || !this.search.trim()) return list;
             const q = this.search.toLowerCase().trim();
-            return this.optionsList.filter(o => o.label.toLowerCase().includes(q));
+            return list.filter(o => o.label.toLowerCase().includes(q));
+        },
+
+        syncLabel() {
+            const found = this.optionsList.find(o => String(o.value) === String(this.selectedVal));
+            if (found) {
+                this.selectedLabel = found.label;
+            } else if (!this.selectedVal && this.optionsList.length > 0 && this.optionsList[0].value === '') {
+                this.selectedLabel = this.optionsList[0].label;
+            } else if (!this.selectedVal) {
+                this.selectedLabel = @js($placeholder);
+            }
+        },
+
+        handleDependencyChange(newFilterVal) {
+            this.currentFilterVal = String(newFilterVal || '');
+            if (this.selectedVal && this.filterKey && this.currentFilterVal) {
+                const isValid = this.optionsList.some(o => 
+                    String(o.value) === String(this.selectedVal) && 
+                    String(o[this.filterKey]) === String(this.currentFilterVal)
+                );
+                if (!isValid) {
+                    this.selectedVal = '';
+                    this.syncLabel();
+                }
+            }
         }
      }" 
-     x-init="
-        const found = optionsList.find(o => String(o.value) === String(selectedVal));
-        if (found) {
-            selectedLabel = found.label;
-        } else if (!selectedVal && optionsList.length > 0 && optionsList[0].value === '') {
-            selectedLabel = optionsList[0].label;
-        }
-     "
+     x-init="syncLabel()"
+     @if($dependsOn)
+     @{{ $dependsOn }}.window="handleDependencyChange($event.detail.value)"
+     @endif
      class="relative w-full">
      
     <!-- Hidden Input for Form Submission -->
@@ -65,7 +104,7 @@
          
         @if($searchable)
         <!-- Search Bar -->
-        <div class="px-2 pb-1.5 pt-1 border-b border-gray-100 bg-gray-50/90 sticky top-0 z-10" x-show="optionsList.length > 5">
+        <div class="px-2 pb-1.5 pt-1 border-b border-gray-100 bg-gray-50/90 sticky top-0 z-10" x-show="filteredOptions.length > 5">
             <div class="relative">
                 <input type="text" 
                        x-ref="searchInput"
@@ -91,8 +130,20 @@
                             selectedLabel = opt.label;
                             open = false;
                             search = '';
+                            @if($dispatchEvent)
+                                $dispatch('{{ $dispatchEvent }}', { value: opt.value, label: opt.label });
+                            @endif
                             if ({{ $onChangeSubmit ? 'true' : 'false' }}) {
-                                $nextTick(() => { $el.closest('form').submit(); });
+                                $nextTick(() => { 
+                                    const form = $el.closest('form');
+                                    if (form) {
+                                        if (typeof form.requestSubmit === 'function') {
+                                            form.requestSubmit();
+                                        } else {
+                                            form.submit();
+                                        }
+                                    }
+                                });
                             }
                         " 
                         class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-[var(--cjc-red)] flex items-center justify-between transition-colors font-medium">

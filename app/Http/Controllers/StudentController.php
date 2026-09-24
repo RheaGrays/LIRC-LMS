@@ -96,8 +96,6 @@ class StudentController extends Controller
         $students = $query->paginate(20)->withQueryString();
         $patronCategories = SystemSetting::get('patron_categories', ['Student', 'Employee', 'Post Graduate', 'Alumni', 'Visitor']);
 
-        // PERF-NEW-03 FIX: Cache departments and programs — they change rarely
-        // but are loaded on every students page request (filtering, sorting, pagination).
         $departmentsList = \Illuminate\Support\Facades\Cache::remember('academic_departments_all', 600, function () {
             return \App\Models\AcademicDepartment::query()->orderBy('name', 'asc')->get();
         });
@@ -109,6 +107,10 @@ class StudentController extends Controller
         });
         
         $violationTypes = \App\Models\ViolationType::query()->orderBy('name', 'asc')->get();
+
+        if ($request->header('X-LEMS-Table-Only') || ($request->ajax() && !$request->expectsJson())) {
+            return view('admin.students.partials._table', compact('students', 'patronCategories', 'departmentsList', 'programsList', 'yearLevelsList', 'violationTypes'));
+        }
 
         return view('admin.students.index', compact('students', 'patronCategories', 'departmentsList', 'programsList', 'yearLevelsList', 'violationTypes'));
     }
